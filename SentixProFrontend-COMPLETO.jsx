@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SENTIX PRO - FRONTEND COMPLETO CORREGIDO
+// SENTIX PRO - FRONTEND COMPLETO
 // Dashboard, Señales, Portfolio, Alertas - Versión Full
 // ═══════════════════════════════════════════════════════════════════════════════
 
