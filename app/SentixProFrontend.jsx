@@ -682,121 +682,120 @@ export default function SentixProFrontend() {
   };
 
   const AlertsTab = () => {
-    return (
-      <div>
-        {/* Config */}
-        <div style={card}>
-          <div style={sTitle}>⚙️ CONFIGURACIÓN DE ALERTAS</div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
-              EMAIL
-            </label>
-            <input
-              type="email"
-              value={alertConfig.email}
-              onChange={e => setAlertConfig(prev => ({ ...prev, email: e.target.value }))}
-              style={{
-                width: "100%",
-                background: bg3,
-                border: `1px solid ${border}`,
-                borderRadius: 6,
-                padding: "10px 14px",
-                color: text,
-                fontSize: 13
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
-              CONFIANZA MÍNIMA: {alertConfig.minConfidence}%
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="95"
-              step="5"
-              value={alertConfig.minConfidence}
-              onChange={e => setAlertConfig(prev => ({ ...prev, minConfidence: parseInt(e.target.value) }))}
-              style={{ width: "100%" }}
-            />
-          </div>
-
-          <button
-            onClick={sendTestAlert}
+  return (
+    <div>
+      {/* Config */}
+      <div style={card}>
+        <div style={sTitle}>⚙️ CONFIGURACIÓN DE ALERTAS</div>
+        
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
+            EMAIL
+          </label>
+          <input
+            type="email"
+            value={alertConfig.email}
+            onChange={e => setAlertConfig(prev => ({ ...prev, email: e.target.value }))}
             style={{
               width: "100%",
-              padding: "10px",
-              background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
-              border: "none",
-              borderRadius: 7,
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer"
+              background: bg3,
+              border: `1px solid ${border}`,
+              borderRadius: 6,
+              padding: "10px 14px",
+              color: text,
+              fontSize: 13
             }}
-          >
-            🧪 ENVIAR ALERTA DE PRUEBA
-          </button>
+          />
         </div>
 
-        {/* Telegram Setup */}
-        <div style={{
-          background: "rgba(59, 130, 246, 0.1)",
-          border: `1px solid ${blue}`,
-          borderRadius: 8,
-          padding: "14px 18px",
-          marginBottom: 16
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: blue, marginBottom: 8 }}>
-            📱 ALERTAS POR TELEGRAM (GRATIS)
-          </div>
-          <div style={{ fontSize: 12, color: text, lineHeight: 1.7 }}>
-            1. Busca <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>@OracleProBot</code> en Telegram<br />
-            2. Envía <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/start</code><br />
-            3. Recibirás alertas instantáneas en tu celular 🚀
-          </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
+            CONFIANZA MÍNIMA: {alertConfig.minConfidence}%
+          </label>
+          <input
+            type="range"
+            min="50"
+            max="95"
+            step="5"
+            value={alertConfig.minConfidence}
+            onChange={e => setAlertConfig(prev => ({ ...prev, minConfidence: parseInt(e.target.value) }))}
+            style={{ width: "100%" }}
+          />
         </div>
 
-        {/* Alert History */}
-        <div style={card}>
-          <div style={sTitle}>📋 HISTORIAL DE ALERTAS</div>
-          {alerts.length === 0 ? (
-            <div style={{ padding: 30, textAlign: "center", color: muted }}>
-              No hay alertas aún
-            </div>
-          ) : (
-            <div style={{ maxHeight: 400, overflowY: "auto" }}>
-              {alerts.map((alert, i) => (
-                <div key={i} style={{
-                  background: bg3,
-                  borderLeft: `3px solid ${alert.action === 'BUY' ? green : red}`,
-                  borderRadius: 6,
-                  padding: "12px 14px",
-                  marginBottom: 10
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                    {alert.action === 'BUY' ? '🟢' : '🔴'} {alert.asset}
-                  </div>
-                  <div style={{ fontSize: 12, color: muted, marginBottom: 4 }}>
-                    Score: {alert.score}/100 · Confianza: {alert.confidence}%
-                  </div>
-                  <div style={{ fontSize: 11, color: text }}>
-                    {alert.reasons}
-                  </div>
-                  <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 6 }}>
-                    {new Date(alert.created_at).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <button
+          onClick={sendTestAlert}
+          style={{
+            width: "100%",
+            padding: "10px",
+            background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
+            border: "none",
+            borderRadius: 7,
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+        >
+          🧪 ENVIAR ALERTA DE PRUEBA
+        </button>
+      </div>
+
+      {/* Telegram Setup */}
+      <div style={{
+        background: "rgba(59, 130, 246, 0.1)",
+        border: `1px solid ${blue}`,
+        borderRadius: 8,
+        padding: "14px 18px",
+        marginBottom: 16
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: blue, marginBottom: 8 }}>
+          📱 ALERTAS POR TELEGRAM (GRATIS)
+        </div>
+        <div style={{ fontSize: 12, color: text, lineHeight: 1.7 }}>
+          1. Busca <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>@SentixProBot</code> en Telegram<br />
+          2. Envía <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/start</code><br />
+          3. Recibirás alertas instantáneas en tu celular 🚀
         </div>
       </div>
-    );
-  };
 
+      {/* Alert History */}
+      <div style={card}>
+        <div style={sTitle}>📋 HISTORIAL DE ALERTAS</div>
+        {!Array.isArray(alerts) || alerts.length === 0 ? (
+          <div style={{ padding: 30, textAlign: "center", color: muted }}>
+            No hay alertas aún. El sistema enviará alertas automáticamente cuando detecte oportunidades de trading con alta confianza.
+          </div>
+        ) : (
+          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+            {alerts.filter(alert => alert && typeof alert === 'object').map((alert, i) => (
+              <div key={i} style={{
+                background: bg3,
+                borderLeft: `3px solid ${alert.action === 'BUY' ? green : red}`,
+                borderRadius: 6,
+                padding: "12px 14px",
+                marginBottom: 10
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                  {alert.action === 'BUY' ? '🟢' : '🔴'} {alert.asset || 'N/A'}
+                </div>
+                <div style={{ fontSize: 12, color: muted, marginBottom: 4 }}>
+                  Score: {alert.score || 0}/100 · Confianza: {alert.confidence || 0}%
+                </div>
+                <div style={{ fontSize: 11, color: text }}>
+                  {alert.reasons || 'No details available'}
+                </div>
+                <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 6 }}>
+                  {alert.created_at ? new Date(alert.created_at).toLocaleString() : 'Unknown date'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
   // ─── LOADING STATE ─────────────────────────────────────────────────────────
   if (loading) {
     return (
