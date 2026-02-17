@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from "react";
+import { MultiWalletPortfolio } from "./components";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTIX PRO - FRONTEND COMPLETO
@@ -1100,6 +1101,7 @@ export default function SentixProFrontend() {
             { k: "dashboard", label: "📊 DASHBOARD", desc: "Overview" },
             { k: "signals", label: "🎯 SEÑALES", desc: "Todas las alertas" },
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
+            { k: "wallets", label: "👛 MULTI-WALLET", desc: "Gestión de wallets" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" }
           ].map(({ k, label, desc }) => (
             <button
@@ -1130,6 +1132,7 @@ export default function SentixProFrontend() {
         {tab === "dashboard" && <DashboardTab />}
         {tab === "signals" && <SignalsTab />}
         {tab === "portfolio" && <PortfolioTab />}
+        {tab === "wallets" && <MultiWalletPortfolio apiUrl={API_URL} marketData={marketData} />}
         {tab === "alerts" && <AlertsTab />}
 
         {/* Footer */}
