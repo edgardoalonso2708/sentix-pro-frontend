@@ -28,7 +28,7 @@ const WALLET_PROVIDERS = [
  * CreateWalletModal Component
  * Modal para crear nuevos wallets/exchanges
  */
-export default function CreateWalletModal({ isOpen, onClose, onSuccess, userId, apiUrl }) {
+export default function CreateWalletModal({ isOpen, onClose, onSuccess, userId = 'default-user', apiUrl }) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'exchange',

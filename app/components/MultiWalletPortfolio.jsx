@@ -8,7 +8,7 @@ import CreateWalletModal from './CreateWalletModal';
  * MultiWalletPortfolio Component
  * Dashboard con toggle entre vista consolidada y por wallet
  */
-export default function MultiWalletPortfolio({ userId, apiUrl }) {
+export default function MultiWalletPortfolio({ userId = 'default-user', apiUrl }) {
   const [view, setView] = useState('consolidated'); // 'consolidated' | 'byWallet'
   const [portfolioData, setPortfolioData] = useState(null);
   const [loading, setLoading] = useState(true);

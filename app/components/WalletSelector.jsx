@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
  * WalletSelector Component
  * Dropdown para seleccionar wallet con información de posiciones
  */
-export default function WalletSelector({ userId, onWalletSelect, selectedWalletId, apiUrl }) {
+export default function WalletSelector({ userId = 'default-user', onWalletSelect, selectedWalletId, apiUrl }) {
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

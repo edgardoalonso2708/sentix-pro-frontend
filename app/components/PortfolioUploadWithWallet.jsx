@@ -7,7 +7,7 @@ import WalletSelector from './WalletSelector';
  * PortfolioUploadWithWallet Component
  * Upload de portfolio CSV con selección de wallet
  */
-export default function PortfolioUploadWithWallet({ userId, apiUrl, onSuccess }) {
+export default function PortfolioUploadWithWallet({ userId = 'default-user', apiUrl, onSuccess }) {
   const [selectedWallet, setSelectedWallet] = useState(null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
