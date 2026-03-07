@@ -34,7 +34,14 @@ export default function SentixProFrontend() {
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
   const USER_ID = 'default-user';
-  
+
+  // Paper Trading
+  const [paperConfig, setPaperConfig] = useState(null);
+  const [paperPositions, setPaperPositions] = useState([]);
+  const [paperHistory, setPaperHistory] = useState([]);
+  const [paperMetrics, setPaperMetrics] = useState(null);
+  const [paperLoading, setPaperLoading] = useState(false);
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
@@ -1551,6 +1558,503 @@ export default function SentixProFrontend() {
     );
   };
 
+  // ─── PAPER TRADING TAB ────────────────────────────────────────────────────
+  const PaperTradingTab = () => {
+    const [showConfig, setShowConfig] = useState(false);
+    const [configForm, setConfigForm] = useState(null);
+    const [savingConfig, setSavingConfig] = useState(false);
+    const [closingTrade, setClosingTrade] = useState(null);
+    const [historyPage, setHistoryPage] = useState(0);
+    const [historyTotal, setHistoryTotal] = useState(0);
+    const [confirmReset, setConfirmReset] = useState(false);
+
+    const HISTORY_PAGE_SIZE = 10;
+
+    // Fetch all paper trading data
+    const loadPaperData = async () => {
+      setPaperLoading(true);
+      try {
+        const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
+          fetch(`${API_URL}/api/paper/config/${USER_ID}`),
+          fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
+          fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${HISTORY_PAGE_SIZE}&offset=${historyPage * HISTORY_PAGE_SIZE}`),
+          fetch(`${API_URL}/api/paper/performance/${USER_ID}`)
+        ]);
+
+        if (configRes.status === 'fulfilled' && configRes.value.ok) {
+          const d = await configRes.value.json();
+          setPaperConfig(d.config);
+          if (!configForm) setConfigForm(d.config);
+        }
+        if (posRes.status === 'fulfilled' && posRes.value.ok) {
+          const d = await posRes.value.json();
+          setPaperPositions(d.positions || []);
+        }
+        if (histRes.status === 'fulfilled' && histRes.value.ok) {
+          const d = await histRes.value.json();
+          setPaperHistory(d.trades || []);
+          setHistoryTotal(d.total || 0);
+        }
+        if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
+          const d = await perfRes.value.json();
+          setPaperMetrics(d.metrics);
+        }
+      } catch (err) {
+        console.error('Paper data load error:', err);
+      } finally {
+        setPaperLoading(false);
+      }
+    };
+
+    useEffect(() => { loadPaperData(); }, [historyPage]);
+
+    // Auto refresh every 30s
+    useEffect(() => {
+      const interval = setInterval(loadPaperData, 30000);
+      return () => clearInterval(interval);
+    }, [historyPage]);
+
+    const handleSaveConfig = async () => {
+      if (!configForm) return;
+      setSavingConfig(true);
+      try {
+        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            is_enabled: configForm.is_enabled,
+            initial_capital: parseFloat(configForm.initial_capital),
+            risk_per_trade: parseFloat(configForm.risk_per_trade),
+            max_open_positions: parseInt(configForm.max_open_positions),
+            max_daily_loss_percent: parseFloat(configForm.max_daily_loss_percent),
+            cooldown_minutes: parseInt(configForm.cooldown_minutes),
+            min_confluence: parseInt(configForm.min_confluence),
+            min_rr_ratio: parseFloat(configForm.min_rr_ratio)
+          })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setPaperConfig(d.config);
+          setConfigForm(d.config);
+        }
+      } catch (err) {
+        console.error('Save config error:', err);
+      } finally {
+        setSavingConfig(false);
+      }
+    };
+
+    const handleCloseTrade = async (tradeId) => {
+      setClosingTrade(tradeId);
+      try {
+        const res = await fetch(`${API_URL}/api/paper/close/${tradeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: USER_ID })
+        });
+        if (res.ok) await loadPaperData();
+      } catch (err) {
+        console.error('Close trade error:', err);
+      } finally {
+        setClosingTrade(null);
+      }
+    };
+
+    const handleReset = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
+        if (res.ok) {
+          setConfirmReset(false);
+          await loadPaperData();
+        }
+      } catch (err) {
+        console.error('Reset error:', err);
+      }
+    };
+
+    const handleToggleEnabled = async () => {
+      const newVal = !paperConfig?.is_enabled;
+      try {
+        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_enabled: newVal })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setPaperConfig(d.config);
+          if (configForm) setConfigForm(prev => ({ ...prev, is_enabled: newVal }));
+        }
+      } catch (err) {
+        console.error('Toggle error:', err);
+      }
+    };
+
+    const formatDuration = (entryAt, exitAt) => {
+      const ms = new Date(exitAt || Date.now()) - new Date(entryAt);
+      const hours = Math.floor(ms / 3600000);
+      const mins = Math.floor((ms % 3600000) / 60000);
+      if (hours > 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+      if (hours > 0) return `${hours}h ${mins}m`;
+      return `${mins}m`;
+    };
+
+    const inputStyle = {
+      width: '100%', padding: '8px 12px', background: bg3,
+      border: `1px solid ${border}`, borderRadius: 6,
+      color: text, fontFamily: 'monospace', fontSize: 12
+    };
+
+    const isEnabled = paperConfig?.is_enabled;
+    const capital = parseFloat(paperConfig?.current_capital || 10000);
+    const initialCap = parseFloat(paperConfig?.initial_capital || 10000);
+    const capitalPnl = capital - initialCap;
+    const capitalPnlPct = initialCap > 0 ? ((capitalPnl / initialCap) * 100) : 0;
+
+    return (
+      <div>
+        {/* Status Banner */}
+        <div style={{
+          background: isEnabled ? "rgba(0, 212, 170, 0.08)" : "rgba(239, 68, 68, 0.08)",
+          border: `1px solid ${isEnabled ? green : red}`,
+          borderRadius: 8, padding: "14px 18px", marginBottom: 16,
+          display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: "50%",
+              background: isEnabled ? green : red,
+              boxShadow: `0 0 8px ${isEnabled ? green : red}`,
+              animation: isEnabled ? "pulse 2s infinite" : "none"
+            }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: isEnabled ? green : red }}>
+                PAPER TRADING {isEnabled ? 'ACTIVO' : 'DESACTIVADO'}
+              </div>
+              <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                Capital: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} ·
+                P&L: <span style={{ color: capitalPnl >= 0 ? green : red }}>
+                  {capitalPnl >= 0 ? '+' : ''}${capitalPnl.toFixed(2)} ({capitalPnlPct.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+          </div>
+          <button onClick={handleToggleEnabled} style={{
+            padding: "6px 16px", background: isEnabled ? "rgba(239,68,68,0.2)" : "rgba(0,212,170,0.2)",
+            border: `1px solid ${isEnabled ? red : green}`, borderRadius: 6,
+            color: isEnabled ? red : green, fontFamily: "monospace", fontSize: 11,
+            fontWeight: 700, cursor: "pointer"
+          }}>
+            {isEnabled ? '⏸ PAUSAR' : '▶ ACTIVAR'}
+          </button>
+        </div>
+
+        {/* Performance Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+          {[
+            { label: "P&L TOTAL", value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
+            { label: "WIN RATE", value: `${paperMetrics?.winRate || 0}%`, color: (paperMetrics?.winRate || 0) >= 50 ? green : (paperMetrics?.winRate || 0) > 0 ? amber : muted },
+            { label: "TRADES", value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
+            { label: "CAPITAL", value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
+            { label: "MAX DRAWDOWN", value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
+            { label: "PROFIT FACTOR", value: paperMetrics?.profitFactor === Infinity ? '∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
+          ].map((stat, i) => (
+            <div key={i} style={{ ...card, padding: "12px 14px", textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 6 }}>{stat.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", color: stat.color }}>{stat.value}</div>
+              {stat.sub && <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 2 }}>{stat.sub}</div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Open Positions */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>
+            POSICIONES ABIERTAS ({paperPositions.length})
+          </div>
+          {paperPositions.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
+              No hay trades abiertos. El sistema abrirá automáticamente cuando detecte señales fuertes.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {paperPositions.map(pos => {
+                const isLong = pos.direction === 'LONG';
+                const pnlColor = pos.unrealizedPnl >= 0 ? green : red;
+                return (
+                  <div key={pos.id} style={{
+                    background: bg3, borderRadius: 8, padding: "12px 16px",
+                    borderLeft: `3px solid ${isLong ? green : red}`,
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    flexWrap: "wrap", gap: 8
+                  }}>
+                    <div style={{ minWidth: 120 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>
+                        <span style={{ color: isLong ? green : red }}>{isLong ? '▲' : '▼'}</span>{' '}
+                        {pos.asset}
+                      </div>
+                      <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                        {pos.direction} · {pos.entry_signal_strength} · {formatDuration(pos.entry_at)}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 10, color: muted }}>Entrada → Actual</div>
+                      <div style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 600 }}>
+                        ${Number(pos.entry_price).toLocaleString()} → <span style={{ color: pnlColor }}>${pos.currentPrice ? pos.currentPrice.toLocaleString() : '...'}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      <span style={{ background: "rgba(239,68,68,0.15)", color: red, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontFamily: "monospace" }}>
+                        SL ${Number(pos.stop_loss).toLocaleString()}
+                      </span>
+                      <span style={{ background: "rgba(0,212,170,0.15)", color: green, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontFamily: "monospace" }}>
+                        TP1 ${Number(pos.take_profit_1).toLocaleString()}
+                      </span>
+                      {pos.trailing_active && (
+                        <span style={{ background: "rgba(245,158,11,0.15)", color: amber, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontFamily: "monospace" }}>
+                          TRAIL ${Number(pos.trailing_stop_current).toLocaleString()}
+                        </span>
+                      )}
+                      <span style={{ background: pos.status === 'partial' ? "rgba(245,158,11,0.15)" : "transparent", color: pos.status === 'partial' ? amber : muted, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontFamily: "monospace" }}>
+                        {pos.status === 'partial' ? 'PARCIAL' : 'OPEN'}
+                      </span>
+                    </div>
+
+                    <div style={{ textAlign: "right", minWidth: 90 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "monospace", color: pnlColor }}>
+                        {pos.unrealizedPnl >= 0 ? '+' : ''}${pos.unrealizedPnl.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 10, fontFamily: "monospace", color: pnlColor }}>
+                        {pos.unrealizedPnlPercent >= 0 ? '+' : ''}{pos.unrealizedPnlPercent.toFixed(2)}%
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleCloseTrade(pos.id)}
+                      disabled={closingTrade === pos.id}
+                      style={{
+                        padding: "4px 10px", background: "rgba(239,68,68,0.15)",
+                        border: `1px solid ${red}`, borderRadius: 4,
+                        color: red, fontFamily: "monospace", fontSize: 10,
+                        fontWeight: 700, cursor: "pointer", opacity: closingTrade === pos.id ? 0.5 : 1
+                      }}
+                    >
+                      {closingTrade === pos.id ? '...' : 'CERRAR'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Trade History */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>
+            HISTORIAL DE TRADES ({historyTotal})
+          </div>
+          {paperHistory.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
+              Aún no hay trades cerrados.
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
+                  <thead>
+                    <tr>
+                      {["Asset", "Dir", "Entrada", "Salida", "P&L", "%", "Duración", "Razón"].map((h, i) => (
+                        <th key={i} style={{
+                          padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
+                          textTransform: "uppercase", letterSpacing: "0.08em",
+                          borderBottom: `1px solid ${border}`, fontWeight: 700
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paperHistory.map((trade, i) => {
+                      const pnl = parseFloat(trade.realized_pnl || 0);
+                      const pnlPct = parseFloat(trade.realized_pnl_percent || 0);
+                      const isWin = pnl > 0;
+                      return (
+                        <tr key={trade.id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 600 }}>{trade.asset}</td>
+                          <td style={{ padding: "6px 8px", color: trade.direction === 'LONG' ? green : red }}>{trade.direction === 'LONG' ? '▲ L' : '▼ S'}</td>
+                          <td style={{ padding: "6px 8px" }}>${Number(trade.entry_price).toLocaleString()}</td>
+                          <td style={{ padding: "6px 8px" }}>${Number(trade.exit_price).toLocaleString()}</td>
+                          <td style={{ padding: "6px 8px", color: isWin ? green : red, fontWeight: 700 }}>
+                            {isWin ? '+' : ''}${pnl.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "6px 8px", color: isWin ? green : red }}>
+                            {isWin ? '+' : ''}{pnlPct.toFixed(2)}%
+                          </td>
+                          <td style={{ padding: "6px 8px", color: muted }}>{formatDuration(trade.entry_at, trade.exit_at)}</td>
+                          <td style={{ padding: "6px 8px" }}>
+                            <span style={{
+                              padding: "2px 6px", borderRadius: 4, fontSize: 9,
+                              background: trade.exit_reason === 'stop_loss' ? "rgba(239,68,68,0.15)" :
+                                trade.exit_reason?.includes('take_profit') ? "rgba(0,212,170,0.15)" :
+                                trade.exit_reason === 'trailing_stop' ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)",
+                              color: trade.exit_reason === 'stop_loss' ? red :
+                                trade.exit_reason?.includes('take_profit') ? green :
+                                trade.exit_reason === 'trailing_stop' ? amber : muted
+                            }}>
+                              {(trade.exit_reason || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {/* Pagination */}
+              {historyTotal > HISTORY_PAGE_SIZE && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
+                  <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
+                    style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
+                    ← Prev
+                  </button>
+                  <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                    {historyPage + 1} / {Math.ceil(historyTotal / HISTORY_PAGE_SIZE)}
+                  </span>
+                  <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal}
+                    style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal ? "default" : "pointer" }}>
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Configuration Panel */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setShowConfig(!showConfig)}>
+            <div style={sTitle}>⚙ CONFIGURACIÓN</div>
+            <span style={{ color: muted, fontSize: 12 }}>{showConfig ? '▲' : '▼'}</span>
+          </div>
+
+          {showConfig && configForm && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Capital Inicial ($)</label>
+                  <input type="number" value={configForm.initial_capital || 10000}
+                    onChange={e => setConfigForm(prev => ({ ...prev, initial_capital: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Riesgo por Trade (%)</label>
+                  <input type="number" step="0.5" min="0.5" max="5" value={(configForm.risk_per_trade || 0.02) * 100}
+                    onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Posiciones Abiertas</label>
+                  <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
+                    onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Pérdida Diaria Máx (%)</label>
+                  <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
+                    onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cooldown entre Trades (min)</label>
+                  <input type="number" min="5" max="120" value={configForm.cooldown_minutes || 30}
+                    onChange={e => setConfigForm(prev => ({ ...prev, cooldown_minutes: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia Mínima (1-3)</label>
+                  <input type="number" min="1" max="3" value={configForm.min_confluence || 2}
+                    onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R Mínimo</label>
+                  <input type="number" step="0.1" min="1.0" max="5.0" value={configForm.min_rr_ratio || 1.5}
+                    onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                <button onClick={handleSaveConfig} disabled={savingConfig}
+                  style={{
+                    padding: "8px 20px", background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
+                    border: "none", borderRadius: 6, color: "#fff",
+                    fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    opacity: savingConfig ? 0.6 : 1
+                  }}>
+                  {savingConfig ? 'Guardando...' : '💾 GUARDAR CONFIG'}
+                </button>
+
+                {!confirmReset ? (
+                  <button onClick={() => setConfirmReset(true)}
+                    style={{
+                      padding: "8px 20px", background: "rgba(239,68,68,0.1)",
+                      border: `1px solid ${red}`, borderRadius: 6,
+                      color: red, fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer"
+                    }}>
+                    🔄 RESET CUENTA
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: red }}>¿Seguro? Cierra todos los trades y resetea capital.</span>
+                    <button onClick={handleReset} style={{
+                      padding: "6px 14px", background: red, border: "none", borderRadius: 4,
+                      color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
+                    }}>SÍ</button>
+                    <button onClick={() => setConfirmReset(false)} style={{
+                      padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
+                      color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
+                    }}>NO</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Extra stats */}
+        {paperMetrics && paperMetrics.totalTrades > 0 && (
+          <div style={{ ...card, padding: "16px 20px" }}>
+            <div style={sTitle}>ESTADÍSTICAS DETALLADAS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+              {[
+                { label: "Promedio Ganancia", value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
+                { label: "Promedio Pérdida", value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
+                { label: "Mejor Trade", value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
+                { label: "Peor Trade", value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
+                { label: "Tiempo Promedio", value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
+                { label: "Racha Actual", value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? 'victorias' : paperMetrics.streakType === 'loss' ? 'derrotas' : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
+              ].map((stat, i) => (
+                <div key={i} style={{ background: bg3, padding: "10px 14px", borderRadius: 6 }}>
+                  <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{stat.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: stat.color }}>{stat.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {paperLoading && (
+          <div style={{ textAlign: "center", padding: 10, fontSize: 10, color: muted, fontFamily: "monospace" }}>
+            Actualizando datos...
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── GUIDE TAB ────────────────────────────────────────────────────────────
   const GuideTab = () => {
     const [guideSection, setGuideSection] = useState(0);
@@ -2072,6 +2576,7 @@ export default function SentixProFrontend() {
             { k: "signals", label: "🎯 SEÑALES", desc: "Todas las alertas" },
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
+            { k: "paper", label: "📈 PAPER", desc: "Trading simulado" },
             { k: "guide", label: "📖 GUÍA", desc: "Cómo usar" }
           ].map(({ k, label, desc }) => (
             <button
@@ -2103,6 +2608,7 @@ export default function SentixProFrontend() {
         {tab === "signals" && <SignalsTab />}
         {tab === "portfolio" && <PortfolioTab />}
         {tab === "alerts" && <AlertsTab />}
+        {tab === "paper" && <PaperTradingTab />}
         {tab === "guide" && <GuideTab />}
 
         {/* Footer */}
