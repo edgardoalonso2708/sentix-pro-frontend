@@ -82,9 +82,9 @@ export default function SentixProFrontend() {
   const fetchDashboardPaper = useCallback(async () => {
     try {
       const [cfgRes, posRes, perfRes] = await Promise.allSettled([
-        fetch(`${API_URL}/api/paper/config`),
-        fetch(`${API_URL}/api/paper/positions`),
-        fetch(`${API_URL}/api/paper/performance`),
+        fetch(`${API_URL}/api/paper/config/${USER_ID}`),
+        fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
+        fetch(`${API_URL}/api/paper/performance/${USER_ID}`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
