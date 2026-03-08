@@ -41,6 +41,13 @@ export default function SentixProFrontend() {
   const [paperHistory, setPaperHistory] = useState([]);
   const [paperMetrics, setPaperMetrics] = useState(null);
   const [paperLoading, setPaperLoading] = useState(false);
+  const [paperShowConfig, setPaperShowConfig] = useState(false);
+  const [paperConfigForm, setPaperConfigForm] = useState(null);
+  const [paperSavingConfig, setPaperSavingConfig] = useState(false);
+  const [paperClosingTrade, setPaperClosingTrade] = useState(null);
+  const [paperHistoryPage, setPaperHistoryPage] = useState(0);
+  const [paperHistoryTotal, setPaperHistoryTotal] = useState(0);
+  const [paperConfirmReset, setPaperConfirmReset] = useState(false);
 
   // Dashboard consolidated
   const [backtestHistory, setBacktestHistory] = useState([]);
@@ -1889,13 +1896,14 @@ export default function SentixProFrontend() {
 
   // ─── PAPER TRADING TAB ────────────────────────────────────────────────────
   const PaperTradingTab = () => {
-    const [showConfig, setShowConfig] = useState(false);
-    const [configForm, setConfigForm] = useState(null);
-    const [savingConfig, setSavingConfig] = useState(false);
-    const [closingTrade, setClosingTrade] = useState(null);
-    const [historyPage, setHistoryPage] = useState(0);
-    const [historyTotal, setHistoryTotal] = useState(0);
-    const [confirmReset, setConfirmReset] = useState(false);
+    // State is lifted to parent to survive re-renders (parent re-creates this function on each render)
+    const showConfig = paperShowConfig, setShowConfig = setPaperShowConfig;
+    const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
+    const savingConfig = paperSavingConfig, setSavingConfig = setPaperSavingConfig;
+    const closingTrade = paperClosingTrade, setClosingTrade = setPaperClosingTrade;
+    const historyPage = paperHistoryPage, setHistoryPage = setPaperHistoryPage;
+    const historyTotal = paperHistoryTotal, setHistoryTotal = setPaperHistoryTotal;
+    const confirmReset = paperConfirmReset, setConfirmReset = setPaperConfirmReset;
 
     const HISTORY_PAGE_SIZE = 10;
 
@@ -1958,7 +1966,8 @@ export default function SentixProFrontend() {
             max_daily_loss_percent: parseFloat(configForm.max_daily_loss_percent),
             cooldown_minutes: parseInt(configForm.cooldown_minutes),
             min_confluence: parseInt(configForm.min_confluence),
-            min_rr_ratio: parseFloat(configForm.min_rr_ratio)
+            min_rr_ratio: parseFloat(configForm.min_rr_ratio),
+            allowed_strength: configForm.allowed_strength
           })
         });
         if (res.ok) {
@@ -2312,6 +2321,33 @@ export default function SentixProFrontend() {
                   <input type="number" step="0.1" min="1.0" max="5.0" value={configForm.min_rr_ratio || 1.5}
                     onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
                     style={inputStyle} />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SEÑALES ACEPTADAS</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'].map(str => {
+                    const isActive = (configForm.allowed_strength || []).includes(str);
+                    const isBuy = str.includes('BUY');
+                    const clr = isBuy ? green : red;
+                    return (
+                      <button key={str} onClick={() => {
+                        setConfigForm(prev => {
+                          const current = prev.allowed_strength || [];
+                          return { ...prev, allowed_strength: isActive ? current.filter(s => s !== str) : [...current, str] };
+                        });
+                      }} style={{
+                        padding: "4px 10px", borderRadius: 4, fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+                        cursor: "pointer", border: `1px solid ${isActive ? clr : border}`,
+                        background: isActive ? `${clr}22` : "transparent",
+                        color: isActive ? clr : muted
+                      }}>{str}</button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
+                  Solo STRONG = conservador · Incluir BUY/SELL = más trades · WEAK = agresivo
                 </div>
               </div>
 
