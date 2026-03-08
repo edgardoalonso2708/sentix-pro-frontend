@@ -3064,6 +3064,334 @@ export default function SentixProFrontend() {
     );
   };
 
+  // ─── OPTIMIZE TAB ────────────────────────────────────────────────────────
+  const OptimizeTab = () => {
+    const [optParams, setOptParams] = useState([]);
+    const [optConfig, setOptConfig] = useState({
+      asset: 'bitcoin',
+      days: 30,
+      paramName: ''
+    });
+    const [optRunning, setOptRunning] = useState(false);
+    const [optResult, setOptResult] = useState(null);
+    const [optError, setOptError] = useState(null);
+    const [optProgress, setOptProgress] = useState({ current: 0, total: 0, message: '' });
+    const [optHistory, setOptHistory] = useState([]);
+
+    const OPT_ASSETS = [
+      { value: 'bitcoin', label: 'Bitcoin (BTC)' },
+      { value: 'ethereum', label: 'Ethereum (ETH)' },
+      { value: 'solana', label: 'Solana (SOL)' },
+      { value: 'binancecoin', label: 'BNB' },
+      { value: 'cardano', label: 'Cardano (ADA)' },
+      { value: 'ripple', label: 'XRP' }
+    ];
+
+    // Load available params and history on mount
+    useEffect(() => {
+      loadOptParams();
+      loadOptHistory();
+    }, []);
+
+    const loadOptParams = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/optimize/params`);
+        if (res.ok) {
+          const data = await res.json();
+          setOptParams(data.params || []);
+          if (data.params?.length > 0 && !optConfig.paramName) {
+            setOptConfig(c => ({ ...c, paramName: data.params[0].key }));
+          }
+        }
+      } catch (e) { console.error('Failed to load optimize params', e); }
+    };
+
+    const loadOptHistory = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/optimize/history`);
+        if (res.ok) {
+          const data = await res.json();
+          setOptHistory(data);
+        }
+      } catch (e) { console.error('Failed to load optimize history', e); }
+    };
+
+    // Poll for optimization progress
+    const pollOptStatus = (jobId) => {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/optimize/status/${jobId}`);
+          if (!res.ok) return;
+          const data = await res.json();
+
+          setOptProgress({
+            current: data.current || 0,
+            total: data.total || 0,
+            message: data.message || ''
+          });
+
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            setOptRunning(false);
+            setOptResult(data.result);
+            setOptProgress({ current: 0, total: 0, message: 'Completado' });
+            loadOptHistory();
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            setOptRunning(false);
+            setOptError(data.error || 'Optimization failed');
+          }
+        } catch (e) { /* continue polling */ }
+      }, 3000);
+
+      return () => clearInterval(interval);
+    };
+
+    const runOptimize = async () => {
+      setOptRunning(true);
+      setOptError(null);
+      setOptResult(null);
+      setOptProgress({ current: 0, total: 0, message: 'Iniciando...' });
+
+      try {
+        const res = await fetch(`${API_URL}/api/optimize/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(optConfig)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to start optimization');
+        }
+        const { jobId } = await res.json();
+        pollOptStatus(jobId);
+      } catch (e) {
+        setOptRunning(false);
+        setOptError(e.message);
+      }
+    };
+
+    const selectedParam = optParams.find(p => p.key === optConfig.paramName);
+
+    return (
+      <div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>⚡ Optimizador de Estrategia</h2>
+        <p style={{ color: muted, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
+          Prueba variaciones de un parámetro de la estrategia contra datos históricos.
+          El optimizador ejecuta un backtest por cada valor y encuentra la configuración óptima por Sharpe ratio.
+        </p>
+
+        {/* Config Panel */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+          {/* Asset */}
+          <div>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>ASSET</label>
+            <select
+              value={optConfig.asset}
+              onChange={e => setOptConfig({ ...optConfig, asset: e.target.value })}
+              disabled={optRunning}
+              style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
+            >
+              {OPT_ASSETS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+            </select>
+          </div>
+
+          {/* Days */}
+          <div>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>DÍAS HISTÓRICOS</label>
+            <select
+              value={optConfig.days}
+              onChange={e => setOptConfig({ ...optConfig, days: Number(e.target.value) })}
+              disabled={optRunning}
+              style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
+            >
+              {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>{d} días</option>)}
+            </select>
+          </div>
+
+          {/* Parameter to optimize */}
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>PARÁMETRO A OPTIMIZAR</label>
+            <select
+              value={optConfig.paramName}
+              onChange={e => setOptConfig({ ...optConfig, paramName: e.target.value })}
+              disabled={optRunning}
+              style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
+            >
+              {optParams.map(p => (
+                <option key={p.key} value={p.key}>{p.label} (default: {p.defaultValue})</option>
+              ))}
+            </select>
+            {selectedParam && (
+              <div style={{ fontSize: 10, color: muted, marginTop: 4 }}>
+                {selectedParam.description} · Rango: {selectedParam.min} → {selectedParam.max} (step {selectedParam.step}) · {selectedParam.testValues} valores a probar
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Run Button */}
+        <button
+          onClick={runOptimize}
+          disabled={optRunning || !optConfig.paramName}
+          style={{
+            width: '100%', padding: '14px 24px', borderRadius: 8, border: 'none',
+            background: optRunning ? bg2 : `linear-gradient(135deg, ${purple}, #7c3aed)`,
+            color: '#fff', fontFamily: 'monospace', fontSize: 14, fontWeight: 700,
+            cursor: optRunning ? 'wait' : 'pointer', marginBottom: 16
+          }}
+        >
+          {optRunning ? `⏳ ${optProgress.message || 'Optimizando...'}` : '⚡ EJECUTAR OPTIMIZACIÓN'}
+        </button>
+
+        {/* Progress Bar */}
+        {optRunning && optProgress.total > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: muted, marginBottom: 4 }}>
+              <span>{optProgress.message}</span>
+              <span>{optProgress.current}/{optProgress.total}</span>
+            </div>
+            <div style={{ height: 6, background: bg2, borderRadius: 3 }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                background: `linear-gradient(90deg, ${purple}, #7c3aed)`,
+                width: `${(optProgress.current / optProgress.total) * 100}%`,
+                transition: 'width 0.5s ease'
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {optError && (
+          <div style={{ padding: 12, background: '#dc262620', border: '1px solid #dc2626', borderRadius: 8, color: '#ef4444', fontSize: 12, marginBottom: 16 }}>
+            ❌ {optError}
+          </div>
+        )}
+
+        {/* Results Table */}
+        {optResult && (
+          <div style={{ marginBottom: 24 }}>
+            {/* Summary */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>MEJOR VALOR</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: green }}>{optResult.bestValue}</div>
+              </div>
+              <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>MEJOR SHARPE</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: optResult.bestSharpe > 0 ? green : red }}>
+                  {optResult.bestSharpe?.toFixed(2)}
+                </div>
+              </div>
+              <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>DEFAULT</div>
+                <div style={{ fontSize: 22, fontWeight: 700 }}>
+                  {optResult.defaultValue} → {optResult.defaultSharpe?.toFixed(2)}
+                </div>
+              </div>
+              <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>MEJORA</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.improvement || 0) > 0 ? green : (optResult.improvement || 0) < 0 ? red : text }}>
+                  {(optResult.improvement || 0) > 0 ? '+' : ''}{optResult.improvement?.toFixed(2) || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Results Grid */}
+            <div style={{ background: bg2, borderRadius: 8, padding: 16, overflowX: 'auto' }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📊 Resultados por Valor ({optResult.paramLabel})</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${border}` }}>
+                    <th style={{ textAlign: 'left', padding: '8px 6px', color: muted, fontSize: 10 }}>VALOR</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>SHARPE</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>P.FACTOR</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>WIN%</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>TRADES</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>PnL%</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>DRAWDOWN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(optResult.results || []).map((r, i) => {
+                    const isBest = i === 0;
+                    const isDefault = r.value === optResult.defaultValue;
+                    return (
+                      <tr key={i} style={{
+                        borderBottom: `1px solid ${border}22`,
+                        background: isBest ? `${green}15` : isDefault ? `${purple}15` : 'transparent'
+                      }}>
+                        <td style={{ padding: '8px 6px', fontWeight: isBest || isDefault ? 700 : 400 }}>
+                          {r.value}
+                          {isBest && <span style={{ color: green, fontSize: 9, marginLeft: 4 }}>★ BEST</span>}
+                          {isDefault && <span style={{ color: purple, fontSize: 9, marginLeft: 4 }}>● DEFAULT</span>}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', color: r.sharpe > 0 ? green : red }}>
+                          {r.sharpe?.toFixed(2)}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', color: r.profitFactor >= 1 ? green : red }}>
+                          {r.profitFactor?.toFixed(2)}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px' }}>{r.winRate}%</td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px' }}>{r.totalTrades}</td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', color: r.totalPnlPercent >= 0 ? green : red }}>
+                          {r.totalPnlPercent >= 0 ? '+' : ''}{r.totalPnlPercent?.toFixed(1)}%
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', color: red }}>
+                          {r.maxDrawdownPercent?.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ fontSize: 10, color: muted, marginTop: 8, textAlign: 'right' }}>
+              ⏱ Completado en {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} días
+            </div>
+          </div>
+        )}
+
+        {/* History */}
+        {optHistory.length > 0 && (
+          <div style={{ background: bg2, borderRadius: 8, padding: 16 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📜 Historial de Optimizaciones</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {optHistory.slice(0, 10).map((h, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 12px', background: bg, borderRadius: 6, fontSize: 11
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 700 }}>{h.paramName}</span>
+                    <span style={{ color: muted, marginLeft: 8 }}>{h.asset?.toUpperCase()} · {h.days}d</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    {h.status === 'completed' ? (
+                      <>
+                        <span style={{ color: green }}>Best: {h.bestValue} (Sharpe {h.bestSharpe?.toFixed(2)})</span>
+                        {h.improvement !== null && (
+                          <span style={{ color: h.improvement > 0 ? green : h.improvement < 0 ? red : muted, fontSize: 10 }}>
+                            {h.improvement > 0 ? '+' : ''}{h.improvement?.toFixed(2)} vs default
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span style={{ color: h.status === 'error' ? red : amber }}>{h.status}</span>
+                    )}
+                    <span style={{ color: muted, fontSize: 9 }}>{h.duration ? `${h.duration.toFixed(0)}s` : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── GUIDE TAB ────────────────────────────────────────────────────────────
   const GuideTab = () => {
     const [guideSection, setGuideSection] = useState(0);
@@ -3587,6 +3915,7 @@ export default function SentixProFrontend() {
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
             { k: "paper", label: "📈 PAPER", desc: "Trading simulado" },
             { k: "backtest", label: "🔬 BACKTEST", desc: "Validar estrategia" },
+            { k: "optimize", label: "⚡ OPTIMIZAR", desc: "Ajustar parámetros" },
             { k: "guide", label: "📖 GUÍA", desc: "Cómo usar" }
           ].map(({ k, label, desc }) => (
             <button
@@ -3620,6 +3949,7 @@ export default function SentixProFrontend() {
         {tab === "alerts" && <AlertsTab />}
         {tab === "paper" && <PaperTradingTab />}
         {tab === "backtest" && <BacktestTab />}
+        {tab === "optimize" && <OptimizeTab />}
         {tab === "guide" && <GuideTab />}
 
         {/* Footer */}
