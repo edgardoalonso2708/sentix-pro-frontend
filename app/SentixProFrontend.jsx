@@ -742,17 +742,18 @@ export default function SentixProFrontend() {
           {(() => {
             const services = [
               { key: 'binance', label: 'Binance' },
-              { key: 'supabase', label: 'Supabase' },
+              { key: 'database', label: 'Supabase' },
               { key: 'sse', label: 'SSE' },
               { key: 'telegram', label: 'Telegram' },
               { key: 'email', label: 'Email' },
-              { key: 'features', label: 'Features' },
+              { key: 'featureStore', label: 'Features' },
             ];
 
             const dotColor = (status) => {
               if (!status || status === 'unknown') return muted;
-              if (status === 'connected' || status === 'active' || status === true) return green;
-              if (status === 'partial' || status === 'degraded') return amber;
+              const s = String(status).toLowerCase();
+              if (s.includes('active') || s.includes('connected') || status === true) return green;
+              if (s.includes('partial') || s.includes('degraded') || s.includes('not configured')) return amber;
               return red;
             };
 
