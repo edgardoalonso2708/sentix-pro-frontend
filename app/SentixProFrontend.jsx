@@ -42,6 +42,10 @@ export default function SentixProFrontend() {
   const [paperMetrics, setPaperMetrics] = useState(null);
   const [paperLoading, setPaperLoading] = useState(false);
 
+  // Dashboard consolidated
+  const [backtestHistory, setBacktestHistory] = useState([]);
+  const [systemHealth, setSystemHealth] = useState(null);
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
@@ -71,6 +75,56 @@ export default function SentixProFrontend() {
       setAlerts(data);
     } catch (error) {
       console.error('Error fetching alerts:', error);
+    }
+  }, [API_URL]);
+
+  // ─── DASHBOARD CONSOLIDATED FETCHES ─────────────────────────────────────
+  const fetchDashboardPaper = useCallback(async () => {
+    try {
+      const [cfgRes, posRes, perfRes] = await Promise.allSettled([
+        fetch(`${API_URL}/api/paper/config`),
+        fetch(`${API_URL}/api/paper/positions`),
+        fetch(`${API_URL}/api/paper/performance`),
+      ]);
+      if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
+        const d = await cfgRes.value.json();
+        setPaperConfig(d);
+      }
+      if (posRes.status === 'fulfilled' && posRes.value.ok) {
+        const d = await posRes.value.json();
+        setPaperPositions(d.positions || []);
+        setPaperHistory(d.history || []);
+      }
+      if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
+        const d = await perfRes.value.json();
+        setPaperMetrics(d);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard paper data:', error);
+    }
+  }, [API_URL]);
+
+  const fetchBacktestHistory = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBacktestHistory(data);
+      }
+    } catch (error) {
+      console.error('Error fetching backtest history:', error);
+    }
+  }, [API_URL]);
+
+  const fetchSystemHealth = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setSystemHealth(data.services || null);
+      }
+    } catch (error) {
+      console.error('Error fetching system health:', error);
     }
   }, [API_URL]);
 
@@ -129,25 +183,37 @@ export default function SentixProFrontend() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      // Use Promise.allSettled so one failure doesn't block everything
       await Promise.allSettled([
         fetchMarketData(),
         fetchSignals(),
         fetchAlerts(),
+        fetchDashboardPaper(),
+        fetchBacktestHistory(),
+        fetchSystemHealth(),
       ]);
       setLoading(false);
     };
 
     loadData();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 30 seconds (market + signals + paper positions)
     const interval = setInterval(() => {
       fetchMarketData();
       fetchSignals();
+      fetchDashboardPaper();
     }, 30000);
 
-    return () => clearInterval(interval);
-  }, [fetchMarketData, fetchSignals, fetchAlerts]);
+    // Slow refresh every 5 minutes (health + backtest history)
+    const slowInterval = setInterval(() => {
+      fetchSystemHealth();
+      fetchBacktestHistory();
+    }, 300000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(slowInterval);
+    };
+  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -456,6 +522,268 @@ export default function SentixProFrontend() {
             </button>
           </div>
         )}
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* PAPER TRADING PERFORMANCE                                            */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...card, marginTop: 16 }}>
+          <div style={sTitle}>📊 PAPER TRADING PERFORMANCE</div>
+          {(() => {
+            const pm = paperMetrics;
+            const closedTrades = paperHistory.filter(t => t.exit_price != null);
+            const currentCapital = pm?.currentCapital || paperConfig?.initial_capital || 10000;
+            const totalPnl = pm?.totalPnL || 0;
+            const winRate = pm?.winRate || 0;
+            const openCount = paperPositions.filter(p => p.status === 'open').length;
+            const maxDD = pm?.maxDrawdown || 0;
+            const profitFactor = pm?.profitFactor || 0;
+
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
+                  {[
+                    { label: "P&L Total", value: `$${totalPnl.toFixed(2)}`, color: totalPnl >= 0 ? green : red },
+                    { label: "Win Rate", value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? green : red },
+                    { label: "Capital Actual", value: `$${currentCapital.toFixed(0)}`, color: text },
+                    { label: "Posiciones Abiertas", value: openCount, color: openCount > 0 ? amber : muted },
+                    { label: "Max Drawdown", value: `${maxDD.toFixed(2)}%`, color: maxDD > 10 ? red : maxDD > 5 ? amber : green },
+                    { label: "Profit Factor", value: profitFactor.toFixed(2), color: profitFactor >= 1.5 ? green : profitFactor >= 1 ? amber : red },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Win Rate Ring */}
+                {closedTrades.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+                    <div style={{
+                      width: 60, height: 60, borderRadius: "50%",
+                      background: `conic-gradient(${green} ${winRate * 3.6}deg, ${bg3} ${winRate * 3.6}deg)`,
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: bg2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: text }}>
+                        {winRate.toFixed(0)}%
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{closedTrades.length} trades cerrados</div>
+                      <div style={{ fontSize: 11, color: muted }}>
+                        {pm?.winCount || 0} ganados · {pm?.lossCount || 0} perdidos
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Trades */}
+                {closedTrades.length > 0 ? (
+                  <div>
+                    <div style={{ fontSize: 10, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Últimos trades</div>
+                    {closedTrades.slice(-5).reverse().map((t, i) => {
+                      const pnl = t.pnl || ((t.exit_price - t.entry_price) * t.size * (t.direction === 'SHORT' ? -1 : 1));
+                      const ago = t.closed_at ? (() => {
+                        const mins = Math.floor((Date.now() - new Date(t.closed_at).getTime()) / 60000);
+                        if (mins < 60) return `${mins}m`;
+                        if (mins < 1440) return `${Math.floor(mins / 60)}h`;
+                        return `${Math.floor(mins / 1440)}d`;
+                      })() : '';
+                      return (
+                        <div key={i} style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "6px 0", borderBottom: `1px solid ${border}`
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 10, color: t.direction === 'LONG' ? green : red, fontWeight: 700 }}>
+                              {t.direction === 'LONG' ? '▲' : '▼'}
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{t.asset}</span>
+                            {t.exit_reason && (
+                              <span style={{
+                                fontSize: 8, padding: "2px 5px", borderRadius: 3,
+                                background: `${muted}22`, color: muted, fontWeight: 600, textTransform: "uppercase"
+                              }}>
+                                {t.exit_reason}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: pnl >= 0 ? green : red }}>
+                              {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                            </span>
+                            {ago && <span style={{ fontSize: 10, color: muted }}>{ago}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
+                    No hay trades cerrados aún
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* DISTRIBUCIÓN DE SEÑALES                                             */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...card, marginTop: 4 }}>
+          <div style={sTitle}>📡 DISTRIBUCIÓN DE SEÑALES</div>
+          {(() => {
+            const buySignals = signals.filter(s => s.action === 'BUY');
+            const sellSignals = signals.filter(s => s.action === 'SELL');
+            const holdSignals = signals.filter(s => s.action === 'HOLD');
+            const total = signals.length;
+            const avgConf = (arr) => arr.length > 0 ? (arr.reduce((s, x) => s + (x.confidence || 0), 0) / arr.length).toFixed(0) : '—';
+
+            const buyPct = total > 0 ? (buySignals.length / total * 100) : 0;
+            const sellPct = total > 0 ? (sellSignals.length / total * 100) : 0;
+            const holdPct = total > 0 ? (holdSignals.length / total * 100) : 0;
+
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 12 }}>
+                  {[
+                    { label: "BUY", count: buySignals.length, conf: avgConf(buySignals), color: green },
+                    { label: "SELL", count: sellSignals.length, conf: avgConf(sellSignals), color: red },
+                    { label: "HOLD", count: holdSignals.length, conf: avgConf(holdSignals), color: amber },
+                    { label: "TOTAL", count: total, conf: avgConf(signals), color: purple },
+                  ].map(({ label, count, conf, color }) => (
+                    <div key={label} style={{ background: bg3, borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color }}>{count}</div>
+                      <div style={{ fontSize: 10, color: muted }}>avg {conf}%</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Stacked bar */}
+                {total > 0 && (
+                  <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: bg3 }}>
+                    {buyPct > 0 && <div style={{ width: `${buyPct}%`, background: green }} />}
+                    {sellPct > 0 && <div style={{ width: `${sellPct}%`, background: red }} />}
+                    {holdPct > 0 && <div style={{ width: `${holdPct}%`, background: amber }} />}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* ÚLTIMO BACKTEST                                                      */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...card, marginTop: 4 }}>
+          <div style={sTitle}>🔬 ÚLTIMO BACKTEST</div>
+          {(() => {
+            const latest = backtestHistory.length > 0 ? backtestHistory[0] : null;
+            if (!latest) {
+              return (
+                <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
+                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => setTab('backtest')}>BACKTEST</span>
+                </div>
+              );
+            }
+
+            const statusColor = latest.status === 'completed' ? green : latest.status === 'running' ? amber : red;
+            const dateStr = latest.completed_at || latest.created_at;
+            const ago = dateStr ? (() => {
+              const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+              if (mins < 60) return `hace ${mins}m`;
+              if (mins < 1440) return `hace ${Math.floor(mins / 60)}h`;
+              return `hace ${Math.floor(mins / 1440)}d`;
+            })() : '';
+
+            return (
+              <div>
+                {/* Info row */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 12, fontSize: 11 }}>
+                  <span style={{ fontWeight: 700, color: text }}>{latest.asset}</span>
+                  <span style={{ color: muted }}>{latest.days}d · {latest.step_interval || '4h'}</span>
+                  <span style={{
+                    fontSize: 9, padding: "2px 6px", borderRadius: 3,
+                    background: `${statusColor}22`, color: statusColor, fontWeight: 700, textTransform: "uppercase"
+                  }}>
+                    {latest.status}
+                  </span>
+                  {ago && <span style={{ color: muted }}>{ago}</span>}
+                </div>
+
+                {/* Metric cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+                  {[
+                    { label: "Total Trades", value: latest.total_trades || 0, color: text },
+                    { label: "Win Rate", value: `${(latest.win_rate || 0).toFixed(1)}%`, color: (latest.win_rate || 0) >= 50 ? green : red },
+                    { label: "P&L", value: `$${(latest.total_pnl || 0).toFixed(2)}`, color: (latest.total_pnl || 0) >= 0 ? green : red },
+                    { label: "P&L %", value: `${(latest.total_pnl_percent || 0).toFixed(2)}%`, color: (latest.total_pnl_percent || 0) >= 0 ? green : red },
+                    { label: "Max DD%", value: `${(latest.max_drawdown_percent || 0).toFixed(2)}%`, color: (latest.max_drawdown_percent || 0) > 10 ? red : amber },
+                    { label: "Profit Factor", value: (latest.profit_factor || 0).toFixed(2), color: (latest.profit_factor || 0) >= 1.5 ? green : (latest.profit_factor || 0) >= 1 ? amber : red },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} style={{ background: bg3, borderRadius: 6, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* ESTADO DEL SISTEMA                                                   */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...card, marginTop: 4 }}>
+          <div style={sTitle}>🖥 ESTADO DEL SISTEMA</div>
+          {(() => {
+            const services = [
+              { key: 'binance', label: 'Binance' },
+              { key: 'supabase', label: 'Supabase' },
+              { key: 'sse', label: 'SSE' },
+              { key: 'telegram', label: 'Telegram' },
+              { key: 'email', label: 'Email' },
+              { key: 'features', label: 'Features' },
+            ];
+
+            const dotColor = (status) => {
+              if (!status || status === 'unknown') return muted;
+              if (status === 'connected' || status === 'active' || status === true) return green;
+              if (status === 'partial' || status === 'degraded') return amber;
+              return red;
+            };
+
+            return (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
+                {services.map(({ key, label }) => {
+                  const status = systemHealth ? (typeof systemHealth[key] === 'object' ? systemHealth[key]?.status : systemHealth[key]) : null;
+                  const dc = dotColor(status);
+                  const statusText = status ? (typeof status === 'boolean' ? (status ? 'active' : 'inactive') : String(status)) : 'checking...';
+                  return (
+                    <div key={key} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: bg3, borderRadius: 6, padding: "10px 14px"
+                    }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: dc,
+                        boxShadow: dc === green ? `0 0 6px ${green}` : 'none',
+                        flexShrink: 0
+                      }} />
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: text }}>{label}</div>
+                        <div style={{ fontSize: 9, color: muted, textTransform: "uppercase" }}>{statusText}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
       </div>
     );
   };
