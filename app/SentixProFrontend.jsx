@@ -2055,6 +2055,686 @@ export default function SentixProFrontend() {
     );
   };
 
+  // ─── BACKTEST TAB ──────────────────────────────────────────────────────────
+  const BacktestTab = () => {
+    const [btConfig, setBtConfig] = useState({
+      asset: 'bitcoin',
+      days: 90,
+      capital: 10000,
+      riskPerTrade: 0.02,
+      minConfluence: 2,
+      minRR: 1.5,
+      stepInterval: '4h',
+      allowedStrength: ['STRONG BUY', 'STRONG SELL'],
+      cooldownBars: 6
+    });
+    const [btRunning, setBtRunning] = useState(false);
+    const [btResult, setBtResult] = useState(null);
+    const [btHistory, setBtHistory] = useState([]);
+    const [btError, setBtError] = useState(null);
+    const [btPolling, setBtPolling] = useState(null);
+    const [btProgress, setBtProgress] = useState(0);
+    const [btTradesPage, setBtTradesPage] = useState(0);
+    const BT_TRADES_PER_PAGE = 15;
+
+    const ASSETS = [
+      { value: 'bitcoin', label: 'Bitcoin (BTC)' },
+      { value: 'ethereum', label: 'Ethereum (ETH)' },
+      { value: 'solana', label: 'Solana (SOL)' },
+      { value: 'binancecoin', label: 'BNB' },
+      { value: 'cardano', label: 'Cardano (ADA)' },
+      { value: 'ripple', label: 'XRP' },
+      { value: 'polkadot', label: 'Polkadot (DOT)' },
+      { value: 'avalanche-2', label: 'Avalanche (AVAX)' },
+      { value: 'chainlink', label: 'Chainlink (LINK)' },
+      { value: 'dogecoin', label: 'Dogecoin (DOGE)' }
+    ];
+
+    // Load backtest history on mount
+    useEffect(() => {
+      loadBtHistory();
+    }, []);
+
+    const loadBtHistory = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBtHistory(data);
+        }
+      } catch (e) { console.error('Backtest history fetch error', e); }
+    };
+
+    // Poll for results
+    const pollResults = (id) => {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/backtest/results/${id}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          setBtProgress(data.progress || 0);
+
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            setBtPolling(null);
+            setBtRunning(false);
+            setBtResult(data);
+            setBtProgress(100);
+            loadBtHistory();
+          } else if (data.status === 'failed') {
+            clearInterval(interval);
+            setBtPolling(null);
+            setBtRunning(false);
+            setBtError(data.error_message || 'Backtest failed');
+          }
+        } catch (e) { /* continue polling */ }
+      }, 4000);
+      setBtPolling(interval);
+    };
+
+    // Cleanup polling on unmount
+    useEffect(() => {
+      return () => { if (btPolling) clearInterval(btPolling); };
+    }, [btPolling]);
+
+    const runBacktest = async () => {
+      setBtRunning(true);
+      setBtError(null);
+      setBtResult(null);
+      setBtProgress(0);
+      setBtTradesPage(0);
+
+      try {
+        const res = await fetch(`${API_URL}/api/backtest/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...btConfig, userId: USER_ID })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to launch backtest');
+        }
+        const { id } = await res.json();
+        pollResults(id);
+      } catch (e) {
+        setBtRunning(false);
+        setBtError(e.message);
+      }
+    };
+
+    const loadHistoricResult = async (id) => {
+      try {
+        const res = await fetch(`${API_URL}/api/backtest/results/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBtResult(data);
+          setBtTradesPage(0);
+        }
+      } catch (e) { console.error('Error loading backtest result', e); }
+    };
+
+    const inputStyle = {
+      background: "#1a1a1a", border: `1px solid ${border}`, borderRadius: 6,
+      color: text, padding: "8px 10px", fontFamily: "monospace", fontSize: 11, width: "100%"
+    };
+    const labelStyle = { fontSize: 10, color: muted, fontFamily: "monospace", marginBottom: 4, display: "block" };
+
+    // Equity curve renderer (CSS bars)
+    const EquityCurve = ({ curve, initial }) => {
+      if (!curve || curve.length < 2) return null;
+      const values = curve.map(p => p.equity);
+      const maxVal = Math.max(...values);
+      const minVal = Math.min(...values);
+      const range = maxVal - minVal || 1;
+      const step = Math.max(1, Math.floor(curve.length / 80)); // max 80 bars
+      const sampled = curve.filter((_, i) => i % step === 0 || i === curve.length - 1);
+
+      return (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: text, marginBottom: 8, fontFamily: "monospace" }}>
+            EQUITY CURVE
+          </div>
+          <div style={{
+            display: "flex", alignItems: "flex-end", gap: 1, height: 120,
+            background: "#0a0a0a", borderRadius: 6, padding: "8px 4px", border: `1px solid ${border}`
+          }}>
+            {sampled.map((point, i) => {
+              const pct = (point.equity - minVal) / range;
+              const color = point.equity >= initial ? green : red;
+              return (
+                <div
+                  key={i}
+                  title={`$${point.equity.toFixed(0)} (${new Date(point.timestamp).toLocaleDateString()})`}
+                  style={{
+                    flex: 1, minWidth: 2, maxWidth: 8,
+                    height: `${Math.max(4, pct * 100)}%`,
+                    background: color, borderRadius: "2px 2px 0 0", opacity: 0.8
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: muted, fontFamily: "monospace", marginTop: 4 }}>
+            <span>${minVal.toFixed(0)}</span>
+            <span>Inicio: ${initial.toFixed(0)}</span>
+            <span>${maxVal.toFixed(0)}</span>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div>
+        {/* Header */}
+        <div style={{
+          background: `linear-gradient(135deg, ${bg2}, #1a0a2a)`,
+          border: `1px solid ${border}`, borderRadius: 10,
+          padding: "16px 20px", marginBottom: 16, display: "flex",
+          justifyContent: "space-between", alignItems: "center"
+        }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: text, fontFamily: "monospace" }}>
+              🔬 BACKTESTING ENGINE
+            </div>
+            <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 4 }}>
+              Valida la estrategia con datos hist&oacute;ricos de Binance &middot; 10/13 factores t&eacute;cnicos
+            </div>
+          </div>
+          {btHistory.length > 0 && (
+            <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+              {btHistory.length} backtest{btHistory.length > 1 ? 's' : ''} ejecutado{btHistory.length > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+
+        {/* Config Form */}
+        <div style={{
+          background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+          padding: 20, marginBottom: 16
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: purple, fontFamily: "monospace", marginBottom: 16 }}>
+            CONFIGURACI&Oacute;N DEL BACKTEST
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+            {/* Asset */}
+            <div>
+              <label style={labelStyle}>Asset</label>
+              <select
+                value={btConfig.asset}
+                onChange={e => setBtConfig({ ...btConfig, asset: e.target.value })}
+                style={inputStyle}
+                disabled={btRunning}
+              >
+                {ASSETS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
+            </div>
+
+            {/* Days */}
+            <div>
+              <label style={labelStyle}>Per&iacute;odo (d&iacute;as)</label>
+              <select
+                value={btConfig.days}
+                onChange={e => setBtConfig({ ...btConfig, days: Number(e.target.value) })}
+                style={inputStyle}
+                disabled={btRunning}
+              >
+                <option value={30}>30 d&iacute;as</option>
+                <option value={60}>60 d&iacute;as</option>
+                <option value={90}>90 d&iacute;as</option>
+                <option value={180}>180 d&iacute;as</option>
+              </select>
+            </div>
+
+            {/* Step Interval */}
+            <div>
+              <label style={labelStyle}>Intervalo de step</label>
+              <select
+                value={btConfig.stepInterval}
+                onChange={e => setBtConfig({ ...btConfig, stepInterval: e.target.value })}
+                style={inputStyle}
+                disabled={btRunning}
+              >
+                <option value="4h">4 horas</option>
+                <option value="1h">1 hora</option>
+              </select>
+            </div>
+
+            {/* Capital */}
+            <div>
+              <label style={labelStyle}>Capital inicial ($)</label>
+              <input
+                type="number"
+                value={btConfig.capital}
+                onChange={e => setBtConfig({ ...btConfig, capital: Number(e.target.value) })}
+                style={inputStyle}
+                disabled={btRunning}
+                min={100}
+              />
+            </div>
+
+            {/* Risk per trade */}
+            <div>
+              <label style={labelStyle}>Riesgo por trade (%)</label>
+              <input
+                type="number"
+                value={(btConfig.riskPerTrade * 100).toFixed(1)}
+                onChange={e => setBtConfig({ ...btConfig, riskPerTrade: Number(e.target.value) / 100 })}
+                style={inputStyle}
+                disabled={btRunning}
+                min={0.5}
+                max={10}
+                step={0.5}
+              />
+            </div>
+
+            {/* Min confluence */}
+            <div>
+              <label style={labelStyle}>Confluencia m&iacute;nima</label>
+              <select
+                value={btConfig.minConfluence}
+                onChange={e => setBtConfig({ ...btConfig, minConfluence: Number(e.target.value) })}
+                style={inputStyle}
+                disabled={btRunning}
+              >
+                <option value={1}>1 timeframe</option>
+                <option value={2}>2 timeframes</option>
+                <option value={3}>3 timeframes</option>
+              </select>
+            </div>
+
+            {/* Min R:R */}
+            <div>
+              <label style={labelStyle}>R:R m&iacute;nimo</label>
+              <input
+                type="number"
+                value={btConfig.minRR}
+                onChange={e => setBtConfig({ ...btConfig, minRR: Number(e.target.value) })}
+                style={inputStyle}
+                disabled={btRunning}
+                min={1.0}
+                max={5.0}
+                step={0.5}
+              />
+            </div>
+
+            {/* Cooldown */}
+            <div>
+              <label style={labelStyle}>Cooldown (barras)</label>
+              <input
+                type="number"
+                value={btConfig.cooldownBars}
+                onChange={e => setBtConfig({ ...btConfig, cooldownBars: Number(e.target.value) })}
+                style={inputStyle}
+                disabled={btRunning}
+                min={1}
+                max={24}
+              />
+            </div>
+          </div>
+
+          {/* Strength filter */}
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Strength filter</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {['STRONG BUY', 'STRONG SELL', 'BUY', 'SELL'].map(s => (
+                <label key={s} style={{ fontSize: 10, color: text, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={btConfig.allowedStrength.includes(s)}
+                    disabled={btRunning}
+                    onChange={e => {
+                      const updated = e.target.checked
+                        ? [...btConfig.allowedStrength, s]
+                        : btConfig.allowedStrength.filter(x => x !== s);
+                      setBtConfig({ ...btConfig, allowedStrength: updated });
+                    }}
+                  />
+                  {s}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Run button */}
+          <div style={{ marginTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
+            <button
+              onClick={runBacktest}
+              disabled={btRunning || btConfig.allowedStrength.length === 0}
+              style={{
+                padding: "12px 28px",
+                background: btRunning ? muted : `linear-gradient(135deg, ${purple}, #7c3aed)`,
+                border: "none", borderRadius: 8, color: "#fff",
+                fontFamily: "monospace", fontSize: 12, fontWeight: 700,
+                cursor: btRunning ? "not-allowed" : "pointer", letterSpacing: "0.02em"
+              }}
+            >
+              {btRunning ? `PROCESANDO... ${btProgress}%` : "EJECUTAR BACKTEST"}
+            </button>
+
+            {btRunning && (
+              <div style={{ flex: 1, height: 6, background: "#1a1a1a", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{
+                  width: `${btProgress}%`, height: "100%",
+                  background: `linear-gradient(90deg, ${purple}, ${green})`,
+                  borderRadius: 3, transition: "width 0.5s ease"
+                }} />
+              </div>
+            )}
+          </div>
+
+          {/* Nota de limitaciones */}
+          <div style={{
+            marginTop: 12, padding: "8px 12px", background: "rgba(168, 85, 247, 0.08)",
+            borderRadius: 6, border: "1px solid rgba(168, 85, 247, 0.2)",
+            fontSize: 9, color: muted, fontFamily: "monospace", lineHeight: 1.6
+          }}>
+            Backtest basado en 10/13 factores (EMA, RSI, MACD, BB, ADX, divergencias, volumen, S/R, momentum, squeeze).
+            Excluye: derivatives funding rate, BTC dominance, DXY macro (sin datos hist&oacute;ricos).
+            Slippage simulado: 0.1% por trade.
+          </div>
+        </div>
+
+        {/* Error */}
+        {btError && (
+          <div style={{
+            background: "rgba(239, 68, 68, 0.1)", border: `1px solid ${red}`, borderRadius: 8,
+            padding: 14, marginBottom: 16, fontSize: 11, color: red, fontFamily: "monospace"
+          }}>
+            Error: {btError}
+          </div>
+        )}
+
+        {/* Results */}
+        {btResult && btResult.status === 'completed' && btResult.metrics && (
+          <div>
+            {/* Summary Cards */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 10, marginBottom: 16
+            }}>
+              {[
+                {
+                  label: "P&L TOTAL",
+                  value: `$${Number(btResult.total_pnl || 0).toFixed(2)}`,
+                  sub: `${Number(btResult.total_pnl_percent || 0).toFixed(2)}%`,
+                  color: Number(btResult.total_pnl) >= 0 ? green : red
+                },
+                {
+                  label: "WIN RATE",
+                  value: `${Number(btResult.win_rate || 0).toFixed(1)}%`,
+                  sub: `${btResult.win_count}W / ${btResult.loss_count}L`,
+                  color: Number(btResult.win_rate) >= 50 ? green : red
+                },
+                {
+                  label: "TRADES",
+                  value: btResult.total_trades || 0,
+                  sub: `${btResult.days} d\u00edas`,
+                  color: purple
+                },
+                {
+                  label: "MAX DRAWDOWN",
+                  value: `${Number(btResult.max_drawdown_percent || 0).toFixed(2)}%`,
+                  sub: `$${Number(btResult.max_drawdown || 0).toFixed(2)}`,
+                  color: red
+                },
+                {
+                  label: "PROFIT FACTOR",
+                  value: Number(btResult.profit_factor || 0).toFixed(2),
+                  sub: btResult.profit_factor >= 1.5 ? "Bueno" : btResult.profit_factor >= 1 ? "Aceptable" : "Pobre",
+                  color: Number(btResult.profit_factor) >= 1.5 ? green : Number(btResult.profit_factor) >= 1 ? "#f59e0b" : red
+                },
+                {
+                  label: "SHARPE RATIO",
+                  value: Number(btResult.sharpe_ratio || 0).toFixed(2),
+                  sub: btResult.sharpe_ratio >= 1 ? "Bueno" : "Bajo",
+                  color: Number(btResult.sharpe_ratio) >= 1 ? green : "#f59e0b"
+                }
+              ].map((card, i) => (
+                <div key={i} style={{
+                  background: bg2, border: `1px solid ${border}`, borderRadius: 8,
+                  padding: "14px 16px", textAlign: "center"
+                }}>
+                  <div style={{ fontSize: 9, color: muted, fontFamily: "monospace", marginBottom: 6 }}>{card.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: card.color, fontFamily: "monospace" }}>{card.value}</div>
+                  <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 4 }}>{card.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Equity Curve */}
+            {btResult.equity_curve && (
+              <div style={{
+                background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                padding: 16, marginBottom: 16
+              }}>
+                <EquityCurve curve={btResult.equity_curve} initial={Number(btResult.initial_capital)} />
+              </div>
+            )}
+
+            {/* Additional Metrics */}
+            {btResult.metrics && (
+              <div style={{
+                background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                padding: 16, marginBottom: 16
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: purple, fontFamily: "monospace", marginBottom: 12 }}>
+                  DETALLES ADICIONALES
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
+                  {[
+                    { l: "Profit promedio", v: `$${Number(btResult.metrics.avgProfit || 0).toFixed(2)}` },
+                    { l: "Loss promedio", v: `$${Number(btResult.metrics.avgLoss || 0).toFixed(2)}` },
+                    { l: "Mejor trade", v: `$${Number(btResult.metrics.bestTrade || 0).toFixed(2)}` },
+                    { l: "Peor trade", v: `$${Number(btResult.metrics.worstTrade || 0).toFixed(2)}` },
+                    { l: "Max wins consecutivos", v: btResult.metrics.maxConsecutiveWins || 0 },
+                    { l: "Max losses consecutivos", v: btResult.metrics.maxConsecutiveLosses || 0 },
+                    { l: "Avg holding (horas)", v: Number(btResult.avg_holding_hours || 0).toFixed(1) },
+                    { l: "Trades/mes", v: Number(btResult.metrics.tradesPerMonth || 0).toFixed(1) }
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      display: "flex", justifyContent: "space-between",
+                      fontSize: 10, fontFamily: "monospace", padding: "4px 0",
+                      borderBottom: `1px solid ${border}`
+                    }}>
+                      <span style={{ color: muted }}>{item.l}</span>
+                      <span style={{ color: text, fontWeight: 600 }}>{item.v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trade List */}
+            {btResult.trades && btResult.trades.length > 0 && (
+              <div style={{
+                background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                padding: 16, marginBottom: 16
+              }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: 12
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                    TRADES ({btResult.trades.length})
+                  </div>
+                  {btResult.trades.length > BT_TRADES_PER_PAGE && (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        onClick={() => setBtTradesPage(Math.max(0, btTradesPage - 1))}
+                        disabled={btTradesPage === 0}
+                        style={{
+                          padding: "4px 10px", background: bg2, border: `1px solid ${border}`,
+                          borderRadius: 4, color: text, fontFamily: "monospace", fontSize: 10,
+                          cursor: btTradesPage === 0 ? "not-allowed" : "pointer", opacity: btTradesPage === 0 ? 0.4 : 1
+                        }}
+                      >
+                        &lt;
+                      </button>
+                      <span style={{ fontSize: 10, color: muted, fontFamily: "monospace", padding: "4px 0" }}>
+                        {btTradesPage + 1}/{Math.ceil(btResult.trades.length / BT_TRADES_PER_PAGE)}
+                      </span>
+                      <button
+                        onClick={() => setBtTradesPage(Math.min(Math.ceil(btResult.trades.length / BT_TRADES_PER_PAGE) - 1, btTradesPage + 1))}
+                        disabled={btTradesPage >= Math.ceil(btResult.trades.length / BT_TRADES_PER_PAGE) - 1}
+                        style={{
+                          padding: "4px 10px", background: bg2, border: `1px solid ${border}`,
+                          borderRadius: 4, color: text, fontFamily: "monospace", fontSize: 10,
+                          cursor: btTradesPage >= Math.ceil(btResult.trades.length / BT_TRADES_PER_PAGE) - 1 ? "not-allowed" : "pointer",
+                          opacity: btTradesPage >= Math.ceil(btResult.trades.length / BT_TRADES_PER_PAGE) - 1 ? 0.4 : 1
+                        }}
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 10 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${border}` }}>
+                        {["#", "Direcci\u00f3n", "Entry", "Exit", "P&L", "P&L %", "Raz\u00f3n", "Barras"].map(h => (
+                          <th key={h} style={{ padding: "6px 8px", textAlign: "left", color: muted, fontWeight: 600, fontSize: 9 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {btResult.trades
+                        .slice(btTradesPage * BT_TRADES_PER_PAGE, (btTradesPage + 1) * BT_TRADES_PER_PAGE)
+                        .map((trade, i) => {
+                          const pnl = Number(trade.pnl || 0);
+                          const pnlPct = Number(trade.pnlPercent || 0);
+                          const isWin = pnl >= 0;
+                          const exitReasonLabels = {
+                            stop_loss: "SL", take_profit_1: "TP1", take_profit_2: "TP2",
+                            trailing_stop: "Trail", forced: "Forzado"
+                          };
+                          return (
+                            <tr key={i} style={{
+                              borderBottom: `1px solid ${border}`,
+                              background: isWin ? "rgba(0, 212, 170, 0.03)" : "rgba(239, 68, 68, 0.03)"
+                            }}>
+                              <td style={{ padding: "6px 8px", color: muted }}>
+                                {btTradesPage * BT_TRADES_PER_PAGE + i + 1}
+                              </td>
+                              <td style={{
+                                padding: "6px 8px", fontWeight: 700,
+                                color: trade.direction === 'LONG' ? green : red
+                              }}>
+                                {trade.direction === 'LONG' ? "\u25B2 LONG" : "\u25BC SHORT"}
+                              </td>
+                              <td style={{ padding: "6px 8px", color: text }}>
+                                ${Number(trade.entryPrice || 0).toFixed(2)}
+                              </td>
+                              <td style={{ padding: "6px 8px", color: text }}>
+                                ${Number(trade.exitPrice || 0).toFixed(2)}
+                              </td>
+                              <td style={{ padding: "6px 8px", fontWeight: 700, color: isWin ? green : red }}>
+                                {isWin ? "+" : ""}{pnl.toFixed(2)}
+                              </td>
+                              <td style={{ padding: "6px 8px", color: isWin ? green : red }}>
+                                {isWin ? "+" : ""}{pnlPct.toFixed(2)}%
+                              </td>
+                              <td style={{ padding: "6px 8px" }}>
+                                <span style={{
+                                  padding: "2px 6px", borderRadius: 4, fontSize: 9,
+                                  background: trade.exitReason === 'stop_loss' ? "rgba(239,68,68,0.15)" :
+                                    trade.exitReason === 'trailing_stop' ? "rgba(245,158,11,0.15)" :
+                                    "rgba(0,212,170,0.15)",
+                                  color: trade.exitReason === 'stop_loss' ? red :
+                                    trade.exitReason === 'trailing_stop' ? "#f59e0b" : green
+                                }}>
+                                  {exitReasonLabels[trade.exitReason] || trade.exitReason || "?"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "6px 8px", color: muted }}>
+                                {trade.holdingBars || "-"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Backtest History */}
+        {btHistory.length > 0 && (
+          <div style={{
+            background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+            padding: 16
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: purple, fontFamily: "monospace", marginBottom: 12 }}>
+              HISTORIAL DE BACKTESTS
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {btHistory.map((bt, i) => {
+                const pnl = Number(bt.total_pnl || 0);
+                const isSelected = btResult && btResult.id === bt.id;
+                return (
+                  <div
+                    key={bt.id}
+                    onClick={() => bt.status === 'completed' && loadHistoricResult(bt.id)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "10px 14px", borderRadius: 6,
+                      background: isSelected ? "rgba(168, 85, 247, 0.1)" : "#0a0a0a",
+                      border: `1px solid ${isSelected ? purple : border}`,
+                      cursor: bt.status === 'completed' ? "pointer" : "default",
+                      opacity: bt.status === 'failed' ? 0.5 : 1
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: text, fontFamily: "monospace", fontWeight: 600, textTransform: "uppercase" }}>
+                        {bt.asset}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        {bt.days}d &middot; {bt.step_interval}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        {bt.total_trades || 0} trades
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                      {bt.status === 'completed' ? (
+                        <>
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, fontFamily: "monospace",
+                            color: pnl >= 0 ? green : red
+                          }}>
+                            {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({Number(bt.total_pnl_percent || 0).toFixed(1)}%)
+                          </span>
+                          <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                            WR: {Number(bt.win_rate || 0).toFixed(0)}%
+                          </span>
+                        </>
+                      ) : bt.status === 'running' ? (
+                        <span style={{ fontSize: 10, color: "#f59e0b", fontFamily: "monospace" }}>
+                          Ejecutando... {bt.progress || 0}%
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, color: red, fontFamily: "monospace" }}>
+                          Error
+                        </span>
+                      )}
+                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        {new Date(bt.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── GUIDE TAB ────────────────────────────────────────────────────────────
   const GuideTab = () => {
     const [guideSection, setGuideSection] = useState(0);
@@ -2577,6 +3257,7 @@ export default function SentixProFrontend() {
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
             { k: "paper", label: "📈 PAPER", desc: "Trading simulado" },
+            { k: "backtest", label: "🔬 BACKTEST", desc: "Validar estrategia" },
             { k: "guide", label: "📖 GUÍA", desc: "Cómo usar" }
           ].map(({ k, label, desc }) => (
             <button
@@ -2609,6 +3290,7 @@ export default function SentixProFrontend() {
         {tab === "portfolio" && <PortfolioTab />}
         {tab === "alerts" && <AlertsTab />}
         {tab === "paper" && <PaperTradingTab />}
+        {tab === "backtest" && <BacktestTab />}
         {tab === "guide" && <GuideTab />}
 
         {/* Footer */}
