@@ -45,6 +45,7 @@ export default function SentixProFrontend() {
   const [paperPositions, setPaperPositions] = useState([]);
   const [paperHistory, setPaperHistory] = useState([]);
   const [paperMetrics, setPaperMetrics] = useState(null);
+  const [correlationData, setCorrelationData] = useState(null);
   const [paperLoading, setPaperLoading] = useState(false);
   const [paperShowConfig, setPaperShowConfig] = useState(false);
   const [paperConfigForm, setPaperConfigForm] = useState(null);
@@ -452,9 +453,11 @@ export default function SentixProFrontend() {
         setPaperConfig(d.config);
         if (!paperConfigForm) setPaperConfigForm(d.config);
       }
+      let positionsCount = 0;
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const d = await posRes.value.json();
         setPaperPositions(d.positions || []);
+        positionsCount = (d.positions || []).length;
       }
       if (histRes.status === 'fulfilled' && histRes.value.ok) {
         const d = await histRes.value.json();
@@ -464,6 +467,18 @@ export default function SentixProFrontend() {
       if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
         const d = await perfRes.value.json();
         setPaperMetrics(d.metrics);
+      }
+      // Fetch correlation if ≥2 positions
+      if (positionsCount >= 2) {
+        try {
+          const corrRes = await fetch(`${API_URL}/api/paper/correlation/${USER_ID}`);
+          if (corrRes.ok) {
+            const corrData = await corrRes.json();
+            setCorrelationData(corrData.correlation || null);
+          }
+        } catch { setCorrelationData(null); }
+      } else {
+        setCorrelationData(null);
       }
     } catch (err) {
       console.error('Paper data load error:', err);
@@ -2864,6 +2879,84 @@ export default function SentixProFrontend() {
             </div>
           )}
         </div>
+
+        {/* Position Correlation */}
+        {correlationData && correlationData.pairs && correlationData.pairs.length > 0 && (
+          <div style={{ ...card, padding: "16px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={sTitle}>CORRELACIÓN DE POSICIONES</div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
+                background: correlationData.riskLevel === 'high' ? `${red}20` : correlationData.riskLevel === 'medium' ? `${amber}20` : `${green}20`,
+                color: correlationData.riskLevel === 'high' ? red : correlationData.riskLevel === 'medium' ? amber : green,
+                textTransform: "uppercase"
+              }}>
+                Riesgo: {correlationData.riskLevel}
+              </div>
+            </div>
+
+            {/* Correlation pairs table */}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11, marginBottom: 10 }}>
+              <thead>
+                <tr>
+                  {["Par", "Correlación", "Nivel"].map((h, i) => (
+                    <th key={i} style={{ textAlign: "left", padding: "4px 8px", color: muted, fontSize: 9, fontWeight: 600, borderBottom: `1px solid ${bg3}`, textTransform: "uppercase" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {correlationData.pairs.map((pair, i) => {
+                  const absCorr = Math.abs(pair.correlation);
+                  const corrColor = absCorr >= 0.75 ? red : absCorr >= 0.5 ? amber : absCorr >= 0.3 ? "#eab308" : green;
+                  return (
+                    <tr key={i}>
+                      <td style={{ padding: "4px 8px", fontSize: 11 }}>
+                        {pair.assetA} ↔ {pair.assetB}
+                      </td>
+                      <td style={{ padding: "4px 8px", fontWeight: 700, color: corrColor }}>
+                        {pair.correlation > 0 ? '+' : ''}{pair.correlation}
+                      </td>
+                      <td style={{ padding: "4px 8px" }}>
+                        <span style={{
+                          fontSize: 9, padding: "2px 6px", borderRadius: 3,
+                          background: `${corrColor}20`, color: corrColor, fontWeight: 600
+                        }}>
+                          {pair.level.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Diversification bar */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: muted, marginBottom: 4 }}>
+                <span>Diversificación Efectiva</span>
+                <span style={{ fontWeight: 700, color: text }}>{(correlationData.effectiveDiversification * 100).toFixed(0)}%</span>
+              </div>
+              <div style={{ height: 6, background: bg3, borderRadius: 3, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 3,
+                  width: `${Math.max(2, correlationData.effectiveDiversification * 100)}%`,
+                  background: correlationData.effectiveDiversification >= 0.5 ? green : correlationData.effectiveDiversification >= 0.25 ? amber : red
+                }} />
+              </div>
+            </div>
+
+            {/* Warnings */}
+            {correlationData.warnings && correlationData.warnings.length > 0 && (
+              <div style={{ fontSize: 10, color: amber, marginTop: 6 }}>
+                {correlationData.warnings.map((w, i) => (
+                  <div key={i} style={{ marginBottom: 2 }}>⚠ {w}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Trade History */}
         <div style={{ ...card, padding: "16px 20px" }}>
