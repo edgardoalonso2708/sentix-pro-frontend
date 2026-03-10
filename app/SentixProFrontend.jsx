@@ -1028,6 +1028,40 @@ export default function SentixProFrontend() {
                     </div>
                   )}
 
+                  {/* Order Book Depth */}
+                  {signal.orderBook && (
+                    <div style={{ display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ fontSize: 11, color: muted }}>
+                        <span style={{ fontSize: 9, letterSpacing: 0.3 }}>BID/ASK </span>
+                        <span style={{
+                          color: signal.orderBook.imbalanceRatio >= 1.5 ? green : signal.orderBook.imbalanceRatio <= 0.67 ? red : text,
+                          fontWeight: 700
+                        }}>
+                          {signal.orderBook.imbalanceRatio?.toFixed(2)}x
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: muted }}>
+                        <span style={{ fontSize: 9, letterSpacing: 0.3 }}>SPREAD </span>
+                        <span style={{ color: signal.orderBook.spreadPercent > 0.1 ? amber : text, fontWeight: 700 }}>
+                          {signal.orderBook.spreadPercent?.toFixed(3)}%
+                        </span>
+                      </div>
+                      {signal.orderBook.pressure && signal.orderBook.pressure !== 'unavailable' && signal.orderBook.pressure !== 'balanced' && (
+                        <div style={{
+                          fontSize: 9,
+                          color: signal.orderBook.pressure.includes('buy') ? green : red,
+                          fontWeight: 700,
+                          background: `${signal.orderBook.pressure.includes('buy') ? green : red}15`,
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          textTransform: "uppercase"
+                        }}>
+                          {signal.orderBook.pressure.replace(/_/g, ' ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Reasons */}
                   <div style={{ fontSize: 12, color: text, marginBottom: 8 }}>
                     {signal.reasons}
@@ -1717,6 +1751,67 @@ export default function SentixProFrontend() {
   const AlertsTab = () => {
     const [testResult, setTestResult] = useState(null);
     const [testing, setTesting] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterForm, setFilterForm] = useState(null);
+    const [savingFilters, setSavingFilters] = useState(false);
+    const [filterSaveMsg, setFilterSaveMsg] = useState(null);
+
+    // Load filters on mount
+    useEffect(() => {
+      (async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/alert-filters/default-user`);
+          if (res.ok) {
+            const data = await res.json();
+            setFilterForm({
+              assets: data.assets || [],
+              actions: data.actions || ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
+              min_confidence: data.min_confidence ?? 50,
+              min_score: data.min_score ?? 25,
+              telegram_enabled: data.telegram_enabled ?? true,
+              email_enabled: data.email_enabled ?? true,
+              cooldown_minutes: data.cooldown_minutes ?? 20,
+              enabled: data.enabled ?? true
+            });
+          }
+        } catch (e) {
+          // use defaults
+          setFilterForm({
+            assets: [],
+            actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
+            min_confidence: 50,
+            min_score: 25,
+            telegram_enabled: true,
+            email_enabled: true,
+            cooldown_minutes: 20,
+            enabled: true
+          });
+        }
+      })();
+    }, []);
+
+    const handleSaveFilters = async () => {
+      if (!filterForm) return;
+      setSavingFilters(true);
+      setFilterSaveMsg(null);
+      try {
+        const res = await fetch(`${API_URL}/api/alert-filters/default-user`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(filterForm)
+        });
+        if (res.ok) {
+          setFilterSaveMsg({ ok: true, text: 'Filtros guardados' });
+        } else {
+          setFilterSaveMsg({ ok: false, text: 'Error al guardar' });
+        }
+      } catch (e) {
+        setFilterSaveMsg({ ok: false, text: e.message });
+      } finally {
+        setSavingFilters(false);
+        setTimeout(() => setFilterSaveMsg(null), 3000);
+      }
+    };
 
     const handleTestAlert = async () => {
       setTesting(true);
@@ -1738,6 +1833,9 @@ export default function SentixProFrontend() {
         setTesting(false);
       }
     };
+
+    const ALL_ACTIONS = ['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'];
+    const AVAILABLE_ASSETS = ['BITCOIN', 'ETHEREUM', 'BINANCECOIN', 'SOLANA', 'CARDANO', 'RIPPLE'];
 
     return (
       <div>
@@ -1838,6 +1936,156 @@ export default function SentixProFrontend() {
                   📱 Telegram: <span style={{ color: testResult.delivery.telegram === 'sent' ? green : amber }}>
                     {testResult.delivery.telegram === 'sent' ? '✅ Enviado' : testResult.delivery.telegram}
                   </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Custom Alert Filters */}
+        <div style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setShowFilters(!showFilters)}>
+            <div style={sTitle}>FILTROS PERSONALIZADOS</div>
+            <div style={{ fontSize: 18, color: muted, transform: showFilters ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</div>
+          </div>
+
+          {showFilters && filterForm && (
+            <div style={{ marginTop: 14 }}>
+              {/* Master switch */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <button onClick={() => setFilterForm(p => ({ ...p, enabled: !p.enabled }))} style={{
+                  width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+                  background: filterForm.enabled ? green : bg3,
+                  position: "relative", transition: "background 0.2s"
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 9, background: "#fff",
+                    position: "absolute", top: 3, left: filterForm.enabled ? 22 : 4,
+                    transition: "left 0.2s"
+                  }} />
+                </button>
+                <span style={{ fontSize: 12, color: filterForm.enabled ? text : muted, fontWeight: 700 }}>
+                  {filterForm.enabled ? 'Filtros activos' : 'Filtros desactivados (usa defaults)'}
+                </span>
+              </div>
+
+              {/* Signal types */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>TIPOS DE SEÑAL</label>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {ALL_ACTIONS.map(act => {
+                    const active = filterForm.actions.includes(act);
+                    const isBuy = act.includes('BUY');
+                    const clr = isBuy ? green : red;
+                    return (
+                      <button key={act} onClick={() => {
+                        setFilterForm(p => ({
+                          ...p,
+                          actions: active ? p.actions.filter(a => a !== act) : [...p.actions, act]
+                        }));
+                      }} style={{
+                        padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700,
+                        background: active ? `${clr}20` : bg3,
+                        color: active ? clr : muted,
+                        border: `1px solid ${active ? clr : border}`
+                      }}>
+                        {act}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Assets filter */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>
+                  ACTIVOS ({filterForm.assets.length === 0 ? 'todos' : filterForm.assets.length + ' seleccionados'})
+                </label>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {AVAILABLE_ASSETS.map(asset => {
+                    const active = filterForm.assets.includes(asset);
+                    return (
+                      <button key={asset} onClick={() => {
+                        setFilterForm(p => ({
+                          ...p,
+                          assets: active ? p.assets.filter(a => a !== asset) : [...p.assets, asset]
+                        }));
+                      }} style={{
+                        padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700,
+                        background: active ? `${blue}20` : bg3,
+                        color: active ? blue : muted,
+                        border: `1px solid ${active ? blue : border}`
+                      }}>
+                        {asset}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>Sin seleccion = alertas para todos los activos</div>
+              </div>
+
+              {/* Min confidence slider */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 4, fontWeight: 700 }}>
+                  CONFIANZA MINIMA: <span style={{ color: text }}>{filterForm.min_confidence}%</span>
+                </label>
+                <input type="range" min="20" max="90" step="5"
+                  value={filterForm.min_confidence}
+                  onChange={e => setFilterForm(p => ({ ...p, min_confidence: parseInt(e.target.value) }))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              {/* Min score slider */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 4, fontWeight: 700 }}>
+                  SCORE MINIMO: <span style={{ color: text }}>{filterForm.min_score}</span>
+                </label>
+                <input type="range" min="10" max="60" step="5"
+                  value={filterForm.min_score}
+                  onChange={e => setFilterForm(p => ({ ...p, min_score: parseInt(e.target.value) }))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              {/* Cooldown */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 4, fontWeight: 700 }}>
+                  COOLDOWN: <span style={{ color: text }}>{filterForm.cooldown_minutes} min</span>
+                </label>
+                <input type="range" min="5" max="120" step="5"
+                  value={filterForm.cooldown_minutes}
+                  onChange={e => setFilterForm(p => ({ ...p, cooldown_minutes: parseInt(e.target.value) }))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              {/* Delivery channels */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: text, cursor: "pointer" }}>
+                  <input type="checkbox" checked={filterForm.telegram_enabled}
+                    onChange={e => setFilterForm(p => ({ ...p, telegram_enabled: e.target.checked }))} />
+                  Telegram
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: text, cursor: "pointer" }}>
+                  <input type="checkbox" checked={filterForm.email_enabled}
+                    onChange={e => setFilterForm(p => ({ ...p, email_enabled: e.target.checked }))} />
+                  Email
+                </label>
+              </div>
+
+              {/* Save button */}
+              <button onClick={handleSaveFilters} disabled={savingFilters} style={{
+                width: "100%", padding: "10px", border: "none", borderRadius: 7, cursor: savingFilters ? "not-allowed" : "pointer",
+                background: savingFilters ? bg3 : `linear-gradient(135deg, ${blue}, #3b82f6)`,
+                color: "#fff", fontSize: 12, fontWeight: 700
+              }}>
+                {savingFilters ? 'Guardando...' : 'GUARDAR FILTROS'}
+              </button>
+
+              {filterSaveMsg && (
+                <div style={{ marginTop: 8, fontSize: 11, color: filterSaveMsg.ok ? green : red, textAlign: "center" }}>
+                  {filterSaveMsg.ok ? '✅' : '❌'} {filterSaveMsg.text}
                 </div>
               )}
             </div>
