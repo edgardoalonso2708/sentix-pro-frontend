@@ -3729,7 +3729,9 @@ export default function SentixProFrontend() {
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>⚡ Optimizador de Estrategia</h2>
         <p style={{ color: muted, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
           Prueba variaciones de un parámetro de la estrategia contra datos históricos.
-          El optimizador ejecuta un backtest por cada valor y encuentra la configuración óptima por Sharpe ratio.
+          {optConfig.days >= 30
+            ? ' Walk-forward validation (70/30 train/test) detecta sobreajuste — rankea por Sharpe OOS.'
+            : ' El optimizador ejecuta un backtest por cada valor y encuentra la configuración óptima por Sharpe ratio.'}
         </p>
 
         {/* Config Panel */}
@@ -3849,6 +3851,49 @@ export default function SentixProFrontend() {
               </div>
             </div>
 
+            {/* Walk-Forward Validation Cards */}
+            {optResult.validation?.enabled && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>OOS SHARPE</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.bestOosSharpe || 0) > 0 ? green : red }}>
+                    {optResult.validation.bestOosSharpe != null ? optResult.validation.bestOosSharpe.toFixed(2) : 'N/A'}
+                  </div>
+                </div>
+                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>DEGRADACION</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.avgDegradation || 0) > 0.5 ? red : (optResult.validation.avgDegradation || 0) > 0.3 ? '#f59e0b' : green }}>
+                    {optResult.validation.avgDegradation != null ? `${(optResult.validation.avgDegradation * 100).toFixed(0)}%` : 'N/A'}
+                  </div>
+                </div>
+                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>RANK CORR.</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.rankCorrelation || 0) > 0.5 ? green : (optResult.validation.rankCorrelation || 0) > 0.2 ? '#f59e0b' : red }}>
+                    {optResult.validation.rankCorrelation != null ? optResult.validation.rankCorrelation.toFixed(2) : 'N/A'}
+                  </div>
+                </div>
+                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>SPLIT</div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>
+                    {optResult.validation.trainDays}d / {optResult.validation.testDays}d
+                  </div>
+                  <div style={{ fontSize: 9, color: muted }}>train / test</div>
+                </div>
+              </div>
+            )}
+
+            {/* Overfit Warning */}
+            {optResult.validation?.overfitWarning && (
+              <div style={{
+                padding: 12, background: '#f59e0b20', border: '1px solid #f59e0b',
+                borderRadius: 8, fontSize: 12, marginBottom: 16, color: '#f59e0b'
+              }}>
+                <strong>Alerta de Sobreajuste:</strong> {optResult.validation.details}
+                {' '}(degradacion: {(optResult.validation.avgDegradation * 100).toFixed(0)}%,
+                rank corr: {optResult.validation.rankCorrelation?.toFixed(2)})
+              </div>
+            )}
+
             {/* Results Grid */}
             <div style={{ background: bg2, borderRadius: 8, padding: 16, overflowX: 'auto' }}>
               <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📊 Resultados por Valor ({optResult.paramLabel})</h3>
@@ -3856,12 +3901,18 @@ export default function SentixProFrontend() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${border}` }}>
                     <th style={{ textAlign: 'left', padding: '8px 6px', color: muted, fontSize: 10 }}>VALOR</th>
-                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>SHARPE</th>
+                    <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>{optResult.validation?.enabled ? 'IS SHARPE' : 'SHARPE'}</th>
+                    {optResult.validation?.enabled && (
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>OOS SHARPE</th>
+                    )}
                     <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>P.FACTOR</th>
                     <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>WIN%</th>
                     <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>TRADES</th>
                     <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>PnL%</th>
                     <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>DRAWDOWN</th>
+                    {optResult.validation?.enabled && (
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: muted, fontSize: 10 }}>DEGRAD.</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -3881,6 +3932,11 @@ export default function SentixProFrontend() {
                         <td style={{ textAlign: 'right', padding: '8px 6px', color: r.sharpe > 0 ? green : red }}>
                           {r.sharpe?.toFixed(2)}
                         </td>
+                        {optResult.validation?.enabled && (
+                          <td style={{ textAlign: 'right', padding: '8px 6px', color: (r.outOfSample?.sharpe || 0) > 0 ? green : red }}>
+                            {r.outOfSample?.sharpe != null ? r.outOfSample.sharpe.toFixed(2) : 'N/A'}
+                          </td>
+                        )}
                         <td style={{ textAlign: 'right', padding: '8px 6px', color: r.profitFactor >= 1 ? green : red }}>
                           {r.profitFactor?.toFixed(2)}
                         </td>
@@ -3892,6 +3948,16 @@ export default function SentixProFrontend() {
                         <td style={{ textAlign: 'right', padding: '8px 6px', color: red }}>
                           {r.maxDrawdownPercent?.toFixed(1)}%
                         </td>
+                        {optResult.validation?.enabled && (() => {
+                          const deg = r.inSample?.sharpe > 0 && r.outOfSample?.sharpe != null
+                            ? ((1 - r.outOfSample.sharpe / r.inSample.sharpe) * 100)
+                            : null;
+                          return (
+                            <td style={{ textAlign: 'right', padding: '8px 6px', color: deg != null ? (deg > 50 ? red : deg > 30 ? '#f59e0b' : green) : muted }}>
+                              {deg != null ? `${deg.toFixed(0)}%` : 'N/A'}
+                            </td>
+                          );
+                        })()}
                       </tr>
                     );
                   })}
@@ -3900,7 +3966,10 @@ export default function SentixProFrontend() {
             </div>
 
             <div style={{ fontSize: 10, color: muted, marginTop: 8, textAlign: 'right' }}>
-              ⏱ Completado en {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} días
+              {optResult.validation?.enabled
+                ? `🔬 Walk-forward ${optResult.validation.trainDays}d/${optResult.validation.testDays}d · Rankeado por ${optResult.validation.rankedBy} · `
+                : ''}
+              ⏱ {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} días
             </div>
           </div>
         )}
@@ -3923,6 +3992,14 @@ export default function SentixProFrontend() {
                     {h.status === 'completed' ? (
                       <>
                         <span style={{ color: green }}>Best: {h.bestValue} (Sharpe {h.bestSharpe?.toFixed(2)})</span>
+                        {h.validationEnabled && h.bestOosSharpe != null && (
+                          <span style={{ color: h.bestOosSharpe > 0 ? green : red, fontSize: 10 }}>
+                            OOS: {h.bestOosSharpe.toFixed(2)}
+                          </span>
+                        )}
+                        {h.overfitWarning && (
+                          <span style={{ color: '#f59e0b', fontSize: 10, fontWeight: 700 }}>OVERFIT</span>
+                        )}
                         {h.improvement !== null && (
                           <span style={{ color: h.improvement > 0 ? green : h.improvement < 0 ? red : muted, fontSize: 10 }}>
                             {h.improvement > 0 ? '+' : ''}{h.improvement?.toFixed(2)} vs default
