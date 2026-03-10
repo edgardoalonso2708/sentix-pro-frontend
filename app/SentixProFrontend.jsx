@@ -1399,6 +1399,42 @@ export default function SentixProFrontend() {
                     </div>
                   )}
 
+                  {/* Support/Resistance Levels */}
+                  {signal.supportResistanceLevels && signal.action !== 'HOLD' && (
+                    <div style={{
+                      background: bg2,
+                      borderRadius: 6,
+                      padding: "10px 12px",
+                      marginBottom: 10
+                    }}>
+                      <div style={{ fontSize: 10, color: muted, fontWeight: 700, marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                        Soporte / Resistencia
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <div>
+                          {(signal.supportResistanceLevels.supports || []).map((s, i) => (
+                            <div key={`s${i}`} style={{ fontSize: 11, color: green, marginBottom: 2 }}>
+                              S{i + 1}: {formatPrice(s.price)}
+                              <span style={{ fontSize: 9, color: muted, marginLeft: 4 }}>
+                                ({s.touches}x, -{s.distancePercent?.toFixed(1)}%)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div>
+                          {(signal.supportResistanceLevels.resistances || []).map((r, i) => (
+                            <div key={`r${i}`} style={{ fontSize: 11, color: red, marginBottom: 2 }}>
+                              R{i + 1}: {formatPrice(r.price)}
+                              <span style={{ fontSize: 9, color: muted, marginLeft: 4 }}>
+                                ({r.touches}x, +{r.distancePercent?.toFixed(1)}%)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Derivatives Row */}
                   {signal.derivatives && signal.derivatives.fundingRate !== undefined && (
                     <div style={{
