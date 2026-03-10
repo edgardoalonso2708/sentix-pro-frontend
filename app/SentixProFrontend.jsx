@@ -3991,10 +3991,16 @@ export default function SentixProFrontend() {
       { icon: "📊", title: "Derivados" },
       { icon: "🌍", title: "Contexto Macro" },
       { icon: "💪", title: "Fuerza de la Señal" },
-      { icon: "⚙", title: "Los 13 Factores" },
+      { icon: "⚙", title: "Los 14 Factores" },
       { icon: "📈", title: "Dashboard Macro" },
       { icon: "🔄", title: "Flujo de Decisión" },
       { icon: "⚠", title: "Errores Comunes" },
+      { icon: "📗", title: "Order Book Depth" },
+      { icon: "📉", title: "Dashboard Analytics" },
+      { icon: "💰", title: "Paper Trading" },
+      { icon: "🧪", title: "Backtesting" },
+      { icon: "🔬", title: "Optimización" },
+      { icon: "🔔", title: "Filtros de Alertas" },
       { icon: "📖", title: "Glosario" },
     ];
 
@@ -4171,8 +4177,8 @@ export default function SentixProFrontend() {
         </div>);
 
         case 7: return (<div>
-          <div style={sectionHeaderStyle}>⚙ 8. Los 13 Factores del Motor de Señales</div>
-          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Cada señal se genera analizando estos 13 factores:</p>
+          <div style={sectionHeaderStyle}>⚙ 8. Los 14 Factores del Motor de Señales</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Cada señal se genera analizando estos 14 factores:</p>
           <GuideTable headers={["#", "Factor", "Peso máx", "Qué analiza"]} rows={[
             ["1", <strong>Tendencia EMA</strong>, "±20", "Dirección de medias móviles 9, 21, 50"],
             ["2", <strong>ADX</strong>, "Multi.", "Fuerza de la tendencia (amplifica o reduce)"],
@@ -4180,14 +4186,16 @@ export default function SentixProFrontend() {
             ["4", <strong>MACD</strong>, "±15", "Momentum y cruces de señal"],
             ["5", <strong>Bollinger Bands</strong>, "±10", "Volatilidad y posición del precio"],
             ["6", <strong>Soporte/Resistencia</strong>, "±8", "Niveles clave de precio"],
-            ["7", <strong>Divergencias RSI</strong>, "±20", "Divergencias ocultas (cambios de tendencia)"],
-            ["8", <strong>Volumen</strong>, "±10", "Confirmación o negación del movimiento"],
-            ["9", <strong>Momentum 24h</strong>, "±10", "Fuerza del cambio diario"],
-            ["10", <strong>Fear & Greed</strong>, "±3", "Sentimiento extremo (contrarian)"],
-            ["11", <strong>Derivados</strong>, "±15", "Funding rate, OI, L/S ratio"],
-            ["12", <strong>BTC Dominance</strong>, "±10", "Flujo de capital BTC vs Alts"],
-            ["13", <strong>DXY Macro</strong>, "±10", "Fortaleza del dólar (contexto macro global)"],
+            ["7", <strong>Order Book Depth</strong>, "±12", "Paredes de órdenes, imbalance bid/ask"],
+            ["8", <strong>Divergencias RSI</strong>, "±20", "Divergencias ocultas (cambios de tendencia)"],
+            ["9", <strong>Volumen</strong>, "±10", "Confirmación o negación del movimiento"],
+            ["10", <strong>Momentum 24h</strong>, "±10", "Fuerza del cambio diario"],
+            ["11", <strong>Fear & Greed</strong>, "±3", "Sentimiento extremo (contrarian)"],
+            ["12", <strong>Derivados</strong>, "±15", "Funding rate, OI, L/S ratio"],
+            ["13", <strong>BTC Dominance</strong>, "±10", "Flujo de capital BTC vs Alts"],
+            ["14", <strong>DXY Macro</strong>, "±10", "Fortaleza del dólar (contexto macro global)"],
           ]} />
+          <div style={tipBox}>💡 <strong>Order Book Depth</strong> es el factor #7: analiza el libro de órdenes de Binance en tiempo real para detectar paredes de compra/venta significativas y el balance entre presión compradora y vendedora.</div>
         </div>);
 
         case 8: return (<div>
@@ -4250,7 +4258,189 @@ export default function SentixProFrontend() {
         </div>);
 
         case 11: return (<div>
-          <div style={sectionHeaderStyle}>📖 12. Glosario Rápido</div>
+          <div style={sectionHeaderStyle}>📗 12. Order Book Depth</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>El Order Book Depth analiza el libro de órdenes de Binance en tiempo real para detectar presión de compra/venta institucional.</p>
+          <div style={{ ...sTitle }}>Qué muestra cada señal</div>
+          <GuideTable headers={["Elemento", "Significado"]} rows={[
+            [<strong>Bid Wall</strong>, "Pared de compra grande. Soporte fuerte donde hay muchas órdenes de compra acumuladas."],
+            [<strong>Ask Wall</strong>, "Pared de venta grande. Resistencia donde hay muchas órdenes de venta acumuladas."],
+            [<strong>Imbalance</strong>, "Ratio entre presión compradora y vendedora. > 1.5 = más compradores. < 0.67 = más vendedores."],
+            [<strong>Profundidad %</strong>, "Analiza el 2% del spread cercano al precio actual."],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Cómo interpretar el Imbalance</div>
+          <GuideTable headers={["Imbalance", "Color", "Significado"]} rows={[
+            ["> 2.0", <span style={{color: green}}>🟢 Verde</span>, "Fuerte presión compradora. Refuerza señales BUY."],
+            ["1.5 - 2.0", <span style={{color: green}}>🟢 Verde claro</span>, "Presión compradora moderada."],
+            ["0.67 - 1.5", <span style={{color: muted}}>⚪ Gris</span>, "Equilibrado. Sin sesgo claro."],
+            ["0.5 - 0.67", <span style={{color: red}}>🔴 Rojo claro</span>, "Presión vendedora moderada."],
+            ["< 0.5", <span style={{color: red}}>🔴 Rojo</span>, "Fuerte presión vendedora. Refuerza señales SELL."],
+          ]} />
+          <div style={tipBox}>💡 <strong>Clave:</strong> Las paredes de órdenes grandes pueden actuar como soporte/resistencia temporal. Si ves una Bid Wall de $5M debajo del precio, es difícil que el precio baje más allá de ese nivel.</div>
+          <div style={alertBox}>⚠ <strong>Ojo:</strong> Las paredes pueden ser "fake" (spoofing). Si una pared desaparece rápidamente, no confíes en ella. Las paredes que persisten varios minutos son más confiables.</div>
+        </div>);
+
+        case 12: return (<div>
+          <div style={sectionHeaderStyle}>📉 13. Dashboard Analytics</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>El Dashboard incluye 4 gráficos interactivos que te ayudan a analizar el rendimiento de tu trading:</p>
+          <div style={{ ...sTitle }}>Gráficos disponibles</div>
+          <GuideTable headers={["Gráfico", "Qué muestra", "Cuándo aparece"]} rows={[
+            [<strong>Curva de Equity</strong>, "Evolución de tu capital en Paper Trading a lo largo del tiempo.", "Cuando tienes al menos 2 trades cerrados."],
+            [<strong>P&L Diario</strong>, "Ganancia o pérdida de cada día en barras verdes/rojas.", "Cuando tienes trades cerrados."],
+            [<strong>Rendimiento por Activo</strong>, "Wins vs Losses por cada criptomoneda operada.", "Cuando tienes trades cerrados."],
+            [<strong>Backtest Equity Curve</strong>, "Curva de equity del último backtest completado.", "Cuando hay un backtest completado."],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Cómo interpretar la Curva de Equity</div>
+          <div style={{ ...card, padding: 14 }}>
+            {[
+              "Línea ascendente constante = estrategia consistente",
+              "Drawdowns profundos = posiciones demasiado grandes o stops mal ubicados",
+              "Línea de referencia = tu capital inicial (si estás debajo, estás en pérdida)",
+              "Tooltip muestra equity exacta y % de drawdown desde el máximo"
+            ].map((item, i) => (
+              <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>• {item}</div>
+            ))}
+          </div>
+          <div style={tipBox}>💡 <strong>Consejo:</strong> Usa el P&L Diario para identificar qué días de la semana operas mejor. Muchos traders descubren que operan peor los lunes y viernes.</div>
+        </div>);
+
+        case 13: return (<div>
+          <div style={sectionHeaderStyle}>💰 14. Paper Trading (Trading Simulado)</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Paper Trading te permite practicar con dinero virtual siguiendo las señales del sistema. Sin riesgo real.</p>
+          <div style={{ ...sTitle }}>Configuración</div>
+          <GuideTable headers={["Parámetro", "Default", "Descripción"]} rows={[
+            [<strong>Capital inicial</strong>, "$10,000", "Capital virtual con el que empiezas"],
+            [<strong>Máx posiciones</strong>, "5", "Máximo de trades abiertos simultáneamente"],
+            [<strong>Riesgo por trade</strong>, "2%", "Porcentaje del capital arriesgado por operación"],
+            [<strong>Min confluencia</strong>, "2", "Mínimo de timeframes que deben coincidir"],
+            [<strong>Min R:R</strong>, "1.5", "Ratio mínimo riesgo/recompensa para entrar"],
+            [<strong>Señales permitidas</strong>, "STRONG BUY/SELL", "Qué tipos de señales activan trades"],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Cómo funciona</div>
+          <div style={{ ...card, padding: 14 }}>
+            {[
+              "1. Activa Paper Trading en la pestaña Paper → Config",
+              "2. El sistema abre trades automáticamente según tus filtros de señales",
+              "3. Los trades usan Stop Loss y Take Profit calculados por el motor de señales",
+              "4. Las posiciones se cierran automáticamente cuando tocan SL, TP1 o TP2",
+              "5. Revisa tus métricas en tiempo real: Win Rate, P&L, Sharpe Ratio",
+              "6. Analiza el historial completo de trades cerrados con todos los detalles"
+            ].map((step, i) => (
+              <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+            ))}
+          </div>
+          <div style={{ ...sTitle, marginTop: 18 }}>Métricas clave</div>
+          <GuideTable headers={["Métrica", "Qué significa", "Valor ideal"]} rows={[
+            [<strong>Win Rate</strong>, "% de trades ganadores", "> 50%"],
+            [<strong>Total P&L</strong>, "Ganancia/pérdida total acumulada", "Positivo y creciente"],
+            [<strong>Avg Win / Avg Loss</strong>, "Promedio de ganancias vs pérdidas", "Avg Win > Avg Loss"],
+            [<strong>Sharpe Ratio</strong>, "Retorno ajustado por riesgo", "> 1.0 (bueno), > 2.0 (excelente)"],
+            [<strong>Max Drawdown</strong>, "Máxima caída desde el pico", "< 20% idealmente"],
+            [<strong>Profit Factor</strong>, "Total ganancias / Total pérdidas", "> 1.5"],
+          ]} />
+          <div style={alertBox}>⚠ <strong>Importante:</strong> Opera en Paper Trading al menos 2-4 semanas antes de arriesgar dinero real. Esto te permite conocer el sistema y ajustar los parámetros a tu estilo.</div>
+        </div>);
+
+        case 14: return (<div>
+          <div style={sectionHeaderStyle}>🧪 15. Backtesting</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>El Backtesting simula cómo habrían funcionado las señales del motor en datos históricos reales.</p>
+          <div style={{ ...sTitle }}>Parámetros de configuración</div>
+          <GuideTable headers={["Parámetro", "Descripción", "Recomendación"]} rows={[
+            [<strong>Asset</strong>, "Criptomoneda a testear", "Empieza con Bitcoin"],
+            [<strong>Días</strong>, "Período histórico a analizar", "90 días mínimo para resultados significativos"],
+            [<strong>Capital</strong>, "Capital inicial simulado", "$10,000 es buen punto de partida"],
+            [<strong>Riesgo por trade</strong>, "% del capital por operación", "1-3% (2% es estándar)"],
+            [<strong>Min confluencia</strong>, "Mínimo de TFs alineados", "2 para más trades, 3 para más calidad"],
+            [<strong>Min R:R</strong>, "Ratio mínimo riesgo/recompensa", "1.5 estándar, 2.0 para mayor selectividad"],
+            [<strong>Step interval</strong>, "Granularidad de la simulación", "4h para balance entre detalle y velocidad"],
+            [<strong>Señales permitidas</strong>, "STRONG BUY, BUY, STRONG SELL, etc.", "Solo STRONG para máxima calidad"],
+            [<strong>Cooldown bars</strong>, "Barras de espera entre trades", "6 para evitar sobre-operar"],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Cómo interpretar resultados</div>
+          <div style={{ ...card, padding: 14 }}>
+            {[
+              "Total Return: Rendimiento total del período (busca > 0%)",
+              "Win Rate: % de trades ganadores (busca > 45%)",
+              "Sharpe Ratio: Rendimiento ajustado por riesgo (busca > 1.0)",
+              "Max Drawdown: Peor caída (busca < 25%)",
+              "Equity Curve: Debería ser generalmente ascendente",
+              "Cada trade muestra: activo, dirección, entrada, salida, P&L, duración"
+            ].map((item, i) => (
+              <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>• {item}</div>
+            ))}
+          </div>
+          <div style={tipBox}>💡 <strong>Consejo:</strong> Ejecuta el mismo backtest con diferentes parámetros para encontrar la combinación óptima. Luego usa el Optimizador para automatizar este proceso.</div>
+          <div style={alertBox}>⚠ <strong>Cuidado con el overfitting:</strong> Si tus resultados son &quot;demasiado buenos&quot; ({'>'} 200% en 30 días), probablemente los parámetros están sobre-ajustados a datos pasados y no funcionarán en el futuro.</div>
+        </div>);
+
+        case 15: return (<div>
+          <div style={sectionHeaderStyle}>🔬 16. Optimización de Estrategia</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>El Optimizador prueba automáticamente cientos de combinaciones de un parámetro del motor de señales para encontrar el valor óptimo.</p>
+          <div style={{ ...sTitle }}>Parámetros optimizables</div>
+          <GuideTable headers={["Parámetro", "Qué controla", "Rango típico"]} rows={[
+            [<strong>rsiPeriod</strong>, "Período del RSI", "7-21"],
+            [<strong>rsiOverbought</strong>, "Nivel de sobrecompra RSI", "65-80"],
+            [<strong>rsiOversold</strong>, "Nivel de sobreventa RSI", "20-35"],
+            [<strong>emaPeriods</strong>, "Períodos de las EMAs", "Varios"],
+            [<strong>macdFast/Slow/Signal</strong>, "Parámetros del MACD", "Varios"],
+            [<strong>bollingerPeriod</strong>, "Período de Bollinger Bands", "15-25"],
+            [<strong>bollingerStdDev</strong>, "Desviación estándar BB", "1.5-3.0"],
+            [<strong>atrPeriod</strong>, "Período del ATR", "10-20"],
+            [<strong>volumeThreshold</strong>, "Umbral de volumen", "1.0-3.0"],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Cómo funciona</div>
+          <div style={flowBox}>{`1. Selecciona el ACTIVO a optimizar (ej: bitcoin)
+2. Selecciona el PARÁMETRO a optimizar (ej: rsiPeriod)
+3. Define el período de datos (días)
+4. Click en "Optimizar"
+
+El sistema:
+  → Genera una grilla de valores para el parámetro
+  → Ejecuta un backtest completo por cada valor
+  → Compara resultados por Sharpe Ratio y Return
+  → Te muestra el MEJOR valor encontrado
+
+5. Revisa los resultados ordenados
+6. Aplica el mejor valor a tu configuración`}</div>
+          <div style={tipBox}>💡 <strong>Flujo recomendado:</strong> Optimiza → Backtest con valores óptimos → Paper Trade 2 semanas → Si funciona, opera en real.</div>
+          <div style={alertBox}>⚠ <strong>No optimices todo a la vez.</strong> Optimiza un parámetro, fija el mejor valor, luego optimiza el siguiente. Optimizar todos juntos puede crear resultados irreales.</div>
+        </div>);
+
+        case 16: return (<div>
+          <div style={sectionHeaderStyle}>🔔 17. Filtros de Alertas Personalizados</div>
+          <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Configura qué alertas de Telegram recibes mediante filtros avanzados basados en condiciones de las señales.</p>
+          <div style={{ ...sTitle }}>Tipos de condiciones</div>
+          <GuideTable headers={["Campo", "Operadores", "Ejemplo"]} rows={[
+            [<strong>score</strong>, "> , < , >= , <=", "score > 75 (solo señales con score alto)"],
+            [<strong>confidence</strong>, "> , < , >= , <=", "confidence >= 60 (alta confianza)"],
+            [<strong>strength</strong>, "= , !=", "strength = STRONG BUY"],
+            [<strong>action</strong>, "= , !=", "action != HOLD (excluir holds)"],
+            [<strong>asset</strong>, "= , in", "asset in bitcoin,ethereum"],
+            [<strong>riskReward</strong>, "> , >= , <", "riskReward >= 2.0"],
+            [<strong>confluence</strong>, "= , >=", "confluence >= 2"],
+          ]} />
+          <div style={{ ...sTitle, marginTop: 18 }}>Lógica de condiciones</div>
+          <div style={{ ...card, padding: 14 }}>
+            {[
+              "AND: Todas las condiciones deben cumplirse (más restrictivo)",
+              "OR: Al menos una condición debe cumplirse (más permisivo)",
+              "Puedes combinar múltiples condiciones por filtro",
+              "Múltiples filtros se evalúan independientemente"
+            ].map((item, i) => (
+              <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>• {item}</div>
+            ))}
+          </div>
+          <div style={{ ...sTitle, marginTop: 18 }}>Ejemplos de filtros útiles</div>
+          <GuideTable headers={["Nombre", "Condiciones", "Para qué"]} rows={[
+            [<strong>Solo señales fuertes</strong>, "strength = STRONG BUY OR strength = STRONG SELL", "Recibir solo las mejores oportunidades"],
+            [<strong>Bitcoin premium</strong>, "asset = bitcoin AND score > 70", "Solo alertas de BTC con alto score"],
+            [<strong>Alto R:R</strong>, "riskReward >= 2.5 AND confluence >= 2", "Trades con excelente ratio riesgo/recompensa"],
+            [<strong>Excluir holds</strong>, "action != HOLD", "No recibir alertas de HOLD (esperar)"],
+          ]} />
+          <div style={tipBox}>💡 <strong>Consejo:</strong> Empieza con filtros amplios y ve restringiéndolos. Si no recibes alertas en 24h, tus filtros son demasiado estrictos.</div>
+        </div>);
+
+        case 17: return (<div>
+          <div style={sectionHeaderStyle}>📖 18. Glosario Rápido</div>
           <GuideTable headers={["Término", "Significado"]} rows={[
             [<strong>ATR</strong>, "Average True Range. Mide la volatilidad típica del activo."],
             [<strong>RSI</strong>, "Relative Strength Index. Sobrecompra (>70) y sobreventa (<30)."],
@@ -4258,6 +4448,8 @@ export default function SentixProFrontend() {
             [<strong>EMA</strong>, "Media móvil exponencial. 9 > 21 > 50 = tendencia alcista."],
             [<strong>Bollinger Bands</strong>, "Bandas de volatilidad. Precio fuera = movimiento extremo."],
             [<strong>ADX</strong>, "Mide fuerza de tendencia. > 30 = fuerte. < 20 = sin tendencia."],
+            [<strong>Order Book</strong>, "Libro de órdenes. Muestra todas las órdenes de compra/venta pendientes."],
+            [<strong>Imbalance</strong>, "Desbalance entre órdenes de compra y venta en el order book."],
             [<strong>Funding Rate</strong>, "Tasa que pagan longs a shorts (o viceversa) cada 8 horas."],
             [<strong>OI</strong>, "Open Interest. Total de posiciones abiertas en futuros."],
             [<strong>L/S Ratio</strong>, "Proporción de longs vs shorts en el mercado."],
@@ -4265,9 +4457,15 @@ export default function SentixProFrontend() {
             [<strong>Trailing Stop</strong>, "Stop-loss que se mueve automáticamente a tu favor."],
             [<strong>R:R</strong>, "Risk/Reward. Cuánto puedes ganar vs cuánto puedes perder."],
             [<strong>Confluence</strong>, "Cuando múltiples timeframes están de acuerdo en la dirección."],
+            [<strong>Paper Trading</strong>, "Trading simulado con dinero virtual para practicar."],
+            [<strong>Backtesting</strong>, "Simular una estrategia en datos históricos reales."],
+            [<strong>Sharpe Ratio</strong>, "Rendimiento ajustado por riesgo. > 1 es bueno, > 2 excelente."],
+            [<strong>Drawdown</strong>, "Caída desde el punto más alto del capital."],
+            [<strong>Profit Factor</strong>, "Total de ganancias dividido entre total de pérdidas."],
+            [<strong>Overfitting</strong>, "Cuando los parámetros se ajustan demasiado a datos pasados."],
           ]} />
           <div style={{ textAlign: "center", marginTop: 20, fontSize: 10, color: muted, fontFamily: "monospace" }}>
-            Sentix Pro v4.5 · Motor de 13 factores · Multi-timeframe · Derivados · Contexto Macro
+            Sentix Pro v5.0 · Motor de 14 factores · Multi-timeframe · Order Book · Paper Trading · Backtesting
           </div>
         </div>);
 
@@ -4296,7 +4494,7 @@ export default function SentixProFrontend() {
             background: "rgba(168,85,247,0.2)", borderRadius: 20,
             fontSize: 10, color: purple, fontWeight: 700
           }}>
-            v4.5 · 13 Factores · Multi-Timeframe
+            v5.0 · 14 Factores · Multi-Timeframe
           </div>
         </div>
 
