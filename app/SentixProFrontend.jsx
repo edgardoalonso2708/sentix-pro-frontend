@@ -1539,6 +1539,56 @@ export default function SentixProFrontend() {
                     </div>
                   )}
 
+                  {/* Advanced Indicators Badges */}
+                  {signal.action !== 'HOLD' && signal.indicators && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                      {signal.indicators.ichimoku && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: signal.indicators.ichimoku.signal === 'bullish' ? `${green}20` : signal.indicators.ichimoku.signal === 'bearish' ? `${red}20` : `${amber}20`,
+                          color: signal.indicators.ichimoku.signal === 'bullish' ? green : signal.indicators.ichimoku.signal === 'bearish' ? red : amber,
+                          fontWeight: 600
+                        }}>
+                          ICHIMOKU: {signal.indicators.ichimoku.priceVsCloud}
+                          {signal.indicators.ichimoku.tkCross !== 'none' && ` · TK ${signal.indicators.ichimoku.tkCross}`}
+                        </div>
+                      )}
+                      {signal.indicators.vwap && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: signal.indicators.vwap.signal === 'bullish' || signal.indicators.vwap.signal === 'oversold' ? `${green}20` : signal.indicators.vwap.signal === 'bearish' || signal.indicators.vwap.signal === 'overbought' ? `${red}20` : `${amber}20`,
+                          color: signal.indicators.vwap.signal === 'bullish' || signal.indicators.vwap.signal === 'oversold' ? green : signal.indicators.vwap.signal === 'bearish' || signal.indicators.vwap.signal === 'overbought' ? red : amber,
+                          fontWeight: 600
+                        }}>
+                          VWAP: {signal.indicators.vwap.distancePercent > 0 ? '+' : ''}{signal.indicators.vwap.distancePercent}%
+                        </div>
+                      )}
+                      {signal.indicators.marketStructure && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: signal.indicators.marketStructure.structure === 'bullish' ? `${green}20` : signal.indicators.marketStructure.structure === 'bearish' ? `${red}20` : `${amber}20`,
+                          color: signal.indicators.marketStructure.structure === 'bullish' ? green : signal.indicators.marketStructure.structure === 'bearish' ? red : amber,
+                          fontWeight: 600
+                        }}>
+                          {signal.indicators.marketStructure.pattern !== 'unknown' && signal.indicators.marketStructure.pattern !== 'mixed' ? signal.indicators.marketStructure.pattern.replace('_', '/') : signal.indicators.marketStructure.structure}
+                          {signal.indicators.marketStructure.breakOfStructure?.detected && ' · BOS'}
+                          {signal.indicators.marketStructure.changeOfCharacter?.detected && ' · CHoCH'}
+                        </div>
+                      )}
+                      {signal.indicators.fibonacci && signal.indicators.fibonacci.nearestLevel && signal.indicators.fibonacci.distanceToNearest < 3 && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: `${amber}20`,
+                          color: amber,
+                          fontWeight: 600
+                        }}>
+                          FIB: {signal.indicators.fibonacci.nearestLevel.label}
+                          {signal.indicators.fibonacci.goldenRatio && ' ★'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Reasons */}
                   <div style={{ fontSize: 12, color: text, marginBottom: 8 }}>
                     {signal.reasons}
