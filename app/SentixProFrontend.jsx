@@ -273,6 +273,84 @@ export default function SentixProFrontend() {
     return { pnl, percentage };
   };
 
+  // ─── ALERT FILTERS: Load once on mount ─────────────────────────────────────
+  useEffect(() => {
+    if (alertFilterForm) return; // already loaded
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/alert-filters/default-user`);
+        if (res.ok) {
+          const data = await res.json();
+          setAlertFilterForm({
+            assets: data.assets || [],
+            actions: data.actions || ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
+            min_confidence: data.min_confidence ?? 50,
+            min_score: data.min_score ?? 25,
+            telegram_enabled: data.telegram_enabled ?? true,
+            email_enabled: data.email_enabled ?? true,
+            cooldown_minutes: data.cooldown_minutes ?? 20,
+            enabled: data.enabled ?? true
+          });
+        }
+      } catch (e) {
+        setAlertFilterForm({
+          assets: [], actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
+          min_confidence: 50, min_score: 25, telegram_enabled: true,
+          email_enabled: true, cooldown_minutes: 20, enabled: true
+        });
+      }
+    })();
+  }, [alertFilterForm]);
+
+  // ─── PAPER TRADING: Load data & auto-refresh (moved from PaperTradingTab) ──
+  const PAPER_HISTORY_PAGE_SIZE = 10;
+
+  const loadPaperData = useCallback(async () => {
+    setPaperLoading(true);
+    try {
+      const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
+        fetch(`${API_URL}/api/paper/config/${USER_ID}`),
+        fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
+        fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${PAPER_HISTORY_PAGE_SIZE}&offset=${paperHistoryPage * PAPER_HISTORY_PAGE_SIZE}`),
+        fetch(`${API_URL}/api/paper/performance/${USER_ID}`)
+      ]);
+      if (configRes.status === 'fulfilled' && configRes.value.ok) {
+        const d = await configRes.value.json();
+        setPaperConfig(d.config);
+        if (!paperConfigForm) setPaperConfigForm(d.config);
+      }
+      if (posRes.status === 'fulfilled' && posRes.value.ok) {
+        const d = await posRes.value.json();
+        setPaperPositions(d.positions || []);
+      }
+      if (histRes.status === 'fulfilled' && histRes.value.ok) {
+        const d = await histRes.value.json();
+        setPaperHistory(d.trades || []);
+        setPaperHistoryTotal(d.total || 0);
+      }
+      if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
+        const d = await perfRes.value.json();
+        setPaperMetrics(d.metrics);
+      }
+    } catch (err) {
+      console.error('Paper data load error:', err);
+    } finally {
+      setPaperLoading(false);
+    }
+  }, [paperHistoryPage, paperConfigForm]);
+
+  // Load paper data when page changes or tab becomes active
+  useEffect(() => {
+    if (tab === 'paper') loadPaperData();
+  }, [tab, paperHistoryPage, loadPaperData]);
+
+  // Auto refresh paper data every 30s when on paper tab
+  useEffect(() => {
+    if (tab !== 'paper') return;
+    const interval = setInterval(loadPaperData, 30000);
+    return () => clearInterval(interval);
+  }, [tab, loadPaperData]);
+
   // Test alert is now handled directly in AlertsTab
 
   // ─── STYLES ────────────────────────────────────────────────────────────────
@@ -1765,39 +1843,7 @@ export default function SentixProFrontend() {
     const savingFilters = alertSavingFilters, setSavingFilters = setAlertSavingFilters;
     const filterSaveMsg = alertFilterSaveMsg, setFilterSaveMsg = setAlertFilterSaveMsg;
 
-    // Load filters on mount
-    useEffect(() => {
-      (async () => {
-        try {
-          const res = await fetch(`${API_URL}/api/alert-filters/default-user`);
-          if (res.ok) {
-            const data = await res.json();
-            setFilterForm({
-              assets: data.assets || [],
-              actions: data.actions || ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
-              min_confidence: data.min_confidence ?? 50,
-              min_score: data.min_score ?? 25,
-              telegram_enabled: data.telegram_enabled ?? true,
-              email_enabled: data.email_enabled ?? true,
-              cooldown_minutes: data.cooldown_minutes ?? 20,
-              enabled: data.enabled ?? true
-            });
-          }
-        } catch (e) {
-          // use defaults
-          setFilterForm({
-            assets: [],
-            actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
-            min_confidence: 50,
-            min_score: 25,
-            telegram_enabled: true,
-            email_enabled: true,
-            cooldown_minutes: 20,
-            enabled: true
-          });
-        }
-      })();
-    }, []);
+    // NOTE: useEffect for loading filters moved to parent level to avoid remount issues
 
     const handleSaveFilters = async () => {
       if (!filterForm) return;
@@ -2162,51 +2208,7 @@ export default function SentixProFrontend() {
     const historyTotal = paperHistoryTotal, setHistoryTotal = setPaperHistoryTotal;
     const confirmReset = paperConfirmReset, setConfirmReset = setPaperConfirmReset;
 
-    const HISTORY_PAGE_SIZE = 10;
-
-    // Fetch all paper trading data
-    const loadPaperData = async () => {
-      setPaperLoading(true);
-      try {
-        const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
-          fetch(`${API_URL}/api/paper/config/${USER_ID}`),
-          fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
-          fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${HISTORY_PAGE_SIZE}&offset=${historyPage * HISTORY_PAGE_SIZE}`),
-          fetch(`${API_URL}/api/paper/performance/${USER_ID}`)
-        ]);
-
-        if (configRes.status === 'fulfilled' && configRes.value.ok) {
-          const d = await configRes.value.json();
-          setPaperConfig(d.config);
-          if (!configForm) setConfigForm(d.config);
-        }
-        if (posRes.status === 'fulfilled' && posRes.value.ok) {
-          const d = await posRes.value.json();
-          setPaperPositions(d.positions || []);
-        }
-        if (histRes.status === 'fulfilled' && histRes.value.ok) {
-          const d = await histRes.value.json();
-          setPaperHistory(d.trades || []);
-          setHistoryTotal(d.total || 0);
-        }
-        if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
-          const d = await perfRes.value.json();
-          setPaperMetrics(d.metrics);
-        }
-      } catch (err) {
-        console.error('Paper data load error:', err);
-      } finally {
-        setPaperLoading(false);
-      }
-    };
-
-    useEffect(() => { loadPaperData(); }, [historyPage]);
-
-    // Auto refresh every 30s
-    useEffect(() => {
-      const interval = setInterval(loadPaperData, 30000);
-      return () => clearInterval(interval);
-    }, [historyPage]);
+    // NOTE: loadPaperData and useEffects moved to parent level to avoid remount issues
 
     const handleSaveConfig = async () => {
       if (!configForm) return;
@@ -4235,12 +4237,14 @@ export default function SentixProFrontend() {
           ))}
         </div>
 
-        {/* Tab Content */}
-        {tab === "dashboard" && <DashboardTab />}
-        {tab === "signals" && <SignalsTab />}
+        {/* Tab Content
+            Tabs without internal hooks → direct function calls (no remount on parent re-render)
+            Tabs with internal useState/useEffect → kept as <Component /> (hooks require stable call order) */}
+        {tab === "dashboard" && DashboardTab()}
+        {tab === "signals" && SignalsTab()}
         {tab === "portfolio" && <PortfolioTab />}
-        {tab === "alerts" && <AlertsTab />}
-        {tab === "paper" && <PaperTradingTab />}
+        {tab === "alerts" && AlertsTab()}
+        {tab === "paper" && PaperTradingTab()}
         {tab === "backtest" && <BacktestTab />}
         {tab === "optimize" && <OptimizeTab />}
         {tab === "guide" && <GuideTab />}
