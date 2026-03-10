@@ -1354,6 +1354,28 @@ export default function SentixProFrontend() {
                     </div>
                   )}
 
+                  {/* Dynamic TF Weights / Regime */}
+                  {signal.timeframes?.dynamicWeights && signal.timeframes.dynamicWeights.regime !== 'static' && (
+                    <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <div style={{
+                        fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                        background: signal.timeframes.dynamicWeights.regime === 'trending' ? `${green}18` : signal.timeframes.dynamicWeights.regime === 'ranging' ? `${amber}18` : `${muted}18`,
+                        color: signal.timeframes.dynamicWeights.regime === 'trending' ? green : signal.timeframes.dynamicWeights.regime === 'ranging' ? amber : muted,
+                        textTransform: "uppercase", letterSpacing: 0.5
+                      }}>
+                        {signal.timeframes.dynamicWeights.regime === 'trending' ? '📈 TRENDING' : signal.timeframes.dynamicWeights.regime === 'ranging' ? '📊 RANGING' : '↔ MIXED'}
+                      </div>
+                      <div style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        ADX {signal.timeframes.dynamicWeights.adx4h}
+                      </div>
+                      <div style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        4h:{(signal.timeframes.dynamicWeights.tf4h * 100).toFixed(0)}%
+                        {' '}1h:{(signal.timeframes.dynamicWeights.tf1h * 100).toFixed(0)}%
+                        {' '}15m:{(signal.timeframes.dynamicWeights.tf15m * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  )}
+
                   {/* Trade Levels Panel */}
                   {signal.tradeLevels && signal.action !== 'HOLD' && (
                     <div style={{
