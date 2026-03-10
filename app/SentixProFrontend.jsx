@@ -82,6 +82,32 @@ export default function SentixProFrontend() {
   const [ptNewWallet, setPtNewWallet] = useState({ name: '', type: 'exchange', provider: 'binance', color: '#6366f1' });
   const [ptUploadWalletId, setPtUploadWalletId] = useState('');
 
+  // Backtest tab state (lifted to parent to survive re-renders)
+  const [btConfig, setBtConfig] = useState({
+    asset: 'bitcoin', days: 90, capital: 10000, riskPerTrade: 0.02,
+    minConfluence: 2, minRR: 1.5, stepInterval: '4h',
+    allowedStrength: ['STRONG BUY', 'STRONG SELL'], cooldownBars: 6
+  });
+  const [btRunning, setBtRunning] = useState(false);
+  const [btResult, setBtResult] = useState(null);
+  const [btHistory, setBtHistory] = useState([]);
+  const [btError, setBtError] = useState(null);
+  const [btPolling, setBtPolling] = useState(null);
+  const [btProgress, setBtProgress] = useState(0);
+  const [btTradesPage, setBtTradesPage] = useState(0);
+
+  // Optimize tab state (lifted to parent to survive re-renders)
+  const [optParams, setOptParams] = useState([]);
+  const [optConfig, setOptConfig] = useState({ asset: 'bitcoin', days: 30, paramName: '' });
+  const [optRunning, setOptRunning] = useState(false);
+  const [optResult, setOptResult] = useState(null);
+  const [optError, setOptError] = useState(null);
+  const [optProgress, setOptProgress] = useState({ current: 0, total: 0, message: '' });
+  const [optHistory, setOptHistory] = useState([]);
+
+  // Guide tab state (lifted to parent to survive re-renders)
+  const [guideSection, setGuideSection] = useState(0);
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
@@ -281,6 +307,57 @@ export default function SentixProFrontend() {
       if (!ptUploadWalletId) setPtUploadWalletId(wallets[0].id);
     }
   }, [wallets, ptNewPosition.walletId, ptUploadWalletId]);
+
+  // ─── BACKTEST TAB DATA LOADING (lifted from BacktestTab) ──────────────────
+  const loadBtHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBtHistory(data);
+      }
+    } catch (e) { console.error('Backtest history fetch error', e); }
+  }, [API_URL]);
+
+  useEffect(() => {
+    if (tab === 'backtest') loadBtHistory();
+  }, [tab, loadBtHistory]);
+
+  // Cleanup backtest polling
+  useEffect(() => {
+    return () => { if (btPolling) clearInterval(btPolling); };
+  }, [btPolling]);
+
+  // ─── OPTIMIZE TAB DATA LOADING (lifted from OptimizeTab) ──────────────────
+  const loadOptParams = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/optimize/params`);
+      if (res.ok) {
+        const data = await res.json();
+        setOptParams(data.params || []);
+        if (data.params?.length > 0) {
+          setOptConfig(c => c.paramName ? c : { ...c, paramName: data.params[0].key });
+        }
+      }
+    } catch (e) { console.error('Optimize params fetch error', e); }
+  }, [API_URL]);
+
+  const loadOptHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/optimize/history`);
+      if (res.ok) {
+        const data = await res.json();
+        setOptHistory(data);
+      }
+    } catch (e) { console.error('Optimize history fetch error', e); }
+  }, [API_URL]);
+
+  useEffect(() => {
+    if (tab === 'optimize') {
+      loadOptParams();
+      loadOptHistory();
+    }
+  }, [tab, loadOptParams, loadOptHistory]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -2936,24 +3013,7 @@ export default function SentixProFrontend() {
 
   // ─── BACKTEST TAB ──────────────────────────────────────────────────────────
   const BacktestTab = () => {
-    const [btConfig, setBtConfig] = useState({
-      asset: 'bitcoin',
-      days: 90,
-      capital: 10000,
-      riskPerTrade: 0.02,
-      minConfluence: 2,
-      minRR: 1.5,
-      stepInterval: '4h',
-      allowedStrength: ['STRONG BUY', 'STRONG SELL'],
-      cooldownBars: 6
-    });
-    const [btRunning, setBtRunning] = useState(false);
-    const [btResult, setBtResult] = useState(null);
-    const [btHistory, setBtHistory] = useState([]);
-    const [btError, setBtError] = useState(null);
-    const [btPolling, setBtPolling] = useState(null);
-    const [btProgress, setBtProgress] = useState(0);
-    const [btTradesPage, setBtTradesPage] = useState(0);
+    // NOTE: All useState/useEffect moved to parent level to avoid remount issues
     const BT_TRADES_PER_PAGE = 15;
 
     const ASSETS = [
@@ -2968,21 +3028,6 @@ export default function SentixProFrontend() {
       { value: 'chainlink', label: 'Chainlink (LINK)' },
       { value: 'dogecoin', label: 'Dogecoin (DOGE)' }
     ];
-
-    // Load backtest history on mount
-    useEffect(() => {
-      loadBtHistory();
-    }, []);
-
-    const loadBtHistory = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
-        if (res.ok) {
-          const data = await res.json();
-          setBtHistory(data);
-        }
-      } catch (e) { console.error('Backtest history fetch error', e); }
-    };
 
     // Poll for results
     const pollResults = (id) => {
@@ -3010,11 +3055,6 @@ export default function SentixProFrontend() {
       }, 4000);
       setBtPolling(interval);
     };
-
-    // Cleanup polling on unmount
-    useEffect(() => {
-      return () => { if (btPolling) clearInterval(btPolling); };
-    }, [btPolling]);
 
     const runBacktest = async () => {
       setBtRunning(true);
@@ -3616,17 +3656,7 @@ export default function SentixProFrontend() {
 
   // ─── OPTIMIZE TAB ────────────────────────────────────────────────────────
   const OptimizeTab = () => {
-    const [optParams, setOptParams] = useState([]);
-    const [optConfig, setOptConfig] = useState({
-      asset: 'bitcoin',
-      days: 30,
-      paramName: ''
-    });
-    const [optRunning, setOptRunning] = useState(false);
-    const [optResult, setOptResult] = useState(null);
-    const [optError, setOptError] = useState(null);
-    const [optProgress, setOptProgress] = useState({ current: 0, total: 0, message: '' });
-    const [optHistory, setOptHistory] = useState([]);
+    // NOTE: All useState/useEffect moved to parent level to avoid remount issues
 
     const OPT_ASSETS = [
       { value: 'bitcoin', label: 'Bitcoin (BTC)' },
@@ -3636,35 +3666,6 @@ export default function SentixProFrontend() {
       { value: 'cardano', label: 'Cardano (ADA)' },
       { value: 'ripple', label: 'XRP' }
     ];
-
-    // Load available params and history on mount
-    useEffect(() => {
-      loadOptParams();
-      loadOptHistory();
-    }, []);
-
-    const loadOptParams = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/optimize/params`);
-        if (res.ok) {
-          const data = await res.json();
-          setOptParams(data.params || []);
-          if (data.params?.length > 0 && !optConfig.paramName) {
-            setOptConfig(c => ({ ...c, paramName: data.params[0].key }));
-          }
-        }
-      } catch (e) { console.error('Failed to load optimize params', e); }
-    };
-
-    const loadOptHistory = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/optimize/history`);
-        if (res.ok) {
-          const data = await res.json();
-          setOptHistory(data);
-        }
-      } catch (e) { console.error('Failed to load optimize history', e); }
-    };
 
     // Poll for optimization progress
     const pollOptStatus = (jobId) => {
@@ -3944,7 +3945,7 @@ export default function SentixProFrontend() {
 
   // ─── GUIDE TAB ────────────────────────────────────────────────────────────
   const GuideTab = () => {
-    const [guideSection, setGuideSection] = useState(0);
+    // NOTE: useState moved to parent level to avoid remount issues
 
     const sectionHeaderStyle = {
       fontSize: 16, fontWeight: 800, color: purple, letterSpacing: "0.02em",
@@ -4492,17 +4493,16 @@ export default function SentixProFrontend() {
           ))}
         </div>
 
-        {/* Tab Content
-            Tabs without internal hooks → direct function calls (no remount on parent re-render)
-            Tabs with internal useState/useEffect → kept as <Component /> (hooks require stable call order) */}
+        {/* Tab Content — ALL tabs use direct function calls to prevent remount on 30s re-render.
+            All hooks lifted to parent level. */}
         {tab === "dashboard" && DashboardTab()}
         {tab === "signals" && SignalsTab()}
         {tab === "portfolio" && PortfolioTab()}
         {tab === "alerts" && AlertsTab()}
         {tab === "paper" && PaperTradingTab()}
-        {tab === "backtest" && <BacktestTab />}
-        {tab === "optimize" && <OptimizeTab />}
-        {tab === "guide" && <GuideTab />}
+        {tab === "backtest" && BacktestTab()}
+        {tab === "optimize" && OptimizeTab()}
+        {tab === "guide" && GuideTab()}
 
         {/* Footer */}
         <div style={{
