@@ -276,28 +276,32 @@ export default function SentixProFrontend() {
   // ─── ALERT FILTERS: Load once on mount ─────────────────────────────────────
   useEffect(() => {
     if (alertFilterForm) return; // already loaded
+    const defaults = {
+      assets: [], actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
+      min_confidence: 50, min_score: 25, telegram_enabled: true,
+      email_enabled: true, cooldown_minutes: 20, enabled: true
+    };
     (async () => {
       try {
         const res = await fetch(`${API_URL}/api/alert-filters/default-user`);
         if (res.ok) {
           const data = await res.json();
           setAlertFilterForm({
-            assets: data.assets || [],
-            actions: data.actions || ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
-            min_confidence: data.min_confidence ?? 50,
-            min_score: data.min_score ?? 25,
-            telegram_enabled: data.telegram_enabled ?? true,
-            email_enabled: data.email_enabled ?? true,
-            cooldown_minutes: data.cooldown_minutes ?? 20,
-            enabled: data.enabled ?? true
+            assets: data.assets || defaults.assets,
+            actions: data.actions || defaults.actions,
+            min_confidence: data.min_confidence ?? defaults.min_confidence,
+            min_score: data.min_score ?? defaults.min_score,
+            telegram_enabled: data.telegram_enabled ?? defaults.telegram_enabled,
+            email_enabled: data.email_enabled ?? defaults.email_enabled,
+            cooldown_minutes: data.cooldown_minutes ?? defaults.cooldown_minutes,
+            enabled: data.enabled ?? defaults.enabled
           });
+        } else {
+          // API returned error (e.g. 500 if table not yet created) — use defaults
+          setAlertFilterForm(defaults);
         }
       } catch (e) {
-        setAlertFilterForm({
-          assets: [], actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
-          min_confidence: 50, min_score: 25, telegram_enabled: true,
-          email_enabled: true, cooldown_minutes: 20, enabled: true
-        });
+        setAlertFilterForm(defaults);
       }
     })();
   }, [alertFilterForm]);
@@ -2509,17 +2513,17 @@ export default function SentixProFrontend() {
                 </table>
               </div>
               {/* Pagination */}
-              {historyTotal > HISTORY_PAGE_SIZE && (
+              {historyTotal > PAPER_HISTORY_PAGE_SIZE && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
                   <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
                     style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
                     ← Prev
                   </button>
                   <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
-                    {historyPage + 1} / {Math.ceil(historyTotal / HISTORY_PAGE_SIZE)}
+                    {historyPage + 1} / {Math.ceil(historyTotal / PAPER_HISTORY_PAGE_SIZE)}
                   </span>
-                  <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal}
-                    style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * HISTORY_PAGE_SIZE >= historyTotal ? "default" : "pointer" }}>
+                  <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal}
+                    style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? "default" : "pointer" }}>
                     Next →
                   </button>
                 </div>
