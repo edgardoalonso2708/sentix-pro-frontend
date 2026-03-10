@@ -515,6 +515,21 @@ export default function SentixProFrontend() {
   const purple = "#a855f7";
   const gold = "#d4af37";
 
+  const getSignalFreshness = (signal) => {
+    if (!signal.timestamp) return { label: '—', color: muted, opacity: 1 };
+    const ageMs = Date.now() - new Date(signal.timestamp).getTime();
+    const ageMin = Math.round(ageMs / 60000);
+    const label = ageMin < 1 ? 'just now' : ageMin < 60 ? `${ageMin}m ago` : `${Math.round(ageMin / 60)}h ago`;
+    const freshness = signal.freshness || 'fresh';
+    const cfg = {
+      fresh:   { color: green, opacity: 1.0 },
+      aging:   { color: amber, opacity: 0.85 },
+      stale:   { color: red,   opacity: 0.65 },
+      expired: { color: muted, opacity: 0.45 },
+    };
+    return { label, ageMin, ...(cfg[freshness] || cfg.fresh) };
+  };
+
   const card = {
     background: bg2,
     border: `1px solid ${border}`,
@@ -1274,7 +1289,9 @@ export default function SentixProFrontend() {
                   background: bg3,
                   borderLeft: `4px solid ${actionColor(signal.action)}`,
                   borderRadius: 8,
-                  padding: "14px 18px"
+                  padding: "14px 18px",
+                  opacity: getSignalFreshness(signal).opacity,
+                  transition: "opacity 0.3s"
                 }}>
                   {/* Header: Asset + Action + Confidence */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 10 }}>
@@ -1301,6 +1318,16 @@ export default function SentixProFrontend() {
                             textTransform: "uppercase"
                           }}>
                             {confluenceLabel(signal.timeframes.confluence)}
+                          </div>
+                        )}
+                        {/* Off-Hours Badge */}
+                        {signal.offHours && (
+                          <div style={{
+                            fontSize: 9, color: amber, fontWeight: 700,
+                            background: `${amber}18`, padding: "3px 8px",
+                            borderRadius: 4, letterSpacing: 0.5
+                          }}>
+                            🌙 OFF-HOURS
                           </div>
                         )}
                         {/* Action Badge */}
@@ -1646,8 +1673,21 @@ export default function SentixProFrontend() {
                   <div style={{ fontSize: 12, color: text, marginBottom: 8 }}>
                     {signal.reasons}
                   </div>
-                  <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
-                    {new Date(signal.timestamp).toLocaleString()}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                      {new Date(signal.timestamp).toLocaleString()}
+                    </div>
+                    {(() => {
+                      const f = getSignalFreshness(signal);
+                      return (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 9, color: f.color, fontWeight: 600 }}>
+                            ● {(signal.freshness || 'fresh').toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: 9, color: muted }}>{f.label}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
