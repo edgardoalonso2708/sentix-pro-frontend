@@ -1376,6 +1376,22 @@ export default function SentixProFrontend() {
                     </div>
                   )}
 
+                  {/* Governor Badge */}
+                  {signal.timeframes?.governorInfo?.applied && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                      padding: "4px 8px", background: `${amber}12`, borderRadius: 4,
+                      borderLeft: `2px solid ${amber}`
+                    }}>
+                      <span style={{ fontSize: 9, color: amber, fontWeight: 700 }}>
+                        GOV {signal.timeframes.governorInfo.severity === 'strong' ? '⚠⚠' : '⚠'}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted }}>
+                        4H {signal.timeframes.governorInfo.regime} — {Math.round((1 - signal.timeframes.governorInfo.effectiveMult) * 100)}% dampened
+                      </span>
+                    </div>
+                  )}
+
                   {/* Trade Levels Panel */}
                   {signal.tradeLevels && signal.action !== 'HOLD' && (
                     <div style={{
