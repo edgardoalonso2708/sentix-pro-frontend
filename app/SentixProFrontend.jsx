@@ -70,6 +70,18 @@ export default function SentixProFrontend() {
   const [dashboardClosedTrades, setDashboardClosedTrades] = useState([]);
   const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
 
+  // Portfolio tab state (lifted to parent to survive re-renders)
+  const [ptShowAddForm, setPtShowAddForm] = useState(false);
+  const [ptShowBatchUpload, setPtShowBatchUpload] = useState(false);
+  const [ptShowCreateWallet, setPtShowCreateWallet] = useState(false);
+  const [ptUploadStatus, setPtUploadStatus] = useState(null);
+  const [ptUploading, setPtUploading] = useState(false);
+  const [ptSaving, setPtSaving] = useState(false);
+  const [ptSelectedWalletFilter, setPtSelectedWalletFilter] = useState('all');
+  const [ptNewPosition, setPtNewPosition] = useState({ asset: 'bitcoin', amount: '', buyPrice: '', walletId: '' });
+  const [ptNewWallet, setPtNewWallet] = useState({ name: '', type: 'exchange', provider: 'binance', color: '#6366f1' });
+  const [ptUploadWalletId, setPtUploadWalletId] = useState('');
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
@@ -254,6 +266,21 @@ export default function SentixProFrontend() {
         .catch(() => {});
     }
   }, [backtestHistory, API_URL]);
+
+  // ─── PORTFOLIO TAB DATA LOADING (lifted from PortfolioTab) ────────────────
+  useEffect(() => {
+    if (tab === 'portfolio') {
+      fetchWallets();
+      fetchPortfolio();
+    }
+  }, [tab, fetchWallets, fetchPortfolio]);
+
+  useEffect(() => {
+    if (wallets.length > 0 && !ptNewPosition.walletId) {
+      setPtNewPosition(prev => ({ ...prev, walletId: wallets[0].id }));
+      if (!ptUploadWalletId) setPtUploadWalletId(wallets[0].id);
+    }
+  }, [wallets, ptNewPosition.walletId, ptUploadWalletId]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -1416,40 +1443,17 @@ export default function SentixProFrontend() {
   };
 
   const PortfolioTab = () => {
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [showBatchUpload, setShowBatchUpload] = useState(false);
-    const [showCreateWallet, setShowCreateWallet] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState(null);
-    const [uploading, setUploading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [selectedWalletFilter, setSelectedWalletFilter] = useState('all');
-    const [newPosition, setNewPosition] = useState({
-      asset: 'bitcoin',
-      amount: '',
-      buyPrice: '',
-      walletId: ''
-    });
-    const [newWallet, setNewWallet] = useState({
-      name: '',
-      type: 'exchange',
-      provider: 'binance',
-      color: '#6366f1'
-    });
-    const [uploadWalletId, setUploadWalletId] = useState('');
-
-    // Load wallets and portfolio when tab mounts
-    useEffect(() => {
-      fetchWallets();
-      fetchPortfolio();
-    }, [fetchWallets, fetchPortfolio]);
-
-    // Set default walletId when wallets load
-    useEffect(() => {
-      if (wallets.length > 0 && !newPosition.walletId) {
-        setNewPosition(prev => ({ ...prev, walletId: wallets[0].id }));
-        if (!uploadWalletId) setUploadWalletId(wallets[0].id);
-      }
-    }, [wallets]);
+    // NOTE: All useState/useEffect moved to parent level to avoid remount issues
+    const showAddForm = ptShowAddForm, setShowAddForm = setPtShowAddForm;
+    const showBatchUpload = ptShowBatchUpload, setShowBatchUpload = setPtShowBatchUpload;
+    const showCreateWallet = ptShowCreateWallet, setShowCreateWallet = setPtShowCreateWallet;
+    const uploadStatus = ptUploadStatus, setUploadStatus = setPtUploadStatus;
+    const uploading = ptUploading, setUploading = setPtUploading;
+    const saving = ptSaving, setSaving = setPtSaving;
+    const selectedWalletFilter = ptSelectedWalletFilter, setSelectedWalletFilter = setPtSelectedWalletFilter;
+    const newPosition = ptNewPosition, setNewPosition = setPtNewPosition;
+    const newWallet = ptNewWallet, setNewWallet = setPtNewWallet;
+    const uploadWalletId = ptUploadWalletId, setUploadWalletId = setPtUploadWalletId;
 
     const portfolioValue = calculatePortfolioValue();
     const { pnl, percentage } = calculatePortfolioPnL();
@@ -4493,7 +4497,7 @@ export default function SentixProFrontend() {
             Tabs with internal useState/useEffect → kept as <Component /> (hooks require stable call order) */}
         {tab === "dashboard" && DashboardTab()}
         {tab === "signals" && SignalsTab()}
-        {tab === "portfolio" && <PortfolioTab />}
+        {tab === "portfolio" && PortfolioTab()}
         {tab === "alerts" && AlertsTab()}
         {tab === "paper" && PaperTradingTab()}
         {tab === "backtest" && <BacktestTab />}
