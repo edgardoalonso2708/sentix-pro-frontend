@@ -49,6 +49,14 @@ export default function SentixProFrontend() {
   const [paperHistoryTotal, setPaperHistoryTotal] = useState(0);
   const [paperConfirmReset, setPaperConfirmReset] = useState(false);
 
+  // Alerts tab state (lifted to parent to survive re-renders)
+  const [alertShowFilters, setAlertShowFilters] = useState(false);
+  const [alertFilterForm, setAlertFilterForm] = useState(null);
+  const [alertSavingFilters, setAlertSavingFilters] = useState(false);
+  const [alertFilterSaveMsg, setAlertFilterSaveMsg] = useState(null);
+  const [alertTestResult, setAlertTestResult] = useState(null);
+  const [alertTesting, setAlertTesting] = useState(false);
+
   // Dashboard consolidated
   const [backtestHistory, setBacktestHistory] = useState([]);
   const [systemHealth, setSystemHealth] = useState(null);
@@ -1749,12 +1757,13 @@ export default function SentixProFrontend() {
   };
 
   const AlertsTab = () => {
-    const [testResult, setTestResult] = useState(null);
-    const [testing, setTesting] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
-    const [filterForm, setFilterForm] = useState(null);
-    const [savingFilters, setSavingFilters] = useState(false);
-    const [filterSaveMsg, setFilterSaveMsg] = useState(null);
+    // State lifted to parent to survive re-renders (30s timer)
+    const testResult = alertTestResult, setTestResult = setAlertTestResult;
+    const testing = alertTesting, setTesting = setAlertTesting;
+    const showFilters = alertShowFilters, setShowFilters = setAlertShowFilters;
+    const filterForm = alertFilterForm, setFilterForm = setAlertFilterForm;
+    const savingFilters = alertSavingFilters, setSavingFilters = setAlertSavingFilters;
+    const filterSaveMsg = alertFilterSaveMsg, setFilterSaveMsg = setAlertFilterSaveMsg;
 
     // Load filters on mount
     useEffect(() => {
