@@ -1,6 +1,11 @@
 'use client'
 
 import { useState, useCallback, useEffect } from "react";
+import {
+  LineChart, Line, AreaChart, Area, BarChart, Bar, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ReferenceLine
+} from 'recharts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTIX PRO - FRONTEND COMPLETO
@@ -61,6 +66,10 @@ export default function SentixProFrontend() {
   const [backtestHistory, setBacktestHistory] = useState([]);
   const [systemHealth, setSystemHealth] = useState(null);
 
+  // Dashboard charts data
+  const [dashboardClosedTrades, setDashboardClosedTrades] = useState([]);
+  const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
@@ -96,10 +105,11 @@ export default function SentixProFrontend() {
   // ─── DASHBOARD CONSOLIDATED FETCHES ─────────────────────────────────────
   const fetchDashboardPaper = useCallback(async () => {
     try {
-      const [cfgRes, posRes, perfRes] = await Promise.allSettled([
+      const [cfgRes, posRes, perfRes, histRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/paper/config/${USER_ID}`),
         fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
         fetch(`${API_URL}/api/paper/performance/${USER_ID}`),
+        fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
@@ -108,11 +118,14 @@ export default function SentixProFrontend() {
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const d = await posRes.value.json();
         setPaperPositions(d.positions || []);
-        setPaperHistory(d.history || []);
       }
       if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
         const d = await perfRes.value.json();
-        setPaperMetrics(d);
+        setPaperMetrics(d.metrics);  // FIX: era setPaperMetrics(d)
+      }
+      if (histRes.status === 'fulfilled' && histRes.value.ok) {
+        const d = await histRes.value.json();
+        setDashboardClosedTrades(d.trades || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard paper data:', error);
@@ -229,6 +242,18 @@ export default function SentixProFrontend() {
       clearInterval(slowInterval);
     };
   }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth]);
+
+  // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
+  useEffect(() => {
+    if (backtestHistory.length > 0 && backtestHistory[0].id && backtestHistory[0].status === 'completed') {
+      fetch(`${API_URL}/api/backtest/results/${backtestHistory[0].id}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.equity_curve) setBacktestEquityCurve(data.equity_curve);
+        })
+        .catch(() => {});
+    }
+  }, [backtestHistory, API_URL]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -402,6 +427,70 @@ export default function SentixProFrontend() {
     if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
     if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
     return `$${num.toFixed(2)}`;
+  };
+
+  // ─── CHART DATA HELPERS ──────────────────────────────────────────────────
+  const computePaperEquityCurve = (trades, initialCapital) => {
+    if (!trades || trades.length === 0) return [];
+    const sorted = [...trades]
+      .filter(t => t.exit_at && t.realized_pnl != null)
+      .sort((a, b) => new Date(a.exit_at) - new Date(b.exit_at));
+    if (sorted.length === 0) return [];
+
+    let cumulative = initialCapital;
+    let peak = initialCapital;
+    const curve = [{
+      date: sorted[0].entry_at ? new Date(sorted[0].entry_at).toLocaleDateString('es', { month: 'short', day: 'numeric' }) : 'Start',
+      equity: initialCapital,
+      drawdown: 0
+    }];
+    for (const trade of sorted) {
+      cumulative += parseFloat(trade.realized_pnl);
+      if (cumulative > peak) peak = cumulative;
+      const dd = peak > 0 ? ((peak - cumulative) / peak) * 100 : 0;
+      curve.push({
+        date: new Date(trade.exit_at).toLocaleDateString('es', { month: 'short', day: 'numeric' }),
+        equity: Math.round(cumulative * 100) / 100,
+        drawdown: Math.round(dd * 100) / 100
+      });
+    }
+    return curve;
+  };
+
+  const computeDailyPnl = (trades) => {
+    if (!trades || trades.length === 0) return [];
+    const dailyMap = {};
+    for (const t of trades) {
+      if (!t.exit_at || t.realized_pnl == null) continue;
+      const day = new Date(t.exit_at).toLocaleDateString('es', { month: 'short', day: 'numeric' });
+      if (!dailyMap[day]) dailyMap[day] = { date: day, pnl: 0, trades: 0 };
+      dailyMap[day].pnl += parseFloat(t.realized_pnl);
+      dailyMap[day].trades += 1;
+    }
+    return Object.values(dailyMap).map(d => ({
+      ...d,
+      pnl: Math.round(d.pnl * 100) / 100
+    }));
+  };
+
+  const computeAssetPerformance = (trades) => {
+    if (!trades || trades.length === 0) return [];
+    const assetMap = {};
+    for (const t of trades) {
+      if (t.realized_pnl == null) continue;
+      const asset = t.asset || 'Unknown';
+      if (!assetMap[asset]) assetMap[asset] = { asset, wins: 0, losses: 0, totalPnl: 0 };
+      if (parseFloat(t.realized_pnl) > 0) {
+        assetMap[asset].wins += 1;
+      } else {
+        assetMap[asset].losses += 1;
+      }
+      assetMap[asset].totalPnl += parseFloat(t.realized_pnl);
+    }
+    return Object.values(assetMap)
+      .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
+      .slice(0, 10)
+      .map(d => ({ ...d, totalPnl: Math.round(d.totalPnl * 100) / 100 }));
   };
 
   // ─── COMPONENTS ────────────────────────────────────────────────────────────
@@ -629,7 +718,7 @@ export default function SentixProFrontend() {
             const pm = paperMetrics;
             const closedTrades = paperHistory.filter(t => t.exit_price != null);
             const currentCapital = pm?.currentCapital || paperConfig?.initial_capital || 10000;
-            const totalPnl = pm?.totalPnL || 0;
+            const totalPnl = pm?.totalPnl || 0;
             const winRate = pm?.winRate || 0;
             const openCount = paperPositions.filter(p => p.status === 'open').length;
             const maxDD = pm?.maxDrawdown || 0;
@@ -724,6 +813,114 @@ export default function SentixProFrontend() {
             );
           })()}
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* CURVA DE EQUITY (Paper Trading)                                      */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {(() => {
+          const initialCap = paperConfig?.initial_capital || paperConfig?.config?.initial_capital || 10000;
+          const equityData = computePaperEquityCurve(dashboardClosedTrades, initialCap);
+          if (equityData.length < 2) return null;
+          return (
+            <div style={{ ...card, marginTop: 4 }}>
+              <div style={sTitle}>📈 CURVA DE EQUITY (Paper Trading)</div>
+              <div style={{ width: '100%', height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={equityData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={green} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={green} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={border} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`} />
+                    <Tooltip
+                      contentStyle={{ background: bg2, border: `1px solid ${border}`, borderRadius: 6, fontSize: 11, color: text }}
+                      formatter={(value, name) => [
+                        name === 'equity' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`,
+                        name === 'equity' ? 'Equity' : 'Drawdown'
+                      ]}
+                    />
+                    <ReferenceLine y={initialCap} stroke={muted} strokeDasharray="3 3" />
+                    <Area type="monotone" dataKey="equity" stroke={green} strokeWidth={2} fill="url(#equityGradient)" dot={false} activeDot={{ r: 3, fill: green }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* P&L DIARIO                                                           */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {(() => {
+          const dailyData = computeDailyPnl(dashboardClosedTrades);
+          if (dailyData.length < 1) return null;
+          return (
+            <div style={{ ...card, marginTop: 4 }}>
+              <div style={sTitle}>📊 P&L DIARIO</div>
+              <div style={{ width: '100%', height: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={border} vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip
+                      contentStyle={{ background: bg2, border: `1px solid ${border}`, borderRadius: 6, fontSize: 11, color: text }}
+                      formatter={(value, name, props) => [`$${value.toFixed(2)} (${props.payload.trades} trades)`, 'P&L']}
+                    />
+                    <ReferenceLine y={0} stroke={muted} strokeDasharray="3 3" />
+                    <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                      {dailyData.map((entry, index) => (
+                        <Cell key={index} fill={entry.pnl >= 0 ? green : red} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* RENDIMIENTO POR ACTIVO                                               */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {(() => {
+          const assetData = computeAssetPerformance(dashboardClosedTrades);
+          if (assetData.length < 1) return null;
+          return (
+            <div style={{ ...card, marginTop: 4 }}>
+              <div style={sTitle}>🎯 RENDIMIENTO POR ACTIVO</div>
+              <div style={{ width: '100%', height: Math.max(150, assetData.length * 36) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={assetData} layout="vertical" margin={{ top: 5, right: 40, left: 60, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={border} horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} />
+                    <YAxis type="category" dataKey="asset" tick={{ fontSize: 10, fill: text, fontWeight: 600 }} axisLine={{ stroke: border }} tickLine={false} width={55} />
+                    <Tooltip
+                      contentStyle={{ background: bg2, border: `1px solid ${border}`, borderRadius: 6, fontSize: 11, color: text }}
+                      formatter={(value, name) => [value, name === 'wins' ? 'Wins' : 'Losses']}
+                    />
+                    <Bar dataKey="wins" fill={green} stackId="a" barSize={16} />
+                    <Bar dataKey="losses" fill={red} stackId="a" radius={[0, 3, 3, 0]} barSize={16} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                {assetData.map(a => (
+                  <div key={a.asset} style={{ background: bg3, borderRadius: 4, padding: "4px 8px", fontSize: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontWeight: 700, color: text }}>{a.asset}</span>
+                    <span style={{ color: a.totalPnl >= 0 ? green : red, fontWeight: 600 }}>
+                      {a.totalPnl >= 0 ? '+' : ''}{a.totalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* DISTRIBUCIÓN DE SEÑALES                                             */}
@@ -830,6 +1027,56 @@ export default function SentixProFrontend() {
             );
           })()}
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* BACKTEST EQUITY CURVE                                                */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {(() => {
+          if (!backtestEquityCurve || backtestEquityCurve.length < 2) return null;
+          const chartData = backtestEquityCurve.map((point) => ({
+            date: new Date(point.timestamp).toLocaleDateString('es', { month: 'short', day: 'numeric' }),
+            equity: point.equity
+          }));
+          // Downsample if too many points
+          const maxPoints = 100;
+          let displayData = chartData;
+          if (chartData.length > maxPoints) {
+            const step = Math.ceil(chartData.length / maxPoints);
+            displayData = chartData.filter((_, i) => i % step === 0 || i === chartData.length - 1);
+          }
+          const initialEquity = displayData[0]?.equity || 10000;
+          const finalEquity = displayData[displayData.length - 1]?.equity || initialEquity;
+          const returnPct = ((finalEquity - initialEquity) / initialEquity * 100).toFixed(2);
+          const minEq = Math.min(...displayData.map(d => d.equity));
+          const maxEq = Math.max(...displayData.map(d => d.equity));
+          const lineColor = parseFloat(returnPct) >= 0 ? green : red;
+
+          return (
+            <div style={{ ...card, marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={sTitle}>📉 BACKTEST EQUITY CURVE</div>
+                <div style={{ fontSize: 11, color: lineColor, fontWeight: 700 }}>
+                  {parseFloat(returnPct) >= 0 ? '+' : ''}{returnPct}%
+                </div>
+              </div>
+              <div style={{ width: '100%', height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={displayData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={border} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} interval={Math.floor(displayData.length / 6)} />
+                    <YAxis tick={{ fontSize: 9, fill: muted }} axisLine={{ stroke: border }} tickLine={false} domain={[Math.floor(minEq * 0.98), Math.ceil(maxEq * 1.02)]} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`} />
+                    <Tooltip
+                      contentStyle={{ background: bg2, border: `1px solid ${border}`, borderRadius: 6, fontSize: 11, color: text }}
+                      formatter={(value) => [`$${value.toFixed(2)}`, 'Equity']}
+                    />
+                    <ReferenceLine y={initialEquity} stroke={muted} strokeDasharray="3 3" />
+                    <Line type="monotone" dataKey="equity" stroke={lineColor} strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: lineColor }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* ESTADO DEL SISTEMA                                                   */}
