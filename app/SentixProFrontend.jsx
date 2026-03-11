@@ -72,6 +72,10 @@ export default function SentixProFrontend() {
   const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
   const [realtimeEquityCurve, setRealtimeEquityCurve] = useState([]);
 
+  // Signal Accuracy
+  const [signalAccuracy, setSignalAccuracy] = useState(null);
+  const [accuracyDays, setAccuracyDays] = useState(7);
+
   // Portfolio tab state (lifted to parent to survive re-renders)
   const [ptShowAddForm, setPtShowAddForm] = useState(false);
   const [ptShowBatchUpload, setPtShowBatchUpload] = useState(false);
@@ -149,6 +153,19 @@ export default function SentixProFrontend() {
       console.error('Error fetching signals:', error);
     }
   }, [API_URL]);
+
+  const fetchAccuracy = useCallback(async (days) => {
+    try {
+      const d = days || accuracyDays;
+      const res = await fetch(`${API_URL}/api/signals/accuracy?days=${d}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSignalAccuracy(data);
+      }
+    } catch (err) {
+      console.error('Error fetching accuracy:', err);
+    }
+  }, [API_URL, accuracyDays]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -282,6 +299,7 @@ export default function SentixProFrontend() {
         fetchBacktestHistory(),
         fetchSystemHealth(),
         fetchMetrics(),
+        fetchAccuracy(),
       ]);
       setLoading(false);
     };
@@ -295,18 +313,19 @@ export default function SentixProFrontend() {
       fetchDashboardPaper();
     }, 30000);
 
-    // Slow refresh every 5 minutes (health + backtest history + metrics)
+    // Slow refresh every 5 minutes (health + backtest history + metrics + accuracy)
     const slowInterval = setInterval(() => {
       fetchSystemHealth();
       fetchBacktestHistory();
       fetchMetrics();
+      fetchAccuracy();
     }, 300000);
 
     return () => {
       clearInterval(interval);
       clearInterval(slowInterval);
     };
-  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics]);
+  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy]);
 
   // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
   useEffect(() => {
@@ -1350,8 +1369,122 @@ export default function SentixProFrontend() {
     const actionColor = (a) => a === 'BUY' ? green : a === 'SELL' ? red : amber;
     const tfLabel = { '4h': '4H', '1h': '1H', '15m': '15M' };
 
+    const hitColor = (rate) => rate === null ? muted : rate >= 55 ? green : rate >= 45 ? amber : red;
+
     return (
       <div>
+        {/* ═══ SIGNAL ACCURACY PANEL ═══ */}
+        <div style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={sTitle}>📊 SIGNAL ACCURACY</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[7, 30].map(d => (
+                <button key={d} onClick={() => { setAccuracyDays(d); fetchAccuracy(d); }} style={{
+                  padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                  background: accuracyDays === d ? green : bg3, color: accuracyDays === d ? "#000" : muted
+                }}>{d}d</button>
+              ))}
+            </div>
+          </div>
+
+          {!signalAccuracy || !signalAccuracy.overall || signalAccuracy.overall.total === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 13 }}>
+              Recopilando datos — metricas disponibles despues de 1 hora de operacion
+            </div>
+          ) : (
+            <>
+              {/* Row 1: Summary hit rate cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
+                {[
+                  { label: "1h Accuracy", value: signalAccuracy.overall.hitRate1h, avg: signalAccuracy.overall.avgChange1h },
+                  { label: "4h Accuracy", value: signalAccuracy.overall.hitRate4h, avg: signalAccuracy.overall.avgChange4h },
+                  { label: "24h Accuracy", value: signalAccuracy.overall.hitRate24h, avg: signalAccuracy.overall.avgChange24h },
+                  { label: "Signals", value: signalAccuracy.overall.total, isCount: true }
+                ].map((item, i) => (
+                  <div key={i} style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: muted, marginBottom: 6, fontWeight: 600 }}>{item.label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: item.isCount ? "#fff" : hitColor(item.value) }}>
+                      {item.value === null ? "—" : item.isCount ? item.value : `${item.value}%`}
+                    </div>
+                    {!item.isCount && item.avg !== null && (
+                      <div style={{ fontSize: 10, color: muted, marginTop: 3 }}>avg move: {item.avg}%</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Row 2: By Strength table */}
+              {signalAccuracy.byStrength && Object.keys(signalAccuracy.byStrength).length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>POR STRENGTH</div>
+                  <div style={{ background: bg3, borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", padding: "8px 12px", fontSize: 10, fontWeight: 700, color: muted, borderBottom: "1px solid #2a2a2a" }}>
+                      <div>Tipo</div><div style={{ textAlign: "center" }}>Count</div><div style={{ textAlign: "center" }}>Hit 1h</div><div style={{ textAlign: "center" }}>Hit 4h</div><div style={{ textAlign: "center" }}>Hit 24h</div>
+                    </div>
+                    {["STRONG BUY", "BUY", "SELL", "STRONG SELL"].filter(k => signalAccuracy.byStrength[k]).map(k => {
+                      const s = signalAccuracy.byStrength[k];
+                      return (
+                        <div key={k} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", padding: "6px 12px", fontSize: 12, borderBottom: "1px solid #1a1a1a" }}>
+                          <div style={{ fontWeight: 700, color: k.includes("BUY") ? green : red }}>{k}</div>
+                          <div style={{ textAlign: "center" }}>{s.total}</div>
+                          <div style={{ textAlign: "center", color: hitColor(s.hitRate1h) }}>{s.hitRate1h !== null ? `${s.hitRate1h}%` : "—"}</div>
+                          <div style={{ textAlign: "center", color: hitColor(s.hitRate4h) }}>{s.hitRate4h !== null ? `${s.hitRate4h}%` : "—"}</div>
+                          <div style={{ textAlign: "center", color: hitColor(s.hitRate24h) }}>{s.hitRate24h !== null ? `${s.hitRate24h}%` : "—"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 3: By Confluence + Trend chart */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+                {/* Confluence cards */}
+                {signalAccuracy.byConfluence && Object.keys(signalAccuracy.byConfluence).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>POR CONFLUENCIA</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {["strong", "moderate", "conflicting", "weak"].filter(k => signalAccuracy.byConfluence[k]).map(k => {
+                        const c = signalAccuracy.byConfluence[k];
+                        return (
+                          <div key={k} style={{ background: bg3, borderRadius: 6, padding: "8px 12px", borderLeft: `3px solid ${confluenceColor(k)}` }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: confluenceColor(k), marginBottom: 4 }}>{k.toUpperCase()} ({c.total})</div>
+                            <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
+                              <span style={{ color: hitColor(c.hitRate1h) }}>1h: {c.hitRate1h !== null ? `${c.hitRate1h}%` : "—"}</span>
+                              <span style={{ color: hitColor(c.hitRate4h) }}>4h: {c.hitRate4h !== null ? `${c.hitRate4h}%` : "—"}</span>
+                              <span style={{ color: hitColor(c.hitRate24h) }}>24h: {c.hitRate24h !== null ? `${c.hitRate24h}%` : "—"}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Trend chart */}
+                {signalAccuracy.trend && signalAccuracy.trend.length > 1 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>TENDENCIA DIARIA (1h hit rate)</div>
+                    <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                      <ResponsiveContainer width="100%" height={140}>
+                        <LineChart data={signalAccuracy.trend}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                          <XAxis dataKey="date" tick={{ fontSize: 9, fill: muted }} tickFormatter={d => d.substring(5)} />
+                          <YAxis tick={{ fontSize: 9, fill: muted }} domain={[0, 100]} unit="%" />
+                          <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 11 }} formatter={(v) => v !== null ? [`${v}%`, 'Hit Rate 1h'] : ['—', 'Hit Rate 1h']} />
+                          <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
+                          <Line type="monotone" dataKey="hitRate1h" stroke={green} strokeWidth={2} dot={{ fill: green, r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ═══ SIGNAL CARDS ═══ */}
         <div style={card}>
           <div style={sTitle}>🎯 TODAS LAS SEÑALES ACTIVAS</div>
 
