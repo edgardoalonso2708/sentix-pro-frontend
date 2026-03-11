@@ -334,7 +334,16 @@ export default function SentixProFrontend() {
       const res = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
       if (res.ok) {
         const data = await res.json();
-        setBtHistory(data);
+        // Mark stale running backtests (>15 min) as failed client-side
+        const STALE_MS = 15 * 60 * 1000;
+        const now = Date.now();
+        const cleaned = data.map(bt => {
+          if (bt.status === 'running' && bt.created_at && (now - new Date(bt.created_at).getTime()) > STALE_MS) {
+            return { ...bt, status: 'failed', error_message: 'Timed out' };
+          }
+          return bt;
+        });
+        setBtHistory(cleaned);
       }
     } catch (e) { console.error('Backtest history fetch error', e); }
   }, [API_URL]);
@@ -3379,29 +3388,57 @@ export default function SentixProFrontend() {
       { value: 'dogecoin', label: 'Dogecoin (DOGE)' }
     ];
 
-    // Poll for results
+    // Poll for results (with 12min hard timeout and error counting)
     const pollResults = (id) => {
+      let errorCount = 0;
+      const MAX_ERRORS = 10;
+      const startTime = Date.now();
+      const POLL_TIMEOUT = 12 * 60 * 1000; // 12 min
+
+      const stopPolling = (reason) => {
+        clearInterval(interval);
+        setBtPolling(null);
+        setBtRunning(false);
+        if (reason) setBtError(reason);
+      };
+
       const interval = setInterval(async () => {
+        // Hard timeout
+        if (Date.now() - startTime > POLL_TIMEOUT) {
+          stopPolling('Backtest timed out (12 min). Revisa el servidor.');
+          loadBtHistory();
+          return;
+        }
         try {
           const res = await fetch(`${API_URL}/api/backtest/results/${id}`);
-          if (!res.ok) return;
+          if (!res.ok) {
+            errorCount++;
+            if (errorCount >= MAX_ERRORS) {
+              stopPolling(`Backend no responde (${errorCount} errores consecutivos)`);
+              loadBtHistory();
+            }
+            return;
+          }
+          errorCount = 0; // reset on success
           const data = await res.json();
           setBtProgress(data.progress || 0);
 
           if (data.status === 'completed') {
-            clearInterval(interval);
-            setBtPolling(null);
-            setBtRunning(false);
+            stopPolling(null);
             setBtResult(data);
             setBtProgress(100);
             loadBtHistory();
           } else if (data.status === 'failed') {
-            clearInterval(interval);
-            setBtPolling(null);
-            setBtRunning(false);
-            setBtError(data.error_message || 'Backtest failed');
+            stopPolling(data.error_message || 'Backtest failed');
+            loadBtHistory();
           }
-        } catch (e) { /* continue polling */ }
+        } catch (e) {
+          errorCount++;
+          if (errorCount >= MAX_ERRORS) {
+            stopPolling('Conexión perdida con el backend');
+            loadBtHistory();
+          }
+        }
       }, 4000);
       setBtPolling(interval);
     };
@@ -4353,18 +4390,24 @@ export default function SentixProFrontend() {
                       if (!confirm(`Eliminar ${btSelected.size} backtest(s)?`)) return;
                       setBtDeleting(true);
                       try {
+                        const idsToDelete = [...btSelected];
                         const res = await fetch(`${API_URL}/api/backtest`, {
                           method: 'DELETE',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: [...btSelected] })
+                          body: JSON.stringify({ ids: idsToDelete })
                         });
                         if (res.ok) {
                           const deletedIds = btSelected;
                           setBtHistory(prev => prev.filter(b => !deletedIds.has(b.id)));
                           setBtSelected(new Set());
                           if (btResult && deletedIds.has(btResult.id)) setBtResult(null);
+                        } else {
+                          // Even if backend says not found, remove from UI and refresh
+                          setBtHistory(prev => prev.filter(b => !btSelected.has(b.id)));
+                          setBtSelected(new Set());
+                          loadBtHistory();
                         }
-                      } catch (e) { console.error('Delete failed', e); }
+                      } catch (e) { console.error('Delete failed', e); loadBtHistory(); }
                       setBtDeleting(false);
                     }}
                     disabled={btDeleting}
