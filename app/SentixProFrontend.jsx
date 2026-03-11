@@ -413,7 +413,7 @@ export default function SentixProFrontend() {
     const defaults = {
       assets: [], actions: ['BUY', 'SELL', 'STRONG BUY', 'STRONG SELL'],
       min_confidence: 50, min_score: 25, telegram_enabled: true,
-      email_enabled: true, cooldown_minutes: 20, enabled: true
+      email_enabled: true, alert_emails: '', cooldown_minutes: 20, enabled: true
     };
     (async () => {
       try {
@@ -427,6 +427,7 @@ export default function SentixProFrontend() {
             min_score: data.min_score ?? defaults.min_score,
             telegram_enabled: data.telegram_enabled ?? defaults.telegram_enabled,
             email_enabled: data.email_enabled ?? defaults.email_enabled,
+            alert_emails: data.alert_emails || defaults.alert_emails,
             cooldown_minutes: data.cooldown_minutes ?? defaults.cooldown_minutes,
             enabled: data.enabled ?? defaults.enabled
           });
@@ -2435,12 +2436,13 @@ export default function SentixProFrontend() {
 
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
-              EMAIL PARA ALERTAS
+              EMAILS PARA ALERTAS (separar con coma)
             </label>
-            <input
-              type="email"
+            <textarea
               value={alertConfig.email}
               onChange={e => setAlertConfig(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="email1@ejemplo.com, email2@ejemplo.com"
+              rows={2}
               style={{
                 width: "100%",
                 background: bg3,
@@ -2448,24 +2450,14 @@ export default function SentixProFrontend() {
                 borderRadius: 6,
                 padding: "10px 14px",
                 color: text,
-                fontSize: 13
+                fontSize: 13,
+                resize: "vertical",
+                fontFamily: "inherit"
               }}
             />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
-              CONFIANZA MINIMA: {alertConfig.minConfidence}%
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="95"
-              step="5"
-              value={alertConfig.minConfidence}
-              onChange={e => setAlertConfig(prev => ({ ...prev, minConfidence: parseInt(e.target.value) }))}
-              style={{ width: "100%" }}
-            />
+            <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
+              Estos emails se usan para la alerta de prueba. Configura los emails de notificacion automatica en los filtros avanzados.
+            </div>
           </div>
 
           <button
@@ -2631,7 +2623,7 @@ export default function SentixProFrontend() {
               </div>
 
               {/* Delivery channels */}
-              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: text, cursor: "pointer" }}>
                   <input type="checkbox" checked={filterForm.telegram_enabled}
                     onChange={e => setFilterForm(p => ({ ...p, telegram_enabled: e.target.checked }))} />
@@ -2643,6 +2635,35 @@ export default function SentixProFrontend() {
                   Email
                 </label>
               </div>
+
+              {/* Email recipients for notifications */}
+              {filterForm.email_enabled && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 6, fontWeight: 700 }}>
+                    EMAILS DE NOTIFICACION (separar con coma)
+                  </label>
+                  <textarea
+                    value={filterForm.alert_emails || ''}
+                    onChange={e => setFilterForm(p => ({ ...p, alert_emails: e.target.value }))}
+                    placeholder="email1@ejemplo.com, email2@ejemplo.com"
+                    rows={2}
+                    style={{
+                      width: "100%",
+                      background: bg3,
+                      border: `1px solid ${border}`,
+                      borderRadius: 6,
+                      padding: "8px 12px",
+                      color: text,
+                      fontSize: 12,
+                      resize: "vertical",
+                      fontFamily: "inherit"
+                    }}
+                  />
+                  <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
+                    Deja vacio para usar el email por defecto. Soporta multiples emails separados por coma.
+                  </div>
+                </div>
+              )}
 
               {/* Save button */}
               <button onClick={handleSaveFilters} disabled={savingFilters} style={{
@@ -2787,10 +2808,14 @@ export default function SentixProFrontend() {
     const handleToggleEnabled = async () => {
       const newVal = !paperConfig?.is_enabled;
       try {
+        // When re-enabling, also reset daily_pnl to prevent immediate auto-disable
+        const payload = newVal
+          ? { is_enabled: true, daily_pnl: 0, daily_pnl_reset_at: new Date().toISOString() }
+          : { is_enabled: false };
         const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_enabled: newVal })
+          body: JSON.stringify(payload)
         });
         if (res.ok) {
           const d = await res.json();
@@ -3042,9 +3067,50 @@ export default function SentixProFrontend() {
 
         {/* Trade History */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>
-            HISTORIAL DE TRADES ({historyTotal})
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={sTitle}>
+              HISTORIAL DE TRADES ({historyTotal})
+            </div>
           </div>
+
+          {/* Delete trades by asset */}
+          {paperHistory.length > 0 && (() => {
+            const uniqueAssets = [...new Set(paperHistory.map(t => t.asset))];
+            const nonCryptoAssets = uniqueAssets.filter(a =>
+              a && (a.includes('GOLD') || a.includes('SILVER') || a.includes('XAU') || a.includes('XAG') || a.includes('pax-gold'))
+            );
+            if (nonCryptoAssets.length === 0) return null;
+            return (
+              <div style={{ marginBottom: 10, padding: "8px 10px", background: "rgba(239,68,68,0.05)", borderRadius: 6, border: `1px solid rgba(239,68,68,0.15)` }}>
+                <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>Borrar trades cerrados (no-crypto):</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {nonCryptoAssets.map(asset => (
+                    <button key={asset} onClick={async () => {
+                      if (!confirm(`Borrar todos los trades cerrados de "${asset}"?`)) return;
+                      try {
+                        const res = await fetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
+                        if (res.ok) {
+                          // Refresh trade history
+                          const hRes = await fetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
+                          if (hRes.ok) {
+                            const hData = await hRes.json();
+                            setPaperHistory(hData.trades || []);
+                            setHistoryTotal(hData.total || 0);
+                          }
+                        }
+                      } catch (e) { console.error('Delete trades error:', e); }
+                    }} style={{
+                      padding: "3px 10px", background: "rgba(239,68,68,0.15)", border: `1px solid ${red}`,
+                      borderRadius: 4, color: red, fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer"
+                    }}>
+                      {"\ud83d\uddd1"} {asset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {paperHistory.length === 0 ? (
             <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
               Aún no hay trades cerrados.
