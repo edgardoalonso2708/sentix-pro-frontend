@@ -3721,6 +3721,152 @@ export default function SentixProFrontend() {
               </div>
             )}
 
+            {/* Statistical Significance */}
+            {btResult.significance && btResult.significance.assessment && (() => {
+              const sig = btResult.significance;
+              const a = sig.assessment;
+              const badgeColor = a.stars >= 3 ? green : a.stars >= 2 ? green : a.stars >= 1 ? amber : red;
+              const badgeIcon = a.stars >= 2 ? "\u2705" : a.stars >= 1 ? "\u26a0\ufe0f" : "\u274c";
+              const starsStr = "\u2605".repeat(a.stars) + "\u2606".repeat(3 - a.stars);
+
+              const pValueColor = (p) => {
+                if (p == null) return muted;
+                if (p < 0.001) return green;
+                if (p < 0.01) return green;
+                if (p < 0.05) return amber;
+                return red;
+              };
+              const pValueStars = (p) => {
+                if (p == null) return "";
+                if (p < 0.001) return " \u2605\u2605\u2605";
+                if (p < 0.01) return " \u2605\u2605";
+                if (p < 0.05) return " \u2605";
+                return "";
+              };
+
+              return (
+                <div style={{
+                  background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                  padding: 16, marginBottom: 16
+                }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                        {badgeIcon} SIGNIFICANCIA ESTAD\u00cdSTICA
+                      </span>
+                      <span style={{
+                        fontSize: 9, padding: "2px 6px", borderRadius: 4,
+                        background: `${badgeColor}22`, color: badgeColor, fontWeight: 600
+                      }}>
+                        {a.label} {starsStr}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 18, fontWeight: 700, color: badgeColor, fontFamily: "monospace"
+                    }}>
+                      {a.confidence}%
+                    </span>
+                  </div>
+
+                  {/* P-values Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 14 }}>
+                    {[
+                      {
+                        label: "P&L (t-test)",
+                        pValue: sig.pnlTest?.pValue,
+                        stat: sig.pnlTest ? `t=${sig.pnlTest.tStatistic}` : null
+                      },
+                      {
+                        label: "Win Rate (binomial)",
+                        pValue: sig.winRateTest?.pValue,
+                        stat: sig.winRateTest ? `z=${sig.winRateTest.zStatistic}` : null
+                      },
+                      {
+                        label: "Sharpe (bootstrap)",
+                        pValue: sig.sharpeTest?.pValue,
+                        stat: sig.sharpeTest ? `${sig.sharpeTest.countBelow}/${sig.sharpeTest.total}` : null
+                      },
+                      {
+                        label: "Profit Factor (bootstrap)",
+                        pValue: sig.profitFactorTest?.pValue,
+                        stat: sig.profitFactorTest ? `${sig.profitFactorTest.countBelow}/${sig.profitFactorTest.total}` : null
+                      }
+                    ].map((item, i) => (
+                      <div key={i} style={{
+                        background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "8px 10px",
+                        border: `1px solid ${border}`
+                      }}>
+                        <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>{item.label}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: pValueColor(item.pValue), fontFamily: "monospace" }}>
+                          {item.pValue != null ? `p=${item.pValue.toFixed(4)}` : "N/A"}
+                          <span style={{ fontSize: 10 }}>{pValueStars(item.pValue)}</span>
+                        </div>
+                        {item.stat && (
+                          <div style={{ fontSize: 9, color: muted, marginTop: 2 }}>{item.stat}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 95% Confidence Intervals */}
+                  {sig.confidenceIntervals?.ci95 && (
+                    <div style={{ marginBottom: a.warnings?.length > 0 ? 10 : 0 }}>
+                      <div style={{ fontSize: 10, color: muted, marginBottom: 6, fontWeight: 600 }}>
+                        INTERVALOS DE CONFIANZA 95%
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
+                        {[
+                          { label: "Return %", metric: "returnPct", suffix: "%", goodIfPositive: true },
+                          { label: "Max Drawdown %", metric: "maxDrawdownPct", suffix: "%", goodIfPositive: false },
+                          { label: "Sharpe Ratio", metric: "sharpe", suffix: "", goodIfPositive: true },
+                          { label: "Win Rate %", metric: "winRate", suffix: "%", goodIfPositive: true }
+                        ].map((row, i) => {
+                          const ci = sig.confidenceIntervals.ci95[row.metric];
+                          if (!ci) return null;
+                          return (
+                            <div key={i} style={{
+                              display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr",
+                              fontSize: 10, fontFamily: "monospace", gap: 4,
+                              padding: "4px 6px", borderRadius: 4,
+                              background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent"
+                            }}>
+                              <span style={{ color: muted }}>{row.label}</span>
+                              <span style={{ color: red, textAlign: "center" }}>
+                                {ci.lower != null ? `${ci.lower}${row.suffix}` : "-"}
+                              </span>
+                              <span style={{ color: text, textAlign: "center", fontWeight: 600 }}>
+                                {ci.median != null ? `${ci.median}${row.suffix}` : "-"}
+                              </span>
+                              <span style={{ color: green, textAlign: "center" }}>
+                                {ci.upper != null ? `${ci.upper}${row.suffix}` : "-"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        <div style={{
+                          display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr",
+                          fontSize: 8, color: muted, padding: "2px 6px", gap: 4
+                        }}>
+                          <span></span>
+                          <span style={{ textAlign: "center" }}>P2.5 (lower)</span>
+                          <span style={{ textAlign: "center" }}>P50 (median)</span>
+                          <span style={{ textAlign: "center" }}>P97.5 (upper)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {a.warnings && a.warnings.length > 0 && (
+                    <div style={{ fontSize: 9, color: amber, fontStyle: "italic" }}>
+                      {a.warnings.map((w, i) => <div key={i}>\u26a0 {w}</div>)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Monte Carlo Simulation */}
             {btResult.monte_carlo && !btResult.monte_carlo.skipped && (() => {
               const mc = btResult.monte_carlo;
