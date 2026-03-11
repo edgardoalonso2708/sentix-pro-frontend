@@ -70,6 +70,7 @@ export default function SentixProFrontend() {
   // Dashboard charts data
   const [dashboardClosedTrades, setDashboardClosedTrades] = useState([]);
   const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
+  const [realtimeEquityCurve, setRealtimeEquityCurve] = useState([]);
 
   // Portfolio tab state (lifted to parent to survive re-renders)
   const [ptShowAddForm, setPtShowAddForm] = useState(false);
@@ -162,11 +163,12 @@ export default function SentixProFrontend() {
   // ─── DASHBOARD CONSOLIDATED FETCHES ─────────────────────────────────────
   const fetchDashboardPaper = useCallback(async () => {
     try {
-      const [cfgRes, posRes, perfRes, histRes] = await Promise.allSettled([
+      const [cfgRes, posRes, perfRes, histRes, eqRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/paper/config/${USER_ID}`),
         fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
         fetch(`${API_URL}/api/paper/performance/${USER_ID}`),
         fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
+        fetch(`${API_URL}/api/paper/equity/${USER_ID}?days=7`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
@@ -183,6 +185,10 @@ export default function SentixProFrontend() {
       if (histRes.status === 'fulfilled' && histRes.value.ok) {
         const d = await histRes.value.json();
         setDashboardClosedTrades(d.trades || []);
+      }
+      if (eqRes.status === 'fulfilled' && eqRes.value.ok) {
+        const d = await eqRes.value.json();
+        setRealtimeEquityCurve(d.curve || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard paper data:', error);
@@ -987,15 +993,48 @@ export default function SentixProFrontend() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        {/* CURVA DE EQUITY (Paper Trading)                                      */}
+        {/* CURVA DE EQUITY (Paper Trading) — Real-time + trade-derived        */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {(() => {
           const initialCap = paperConfig?.initial_capital || paperConfig?.config?.initial_capital || 10000;
-          const equityData = computePaperEquityCurve(dashboardClosedTrades, initialCap);
+
+          // Prefer real-time snapshots if available, fallback to trade-derived
+          const hasRealtime = realtimeEquityCurve && realtimeEquityCurve.length >= 2;
+          let equityData;
+          let isRealtime = false;
+
+          if (hasRealtime) {
+            isRealtime = true;
+            let peak = initialCap;
+            equityData = realtimeEquityCurve.map((pt) => {
+              const eq = parseFloat(pt.equity);
+              if (eq > peak) peak = eq;
+              const dd = peak > 0 ? ((peak - eq) / peak) * 100 : 0;
+              return {
+                date: new Date(pt.timestamp).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                equity: eq,
+                unrealized: parseFloat(pt.unrealized || 0),
+                drawdown: Math.round(dd * 100) / 100
+              };
+            });
+          } else {
+            equityData = computePaperEquityCurve(dashboardClosedTrades, initialCap);
+          }
+
           if (equityData.length < 2) return null;
+
+          const latestEquity = equityData[equityData.length - 1]?.equity || initialCap;
+          const totalReturn = ((latestEquity - initialCap) / initialCap * 100).toFixed(2);
+          const returnColor = totalReturn >= 0 ? green : red;
+
           return (
             <div style={{ ...card, marginTop: 4 }}>
-              <div style={sTitle}>📈 CURVA DE EQUITY (Paper Trading)</div>
+              <div style={{ ...sTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📈 CURVA DE EQUITY {isRealtime ? '(Real-time)' : '(Paper Trading)'}</span>
+                <span style={{ fontSize: 11, color: returnColor, fontWeight: 600 }}>
+                  {totalReturn >= 0 ? '+' : ''}{totalReturn}%
+                </span>
+              </div>
               <div style={{ width: '100%', height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={equityData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -1011,8 +1050,8 @@ export default function SentixProFrontend() {
                     <Tooltip
                       contentStyle={{ background: bg2, border: `1px solid ${border}`, borderRadius: 6, fontSize: 11, color: text }}
                       formatter={(value, name) => [
-                        name === 'equity' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`,
-                        name === 'equity' ? 'Equity' : 'Drawdown'
+                        name === 'equity' ? `$${value.toFixed(2)}` : name === 'unrealized' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`,
+                        name === 'equity' ? 'Equity' : name === 'unrealized' ? 'Unrealized P&L' : 'Drawdown'
                       ]}
                     />
                     <ReferenceLine y={initialCap} stroke={muted} strokeDasharray="3 3" />
