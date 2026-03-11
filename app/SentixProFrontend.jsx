@@ -55,6 +55,11 @@ export default function SentixProFrontend() {
   const [paperHistoryTotal, setPaperHistoryTotal] = useState(0);
   const [paperConfirmReset, setPaperConfirmReset] = useState(false);
 
+  // Advanced Performance
+  const [advancedPerf, setAdvancedPerf] = useState(null);
+  const [advancedPerfDays, setAdvancedPerfDays] = useState(90);
+  const [showAdvancedPerf, setShowAdvancedPerf] = useState(false);
+
   // Alerts tab state (lifted to parent to survive re-renders)
   const [alertShowFilters, setAlertShowFilters] = useState(false);
   const [alertFilterForm, setAlertFilterForm] = useState(null);
@@ -180,12 +185,13 @@ export default function SentixProFrontend() {
   // ─── DASHBOARD CONSOLIDATED FETCHES ─────────────────────────────────────
   const fetchDashboardPaper = useCallback(async () => {
     try {
-      const [cfgRes, posRes, perfRes, histRes, eqRes] = await Promise.allSettled([
+      const [cfgRes, posRes, perfRes, histRes, eqRes, advRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/paper/config/${USER_ID}`),
         fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
         fetch(`${API_URL}/api/paper/performance/${USER_ID}`),
         fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
         fetch(`${API_URL}/api/paper/equity/${USER_ID}?days=7`),
+        fetch(`${API_URL}/api/paper/performance-advanced/${USER_ID}?days=${advancedPerfDays}`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
@@ -207,10 +213,14 @@ export default function SentixProFrontend() {
         const d = await eqRes.value.json();
         setRealtimeEquityCurve(d.curve || []);
       }
+      if (advRes.status === 'fulfilled' && advRes.value.ok) {
+        const d = await advRes.value.json();
+        if (d.total !== undefined) setAdvancedPerf(d);
+      }
     } catch (error) {
       console.error('Error fetching dashboard paper data:', error);
     }
-  }, [API_URL]);
+  }, [API_URL, advancedPerfDays]);
 
   const fetchBacktestHistory = useCallback(async () => {
     try {
@@ -3107,6 +3117,228 @@ export default function SentixProFrontend() {
               {stat.sub && <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 2 }}>{stat.sub}</div>}
             </div>
           ))}
+        </div>
+
+        {/* ═══ ADVANCED PERFORMANCE ANALYTICS ═══ */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setShowAdvancedPerf(!showAdvancedPerf)}>
+            <div style={sTitle}>📊 ANALYTICS AVANZADOS {showAdvancedPerf ? '▾' : '▸'}</div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {[30, 90, 0].map(d => (
+                <button key={d} onClick={(e) => { e.stopPropagation(); setAdvancedPerfDays(d); }} style={{
+                  padding: "3px 10px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700,
+                  background: advancedPerfDays === d ? green : bg3, color: advancedPerfDays === d ? "#000" : muted
+                }}>{d === 0 ? 'Todo' : `${d}d`}</button>
+              ))}
+            </div>
+          </div>
+
+          {showAdvancedPerf && (() => {
+            if (!advancedPerf || advancedPerf.total < 5) {
+              return <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
+                Necesitas al menos 5 trades cerrados para ver analytics avanzados ({advancedPerf?.total || 0} actuales)
+              </div>;
+            }
+
+            const hitColor = (rate) => rate >= 55 ? green : rate >= 45 ? amber : red;
+
+            return (
+              <div style={{ marginTop: 14 }}>
+                {/* Row 1: By Asset - Horizontal Bar Chart */}
+                {advancedPerf.byAsset && advancedPerf.byAsset.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L POR ASSET</div>
+                    <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                      <ResponsiveContainer width="100%" height={Math.max(120, advancedPerf.byAsset.length * 32)}>
+                        <BarChart data={advancedPerf.byAsset} layout="vertical" margin={{ left: 60, right: 20, top: 5, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 9, fill: muted }} />
+                          <YAxis type="category" dataKey="asset" tick={{ fontSize: 10, fill: "#e5e7eb" }} width={55} />
+                          <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
+                            formatter={(v, name, props) => {
+                              const d = props.payload;
+                              return [`$${v} | WR: ${d.winRate}% | ${d.trades} trades | avg: $${d.avgPnl}`, 'P&L'];
+                            }} />
+                          <Bar dataKey="totalPnl" radius={[0, 4, 4, 0]}>
+                            {advancedPerf.byAsset.map((entry, i) => (
+                              <Cell key={i} fill={entry.totalPnl >= 0 ? green : red} fillOpacity={0.8} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* Row 2: By Hour + By Day of Week */}
+                <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 12, marginBottom: 16 }}>
+                  {/* By Hour */}
+                  {advancedPerf.byHour && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR HORA (UTC)</div>
+                      <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                        <ResponsiveContainer width="100%" height={140}>
+                          <BarChart data={advancedPerf.byHour}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                            <XAxis dataKey="hour" tick={{ fontSize: 8, fill: muted }} />
+                            <YAxis tick={{ fontSize: 8, fill: muted }} domain={[0, 100]} unit="%" />
+                            <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                              formatter={(v, name, props) => {
+                                const d = props.payload;
+                                return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                              }} />
+                            <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
+                            <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
+                              {advancedPerf.byHour.map((entry, i) => (
+                                <Cell key={i} fill={entry.trades === 0 ? "#1a1a1a" : entry.totalPnl >= 0 ? green : red} fillOpacity={entry.trades === 0 ? 0.1 : 0.7} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* By Day of Week */}
+                  {advancedPerf.byDayOfWeek && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR DIA</div>
+                      <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                        <ResponsiveContainer width="100%" height={140}>
+                          <BarChart data={advancedPerf.byDayOfWeek}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                            <XAxis dataKey="label" tick={{ fontSize: 9, fill: muted }} />
+                            <YAxis tick={{ fontSize: 8, fill: muted }} domain={[0, 100]} unit="%" />
+                            <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                              formatter={(v, name, props) => {
+                                const d = props.payload;
+                                return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                              }} />
+                            <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
+                            <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
+                              {advancedPerf.byDayOfWeek.map((entry, i) => (
+                                <Cell key={i} fill={entry.trades === 0 ? "#1a1a1a" : entry.totalPnl >= 0 ? green : red} fillOpacity={entry.trades === 0 ? 0.1 : 0.7} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 3: P&L Distribution Histogram */}
+                {advancedPerf.pnlDistribution && advancedPerf.pnlDistribution.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>DISTRIBUCION DE P&L (%)</div>
+                    <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                      <ResponsiveContainer width="100%" height={140}>
+                        <BarChart data={advancedPerf.pnlDistribution}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                          <XAxis dataKey="bucket" tick={{ fontSize: 7, fill: muted }} interval={0} angle={-45} textAnchor="end" height={50} />
+                          <YAxis tick={{ fontSize: 8, fill: muted }} allowDecimals={false} />
+                          <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                            formatter={(v) => [v, 'Trades']} />
+                          <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                            {advancedPerf.pnlDistribution.map((entry, i) => (
+                              <Cell key={i} fill={entry.bucket.includes('-') || entry.bucket.startsWith('<') ? red : green} fillOpacity={0.7} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* Row 4: Exit Reason + Direction */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {/* By Exit Reason */}
+                  {advancedPerf.byExitReason && advancedPerf.byExitReason.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR RAZON DE CIERRE</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {advancedPerf.byExitReason.map(r => {
+                          const reasonColor = r.reason === 'stop_loss' ? red : r.reason.includes('take_profit') ? green : r.reason === 'trailing_stop' ? amber : muted;
+                          return (
+                            <div key={r.reason} style={{ background: bg3, borderRadius: 6, padding: "8px 12px", borderLeft: `3px solid ${reasonColor}` }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: reasonColor }}>{r.reason.replace(/_/g, ' ').toUpperCase()}</span>
+                                <span style={{ fontSize: 10, color: muted }}>{r.count} trades</span>
+                              </div>
+                              <div style={{ display: "flex", gap: 14, fontSize: 10, marginTop: 4 }}>
+                                <span style={{ color: hitColor(r.winRate) }}>WR: {r.winRate}%</span>
+                                <span style={{ color: r.avgPnl >= 0 ? green : red }}>Avg: ${r.avgPnl}</span>
+                                <span style={{ color: r.avgPnlPct >= 0 ? green : red }}>Avg: {r.avgPnlPct}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* By Direction */}
+                  {advancedPerf.byDirection && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR DIRECCION</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {["LONG", "SHORT"].map(dir => {
+                          const d = advancedPerf.byDirection[dir];
+                          if (!d || d.trades === 0) return null;
+                          const dirColor = dir === "LONG" ? green : red;
+                          return (
+                            <div key={dir} style={{ background: bg3, borderRadius: 6, padding: "10px 14px", borderLeft: `3px solid ${dirColor}` }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: dirColor }}>{dir === "LONG" ? "▲ LONG" : "▼ SHORT"}</span>
+                                <span style={{ fontSize: 11, color: muted }}>{d.trades} trades</span>
+                              </div>
+                              <div style={{ display: "flex", gap: 16, fontSize: 11 }}>
+                                <div>
+                                  <span style={{ color: muted }}>Win Rate: </span>
+                                  <span style={{ color: hitColor(d.winRate), fontWeight: 700 }}>{d.winRate}%</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: muted }}>P&L: </span>
+                                  <span style={{ color: d.totalPnl >= 0 ? green : red, fontWeight: 700 }}>${d.totalPnl}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: muted }}>W/L: </span>
+                                  <span style={{ fontWeight: 600 }}>{d.wins}/{d.trades - d.wins}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Monthly Trend */}
+                      {advancedPerf.tradesByMonth && advancedPerf.tradesByMonth.length > 1 && (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L MENSUAL</div>
+                          <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                            <ResponsiveContainer width="100%" height={100}>
+                              <BarChart data={advancedPerf.tradesByMonth}>
+                                <XAxis dataKey="month" tick={{ fontSize: 8, fill: muted }} tickFormatter={m => m.substring(5)} />
+                                <YAxis tick={{ fontSize: 8, fill: muted }} />
+                                <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                                  formatter={(v, name, props) => [`$${v} | WR: ${props.payload.winRate}% | ${props.payload.trades}t`, 'P&L']} />
+                                <Bar dataKey="totalPnl" radius={[2, 2, 0, 0]}>
+                                  {advancedPerf.tradesByMonth.map((entry, i) => (
+                                    <Cell key={i} fill={entry.totalPnl >= 0 ? green : red} fillOpacity={0.8} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Open Positions */}
