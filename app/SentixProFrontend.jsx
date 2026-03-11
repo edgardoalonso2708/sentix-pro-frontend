@@ -4391,22 +4391,24 @@ export default function SentixProFrontend() {
                       setBtDeleting(true);
                       try {
                         const idsToDelete = [...btSelected];
-                        const res = await fetch(`${API_URL}/api/backtest`, {
+                        // Try DELETE first, fallback to POST /api/backtest/delete
+                        let res = await fetch(`${API_URL}/api/backtest`, {
                           method: 'DELETE',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ ids: idsToDelete })
                         });
-                        if (res.ok) {
-                          const deletedIds = btSelected;
-                          setBtHistory(prev => prev.filter(b => !deletedIds.has(b.id)));
-                          setBtSelected(new Set());
-                          if (btResult && deletedIds.has(btResult.id)) setBtResult(null);
-                        } else {
-                          // Even if backend says not found, remove from UI and refresh
-                          setBtHistory(prev => prev.filter(b => !btSelected.has(b.id)));
-                          setBtSelected(new Set());
-                          loadBtHistory();
+                        if (!res.ok && res.status === 404) {
+                          res = await fetch(`${API_URL}/api/backtest/delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: idsToDelete })
+                          });
                         }
+                        // Always remove from UI regardless of backend response
+                        const deletedIds = new Set(idsToDelete);
+                        setBtHistory(prev => prev.filter(b => !deletedIds.has(b.id)));
+                        setBtSelected(new Set());
+                        if (btResult && deletedIds.has(btResult.id)) setBtResult(null);
                       } catch (e) { console.error('Delete failed', e); loadBtHistory(); }
                       setBtDeleting(false);
                     }}
