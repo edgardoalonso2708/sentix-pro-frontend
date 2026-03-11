@@ -4338,8 +4338,10 @@ export default function SentixProFrontend() {
                           body: JSON.stringify({ ids: [...btSelected] })
                         });
                         if (res.ok) {
+                          const deletedIds = btSelected;
+                          setBtHistory(prev => prev.filter(b => !deletedIds.has(b.id)));
                           setBtSelected(new Set());
-                          loadBtHistory();
+                          if (btResult && deletedIds.has(btResult.id)) setBtResult(null);
                         }
                       } catch (e) { console.error('Delete failed', e); }
                       setBtDeleting(false);
