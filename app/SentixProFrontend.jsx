@@ -3721,6 +3721,105 @@ export default function SentixProFrontend() {
               </div>
             )}
 
+            {/* Monte Carlo Simulation */}
+            {btResult.monte_carlo && !btResult.monte_carlo.skipped && (() => {
+              const mc = btResult.monte_carlo;
+              return (
+                <div style={{
+                  background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                  padding: 16, marginBottom: 16
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                      🎲 MONTE CARLO SIMULATION
+                    </span>
+                    <span style={{ fontSize: 9, color: muted }}>
+                      {mc.simulations?.toLocaleString()} paths · {mc.tradeCount} trades
+                    </span>
+                  </div>
+
+                  {/* Summary Cards */}
+                  {mc.summary && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 14 }}>
+                      {[
+                        { label: "Profit Probability", value: `${mc.summary.profitProbability}%`, color: mc.summary.profitProbability >= 50 ? green : red },
+                        { label: "Median Return", value: `${mc.summary.medianReturn}%`, color: mc.summary.medianReturn >= 0 ? green : red },
+                        { label: "Median Drawdown", value: `${mc.summary.medianDrawdown}%`, color: amber },
+                        { label: "Worst Case (5th)", value: `${mc.summary.worstCase5}%`, color: red },
+                        { label: "Best Case (95th)", value: `${mc.summary.bestCase95}%`, color: green },
+                        { label: "Median Sharpe", value: mc.summary.medianSharpe, color: mc.summary.medianSharpe >= 1 ? green : amber }
+                      ].map((card, ci) => (
+                        <div key={ci} style={{
+                          background: bg3, borderRadius: 8, padding: "10px 12px", textAlign: "center"
+                        }}>
+                          <div style={{ fontSize: 8, color: muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                            {card.label}
+                          </div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: card.color }}>
+                            {card.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Percentile Distribution Table */}
+                  {mc.percentiles && (
+                    <div style={{ background: bg3, borderRadius: 8, padding: 12, marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: text, marginBottom: 8, fontFamily: "monospace" }}>
+                        PERCENTILE DISTRIBUTION
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "50px repeat(5, 1fr)", gap: 3, fontSize: 9, fontFamily: "monospace" }}>
+                        <div style={{ color: muted, fontWeight: 600 }}>%ile</div>
+                        <div style={{ color: muted, fontWeight: 600 }}>Return</div>
+                        <div style={{ color: muted, fontWeight: 600 }}>MaxDD</div>
+                        <div style={{ color: muted, fontWeight: 600 }}>Sharpe</div>
+                        <div style={{ color: muted, fontWeight: 600 }}>WinRate</div>
+                        <div style={{ color: muted, fontWeight: 600 }}>Equity</div>
+                        {[5, 25, 50, 75, 95].map(p => {
+                          const row = mc.percentiles[`p${p}`];
+                          if (!row) return null;
+                          return [
+                            <div key={`l${p}`} style={{ color: amber, fontWeight: 700 }}>P{p}</div>,
+                            <div key={`r${p}`} style={{ color: row.returnPct >= 0 ? green : red }}>{row.returnPct}%</div>,
+                            <div key={`d${p}`} style={{ color: red }}>{row.maxDrawdownPct}%</div>,
+                            <div key={`s${p}`} style={{ color: text }}>{row.sharpe}</div>,
+                            <div key={`w${p}`} style={{ color: text }}>{row.winRate}%</div>,
+                            <div key={`e${p}`} style={{ color: text }}>${Number(row.finalEquity).toLocaleString()}</div>
+                          ];
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Drawdown Probability */}
+                  {mc.riskOfRuin && (
+                    <div style={{ background: bg3, borderRadius: 8, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: text, marginBottom: 8, fontFamily: "monospace" }}>
+                        DRAWDOWN PROBABILITY
+                      </div>
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        {Object.entries(mc.riskOfRuin).map(([key, prob]) => {
+                          const threshold = key.replace('dd', '').replace('pct', '');
+                          return (
+                            <div key={key} style={{ textAlign: "center" }}>
+                              <div style={{ fontSize: 8, color: muted, marginBottom: 2 }}>&gt;{threshold}% DD</div>
+                              <div style={{
+                                fontSize: 15, fontWeight: 700,
+                                color: prob > 50 ? red : prob > 25 ? amber : green
+                              }}>
+                                {prob}%
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Trade List */}
             {btResult.trades && btResult.trades.length > 0 && (
               <div style={{
