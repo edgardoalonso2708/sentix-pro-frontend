@@ -128,6 +128,7 @@ export default function SentixProFrontend() {
   const [autoTuneConfig, setAutoTuneConfig] = useState(null);
   const [autoTuneRunning, setAutoTuneRunning] = useState(false);
   const [autoTuneExpanded, setAutoTuneExpanded] = useState(true);
+  const [autoTunePending, setAutoTunePending] = useState([]);
 
   // Guide tab state (lifted to parent to survive re-renders)
   const [guideSection, setGuideSection] = useState(0);
@@ -433,9 +434,10 @@ export default function SentixProFrontend() {
 
   const loadAutoTuneData = useCallback(async () => {
     try {
-      const [histRes, cfgRes] = await Promise.all([
+      const [histRes, cfgRes, pendRes] = await Promise.all([
         fetch(`${API_URL}/api/autotune/history?limit=10`),
         fetch(`${API_URL}/api/autotune/config`),
+        fetch(`${API_URL}/api/autotune/pending`),
       ]);
       if (histRes.ok) {
         const d = await histRes.json();
@@ -445,6 +447,10 @@ export default function SentixProFrontend() {
         const d = await cfgRes.json();
         setAutoTuneConfig(d);
         setAutoTuneRunning(d.isRunning || false);
+      }
+      if (pendRes.ok) {
+        const d = await pendRes.json();
+        setAutoTunePending(d.pending || []);
       }
     } catch (e) { console.error('Auto-tune data fetch error', e); }
   }, [API_URL]);
@@ -5395,8 +5401,104 @@ export default function SentixProFrontend() {
               <p style={{ color: muted, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
                 Re-optimiza los 10 parámetros más impactantes cada 24h usando walk-forward validation + safety guards.
                 {autoTuneConfig?.config && Object.keys(autoTuneConfig.config).length > 0 && ' Config activa auto-tuneada.'}
-                {process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ? ' 🧠 AI review habilitado.' : ''}
+                {autoTuneConfig?.approvalMode === 'telegram' ? ' 📱 Aprobación por Telegram.' : ' 🧠 AI review habilitado.'}
               </p>
+
+              {/* ─── PENDING APPROVAL BANNER ────────────────────────── */}
+              {autoTunePending.length > 0 && autoTunePending.map(proposal => {
+                const remaining = Math.max(0, proposal.remainingMs);
+                const hoursLeft = Math.floor(remaining / 3600000);
+                const minsLeft = Math.floor((remaining % 3600000) / 60000);
+                const aiDecision = proposal.context?.aiReview?.decision;
+                const aiReasoning = proposal.context?.aiReview?.reasoning;
+
+                return (
+                  <div key={proposal.runId} style={{
+                    background: `${amber}15`, border: `1px solid ${amber}50`, borderRadius: 8,
+                    padding: 14, marginBottom: 12
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: amber }}>
+                        ⏳ PROPUESTA PENDIENTE DE APROBACIÓN
+                      </span>
+                      <span style={{ fontSize: 10, color: muted }}>
+                        Expira en {hoursLeft}h {minsLeft}m
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: 11, color: text, marginBottom: 8 }}>
+                      <span style={{ color: muted }}>Régimen:</span> {proposal.context?.marketRegime || 'unknown'}
+                      {aiDecision && <> | <span style={{ color: muted }}>AI:</span> <span style={{
+                        color: aiDecision === 'APPLY' ? green : aiDecision === 'BLEND' ? amber : red
+                      }}>{aiDecision}</span></>}
+                    </div>
+
+                    {/* Proposed changes table */}
+                    <div style={{ background: bg2, borderRadius: 6, padding: 8, marginBottom: 8 }}>
+                      {proposal.accepted?.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '3px 0',
+                          borderBottom: i < proposal.accepted.length - 1 ? `1px solid ${border}` : 'none' }}>
+                          <span style={{ fontFamily: 'monospace', color: text }}>{p.paramName}</span>
+                          <span>
+                            <span style={{ color: muted }}>{p.currentValue}</span>
+                            <span style={{ color: muted }}> → </span>
+                            <span style={{ color: green, fontWeight: 700 }}>{p.proposedValue}</span>
+                            <span style={{ color: green, fontSize: 10, marginLeft: 4 }}>+{p.improvementPct}%</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {aiReasoning && (
+                      <p style={{ fontSize: 10, color: muted, fontStyle: 'italic', marginBottom: 8, lineHeight: 1.4 }}>
+                        {aiReasoning.substring(0, 200)}
+                      </p>
+                    )}
+
+                    {/* Approval buttons */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={async () => {
+                        try {
+                          await fetch(`${API_URL}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'apply' })
+                          });
+                          loadAutoTuneData();
+                        } catch (e) { console.error(e); }
+                      }} style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        background: green, color: '#fff', fontWeight: 700, fontSize: 12
+                      }}>✅ Aplicar</button>
+
+                      <button onClick={async () => {
+                        try {
+                          await fetch(`${API_URL}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'blend' })
+                          });
+                          loadAutoTuneData();
+                        } catch (e) { console.error(e); }
+                      }} style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        background: amber, color: '#000', fontWeight: 700, fontSize: 12
+                      }}>🔀 Blend 50/50</button>
+
+                      <button onClick={async () => {
+                        try {
+                          await fetch(`${API_URL}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'reject' })
+                          });
+                          loadAutoTuneData();
+                        } catch (e) { console.error(e); }
+                      }} style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        background: red, color: '#fff', fontWeight: 700, fontSize: 12
+                      }}>❌ Rechazar</button>
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Status Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 12 }}>
@@ -5427,6 +5529,9 @@ export default function SentixProFrontend() {
                           const last = autoTuneHistory[0];
                           const applied = last.params_applied ? Object.keys(last.params_applied).length : 0;
                           if (last.status === 'failed') return <span style={{ color: red }}>❌ Error</span>;
+                          if (last.status === 'pending_approval') return <span style={{ color: amber }}>⏳ Pendiente</span>;
+                          if (last.status === 'rejected') return <span style={{ color: red }}>❌ Rechazado</span>;
+                          if (last.status === 'reverted') return <span style={{ color: red }}>⚠️ Revertido</span>;
                           if (applied > 0) return <span style={{ color: green }}>✅ {applied} params</span>;
                           return <span style={{ color: muted }}>— Sin cambios</span>;
                         })()
@@ -5445,6 +5550,14 @@ export default function SentixProFrontend() {
                           return <span style={{ color: clr }}>🧠 {d}</span>;
                         })()
                       : <span style={{ color: muted }}>N/A</span>}
+                  </div>
+                </div>
+
+                {/* Approval Mode */}
+                <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>APROBACIÓN</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: autoTuneConfig?.approvalMode === 'telegram' ? purple : green }}>
+                    {autoTuneConfig?.approvalMode === 'telegram' ? '📱 Telegram' : '⚡ Auto'}
                   </div>
                 </div>
               </div>
