@@ -123,6 +123,12 @@ export default function SentixProFrontend() {
   const [optProgress, setOptProgress] = useState({ current: 0, total: 0, message: '' });
   const [optHistory, setOptHistory] = useState([]);
 
+  // Auto-tune state
+  const [autoTuneHistory, setAutoTuneHistory] = useState([]);
+  const [autoTuneConfig, setAutoTuneConfig] = useState(null);
+  const [autoTuneRunning, setAutoTuneRunning] = useState(false);
+  const [autoTuneExpanded, setAutoTuneExpanded] = useState(true);
+
   // Guide tab state (lifted to parent to survive re-renders)
   const [guideSection, setGuideSection] = useState(0);
 
@@ -425,12 +431,31 @@ export default function SentixProFrontend() {
     } catch (e) { console.error('Optimize history fetch error', e); }
   }, [API_URL]);
 
+  const loadAutoTuneData = useCallback(async () => {
+    try {
+      const [histRes, cfgRes] = await Promise.all([
+        fetch(`${API_URL}/api/autotune/history?limit=10`),
+        fetch(`${API_URL}/api/autotune/config`),
+      ]);
+      if (histRes.ok) {
+        const d = await histRes.json();
+        setAutoTuneHistory(d.history || []);
+      }
+      if (cfgRes.ok) {
+        const d = await cfgRes.json();
+        setAutoTuneConfig(d);
+        setAutoTuneRunning(d.isRunning || false);
+      }
+    } catch (e) { console.error('Auto-tune data fetch error', e); }
+  }, [API_URL]);
+
   useEffect(() => {
     if (tab === 'optimize') {
       loadOptParams();
       loadOptHistory();
+      loadAutoTuneData();
     }
-  }, [tab, loadOptParams, loadOptHistory]);
+  }, [tab, loadOptParams, loadOptHistory, loadAutoTuneData]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -5351,6 +5376,190 @@ export default function SentixProFrontend() {
             </div>
           </div>
         )}
+
+        {/* ─── AUTO-PARAMETER TUNING PANEL ──────────────────────────────── */}
+        <div style={{ background: bg2, borderRadius: 8, padding: 16, marginTop: 16, border: `1px solid ${border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: autoTuneExpanded ? 12 : 0 }}
+            onClick={() => setAutoTuneExpanded(!autoTuneExpanded)}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
+              🤖 Auto-Parameter Tuning {autoTuneConfig?.source === 'saved' && <span style={{ color: green, fontSize: 10, marginLeft: 8 }}>ACTIVO</span>}
+            </h3>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {autoTuneRunning && <span style={{ color: amber, fontSize: 11, fontWeight: 700 }}>⏳ Ejecutando...</span>}
+              <span style={{ color: muted, fontSize: 14 }}>{autoTuneExpanded ? '▼' : '▶'}</span>
+            </div>
+          </div>
+
+          {autoTuneExpanded && (
+            <div>
+              <p style={{ color: muted, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
+                Re-optimiza los 10 parámetros más impactantes cada 24h usando walk-forward validation + safety guards.
+                {autoTuneConfig?.config && Object.keys(autoTuneConfig.config).length > 0 && ' Config activa auto-tuneada.'}
+                {process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ? ' 🧠 AI review habilitado.' : ''}
+              </p>
+
+              {/* Status Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 12 }}>
+                {/* Config Source */}
+                <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>CONFIG FUENTE</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: autoTuneConfig?.source === 'saved' ? green : muted }}>
+                    {autoTuneConfig?.source === 'saved' ? '🤖 Auto-Tuned' : '📦 Default'}
+                  </div>
+                </div>
+
+                {/* Last Run */}
+                <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>ÚLTIMO RUN</div>
+                  <div style={{ fontSize: 11, fontWeight: 700 }}>
+                    {autoTuneHistory.length > 0
+                      ? new Date(autoTuneHistory[0].started_at).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : 'Nunca'}
+                  </div>
+                </div>
+
+                {/* Last Result */}
+                <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>RESULTADO</div>
+                  <div style={{ fontSize: 11, fontWeight: 700 }}>
+                    {autoTuneHistory.length > 0
+                      ? (() => {
+                          const last = autoTuneHistory[0];
+                          const applied = last.params_applied ? Object.keys(last.params_applied).length : 0;
+                          if (last.status === 'failed') return <span style={{ color: red }}>❌ Error</span>;
+                          if (applied > 0) return <span style={{ color: green }}>✅ {applied} params</span>;
+                          return <span style={{ color: muted }}>— Sin cambios</span>;
+                        })()
+                      : <span style={{ color: muted }}>—</span>}
+                  </div>
+                </div>
+
+                {/* AI Review */}
+                <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>AI REVIEW</div>
+                  <div style={{ fontSize: 11, fontWeight: 700 }}>
+                    {autoTuneHistory.length > 0 && autoTuneHistory[0].ai_review
+                      ? (() => {
+                          const d = autoTuneHistory[0].ai_review.decision;
+                          const clr = d === 'APPLY' ? green : d === 'BLEND' ? amber : red;
+                          return <span style={{ color: clr }}>🧠 {d}</span>;
+                        })()
+                      : <span style={{ color: muted }}>N/A</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={async () => {
+                    setAutoTuneRunning(true);
+                    try {
+                      await fetch(`${API_URL}/api/autotune/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asset: 'bitcoin' }) });
+                      // Poll for completion
+                      const poll = setInterval(async () => {
+                        try {
+                          const r = await fetch(`${API_URL}/api/autotune/config`);
+                          if (r.ok) {
+                            const d = await r.json();
+                            if (!d.isRunning) {
+                              clearInterval(poll);
+                              setAutoTuneRunning(false);
+                              loadAutoTuneData();
+                            }
+                          }
+                        } catch (_) {}
+                      }, 15000);
+                    } catch (e) { setAutoTuneRunning(false); console.error(e); }
+                  }}
+                  disabled={autoTuneRunning}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none',
+                    background: autoTuneRunning ? bg : `linear-gradient(135deg, ${purple}, #7c3aed)`,
+                    color: '#fff', cursor: autoTuneRunning ? 'wait' : 'pointer', flex: 1
+                  }}>
+                  {autoTuneRunning ? '⏳ Ejecutando Auto-Tune...' : '🚀 Ejecutar Ahora'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Resetear a parámetros por defecto?')) return;
+                    await fetch(`${API_URL}/api/autotune/reset`, { method: 'POST' });
+                    loadAutoTuneData();
+                  }}
+                  disabled={autoTuneRunning || autoTuneConfig?.source !== 'saved'}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    border: `1px solid ${border}`, background: bg, color: muted, cursor: 'pointer'
+                  }}>
+                  🔄 Reset Defaults
+                </button>
+              </div>
+
+              {/* Run History Table */}
+              {autoTuneHistory.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 8 }}>📋 Historial de Auto-Tune</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {autoTuneHistory.slice(0, 5).map((run, i) => {
+                      const applied = run.params_applied ? Object.keys(run.params_applied) : [];
+                      const aiDecision = run.ai_review?.decision;
+                      const statusColor = run.status === 'completed' ? (applied.length > 0 ? green : muted) : run.status === 'failed' ? red : amber;
+                      return (
+                        <div key={run.id || i} style={{
+                          padding: '10px 12px', background: bg, borderRadius: 6, fontSize: 11,
+                          borderLeft: `3px solid ${statusColor}`
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span>
+                              <span style={{ fontWeight: 700 }}>{run.trigger === 'manual' ? '🖐️' : '⏰'} {run.asset?.toUpperCase()}</span>
+                              <span style={{ color: muted, marginLeft: 8 }}>{run.lookback_days}d · {run.market_regime || '?'}</span>
+                            </span>
+                            <span style={{ color: muted, fontSize: 9 }}>
+                              {new Date(run.started_at).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {applied.length > 0 ? (
+                              applied.map(p => (
+                                <span key={p} style={{ background: `${green}20`, color: green, padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>
+                                  {p}: {run.params_applied[p]}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ color: muted, fontSize: 10 }}>
+                                {run.status === 'failed' ? `Error: ${run.error_message?.substring(0, 60)}` : 'Sin cambios aplicados'}
+                              </span>
+                            )}
+                            {aiDecision && (
+                              <span style={{
+                                background: aiDecision === 'APPLY' ? `${green}20` : aiDecision === 'BLEND' ? `${amber}20` : `${red}20`,
+                                color: aiDecision === 'APPLY' ? green : aiDecision === 'BLEND' ? amber : red,
+                                padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700
+                              }}>
+                                🧠 {aiDecision}
+                              </span>
+                            )}
+                          </div>
+                          {run.ai_review?.reasoning && (
+                            <div style={{ color: muted, fontSize: 9, marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                              {run.ai_review.reasoning.substring(0, 150)}{run.ai_review.reasoning.length > 150 ? '...' : ''}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {autoTuneHistory.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 16, color: muted, fontSize: 11 }}>
+                  🤖 Auto-tune se ejecuta diariamente a las 3:00 AM o manualmente. Primer run generará historial.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
