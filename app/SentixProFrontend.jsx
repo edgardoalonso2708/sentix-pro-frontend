@@ -100,6 +100,8 @@ export default function SentixProFrontend() {
   const [btPolling, setBtPolling] = useState(null);
   const [btProgress, setBtProgress] = useState(0);
   const [btTradesPage, setBtTradesPage] = useState(0);
+  const [btSelected, setBtSelected] = useState(new Set());
+  const [btDeleting, setBtDeleting] = useState(false);
 
   // Optimize tab state (lifted to parent to survive re-renders)
   const [optParams, setOptParams] = useState([]);
@@ -4319,38 +4321,111 @@ export default function SentixProFrontend() {
             background: bg2, border: `1px solid ${border}`, borderRadius: 10,
             padding: 16
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: purple, fontFamily: "monospace", marginBottom: 12 }}>
-              HISTORIAL DE BACKTESTS
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                HISTORIAL DE BACKTESTS
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {btSelected.size > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Eliminar ${btSelected.size} backtest(s)?`)) return;
+                      setBtDeleting(true);
+                      try {
+                        const res = await fetch(`${API_URL}/api/backtest`, {
+                          method: 'DELETE',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: [...btSelected] })
+                        });
+                        if (res.ok) {
+                          setBtSelected(new Set());
+                          loadBtHistory();
+                        }
+                      } catch (e) { console.error('Delete failed', e); }
+                      setBtDeleting(false);
+                    }}
+                    disabled={btDeleting}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)", border: `1px solid ${red}`,
+                      borderRadius: 6, padding: "4px 12px", cursor: "pointer",
+                      fontSize: 10, fontFamily: "monospace", color: red, fontWeight: 600
+                    }}
+                  >
+                    {btDeleting ? "Eliminando..." : `Eliminar (${btSelected.size})`}
+                  </button>
+                )}
+                {btHistory.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (btSelected.size === btHistory.length) {
+                        setBtSelected(new Set());
+                      } else {
+                        setBtSelected(new Set(btHistory.map(b => b.id)));
+                      }
+                    }}
+                    style={{
+                      background: "transparent", border: `1px solid ${border}`,
+                      borderRadius: 6, padding: "4px 10px", cursor: "pointer",
+                      fontSize: 9, fontFamily: "monospace", color: muted
+                    }}
+                  >
+                    {btSelected.size === btHistory.length ? "Deseleccionar" : "Seleccionar todo"}
+                  </button>
+                )}
+              </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {btHistory.map((bt, i) => {
                 const pnl = Number(bt.total_pnl || 0);
-                const isSelected = btResult && btResult.id === bt.id;
+                const isViewing = btResult && btResult.id === bt.id;
+                const isChecked = btSelected.has(bt.id);
                 return (
                   <div
                     key={bt.id}
-                    onClick={() => bt.status === 'completed' && loadHistoricResult(bt.id)}
                     style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
                       padding: "10px 14px", borderRadius: 6,
-                      background: isSelected ? "rgba(168, 85, 247, 0.1)" : "#0a0a0a",
-                      border: `1px solid ${isSelected ? purple : border}`,
+                      background: isViewing ? "rgba(168, 85, 247, 0.1)" : isChecked ? "rgba(168, 85, 247, 0.05)" : "#0a0a0a",
+                      border: `1px solid ${isViewing ? purple : isChecked ? "rgba(168, 85, 247, 0.3)" : border}`,
                       cursor: bt.status === 'completed' ? "pointer" : "default",
-                      opacity: bt.status === 'failed' ? 0.5 : 1
+                      opacity: bt.status === 'failed' ? 0.6 : 1
                     }}
                   >
-                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                      <span style={{ fontSize: 10, color: text, fontFamily: "monospace", fontWeight: 600, textTransform: "uppercase" }}>
-                        {bt.asset}
-                      </span>
-                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
-                        {bt.days}d &middot; {bt.step_interval}
-                      </span>
-                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
-                        {bt.total_trades || 0} trades
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setBtSelected(prev => {
+                            const next = new Set(prev);
+                            if (next.has(bt.id)) next.delete(bt.id);
+                            else next.add(bt.id);
+                            return next;
+                          });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ accentColor: purple, cursor: "pointer" }}
+                      />
+                      <span
+                        onClick={() => bt.status === 'completed' && loadHistoricResult(bt.id)}
+                        style={{ display: "flex", gap: 16, alignItems: "center", flex: 1 }}
+                      >
+                        <span style={{ fontSize: 10, color: text, fontFamily: "monospace", fontWeight: 600, textTransform: "uppercase" }}>
+                          {bt.asset}
+                        </span>
+                        <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                          {bt.days}d &middot; {bt.step_interval}
+                        </span>
+                        <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                          {bt.total_trades || 0} trades
+                        </span>
                       </span>
                     </div>
-                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                    <div
+                      onClick={() => bt.status === 'completed' && loadHistoricResult(bt.id)}
+                      style={{ display: "flex", gap: 16, alignItems: "center" }}
+                    >
                       {bt.status === 'completed' ? (
                         <>
                           <span style={{
@@ -4369,7 +4444,7 @@ export default function SentixProFrontend() {
                         </span>
                       ) : (
                         <span style={{ fontSize: 10, color: red, fontFamily: "monospace" }}>
-                          Error
+                          {bt.error_message === 'Timed out' ? 'Timeout' : 'Error'}
                         </span>
                       )}
                       <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
