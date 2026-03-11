@@ -105,7 +105,8 @@ export default function SentixProFrontend() {
 
   // Optimize tab state (lifted to parent to survive re-renders)
   const [optParams, setOptParams] = useState([]);
-  const [optConfig, setOptConfig] = useState({ asset: 'bitcoin', days: 30, paramName: '' });
+  const [optConfig, setOptConfig] = useState({ asset: 'bitcoin', days: 90, paramName: '' });
+  const [optPhase, setOptPhase] = useState(0); // 0=all, 1=risk, 2=weights, 3=tuning
   const [optRunning, setOptRunning] = useState(false);
   const [optResult, setOptResult] = useState(null);
   const [optError, setOptError] = useState(null);
@@ -4599,15 +4600,67 @@ export default function SentixProFrontend() {
 
     const selectedParam = optParams.find(p => p.key === optConfig.paramName);
 
+    // Phase definitions for guided optimization
+    const PHASES = [
+      { id: 0, label: 'TODOS', icon: '📋', desc: 'Todos los parámetros', color: muted,
+        keys: null }, // null = show all
+      { id: 1, label: 'FASE 1: RIESGO', icon: '🛡️', desc: 'Stop loss, trailing, thresholds — los más impactantes', color: '#ef4444',
+        keys: ['riskPerTrade', 'atrStopMult', 'atrTrailingMult', 'buyThreshold', 'sellThreshold', 'confidenceCap'] },
+      { id: 2, label: 'FASE 2: PESOS', icon: '⚖️', desc: 'Peso de cada indicador en el score final', color: '#f59e0b',
+        keys: ['trendScoreStrong', 'derivativesScore', 'ichimokuScore', 'vwapScore', 'fibScore', 'marketStructureScore', 'orderBookScore'] },
+      { id: 3, label: 'FASE 3: AJUSTE FINO', icon: '🔧', desc: 'Governor, confluence, timeframes — refinamiento', color: purple,
+        keys: ['adxStrongThreshold', 'adxStrongMultiplier', 'adxWeakMultiplier', 'rsiOversold', 'rsiOverbought',
+               'strongConfluenceMult', 'conflictingMult', 'governorMultMild', 'governorMultStrong',
+               'governorStrongThreshold', 'governorRangingDampen', 'dynamicTFWeightsEnabled',
+               'tfTrending4hWeight', 'tfRanging15mWeight', 'srClusterThreshold', 'srSwingLookback'] }
+    ];
+
+    const activePhase = PHASES[optPhase];
+    const filteredParams = activePhase.keys
+      ? optParams.filter(p => activePhase.keys.includes(p.key))
+      : optParams;
+
     return (
       <div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>⚡ Optimizador de Estrategia</h2>
-        <p style={{ color: muted, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
-          Prueba variaciones de un parámetro de la estrategia contra datos históricos.
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>⚡ Optimizador de Estrategia</h2>
+        <p style={{ color: muted, fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
+          Optimiza un parámetro a la vez contra datos históricos.
           {optConfig.days >= 30
-            ? ' Walk-forward validation (70/30 train/test) detecta sobreajuste — rankea por Sharpe OOS.'
-            : ' El optimizador ejecuta un backtest por cada valor y encuentra la configuración óptima por Sharpe ratio.'}
+            ? ' Walk-forward 70/30 detecta sobreajuste.'
+            : ' ⚠️ Usa 90+ días para validación walk-forward.'}
         </p>
+
+        {/* Phase Selector */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+          {PHASES.map(ph => (
+            <button key={ph.id} onClick={() => { setOptPhase(ph.id); setOptConfig(c => ({ ...c, paramName: '' })); }}
+              style={{
+                padding: '8px 14px', borderRadius: 8, fontSize: 11, fontFamily: 'monospace', fontWeight: 700,
+                border: optPhase === ph.id ? `2px solid ${ph.color}` : `1px solid ${border}`,
+                background: optPhase === ph.id ? `${ph.color}20` : bg2,
+                color: optPhase === ph.id ? ph.color : muted, cursor: 'pointer'
+              }}>
+              {ph.icon} {ph.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Phase Description */}
+        {optPhase > 0 && (
+          <div style={{ padding: 12, background: `${activePhase.color}10`, border: `1px solid ${activePhase.color}40`,
+            borderRadius: 8, marginBottom: 16, fontSize: 12, color: activePhase.color }}>
+            <strong>{activePhase.icon} {activePhase.label}:</strong> {activePhase.desc}
+            {optPhase === 1 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
+              💡 Empieza aquí. Estos parámetros definen cuánto arriesgas y cuándo entras/sales. Optimiza cada uno con 90 días de datos.
+            </span>}
+            {optPhase === 2 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
+              💡 Una vez tengas buenos parámetros de riesgo, ajusta qué indicadores pesan más en la decisión de compra/venta.
+            </span>}
+            {optPhase === 3 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
+              💡 Último paso. Ajusta el governor del 4H, confluence multipliers y pesos de timeframe. Cambios sutiles.
+            </span>}
+          </div>
+        )}
 
         {/* Config Panel */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
@@ -4633,20 +4686,23 @@ export default function SentixProFrontend() {
               disabled={optRunning}
               style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             >
-              {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>{d} días</option>)}
+              {[30, 60, 90, 120].map(d => <option key={d} value={d}>{d} días{d >= 90 ? ' ✓' : ''}</option>)}
             </select>
           </div>
 
           {/* Parameter to optimize */}
           <div style={{ gridColumn: 'span 2' }}>
-            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>PARÁMETRO A OPTIMIZAR</label>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+              PARÁMETRO A OPTIMIZAR {optPhase > 0 && <span style={{ color: activePhase.color }}>({filteredParams.length} disponibles)</span>}
+            </label>
             <select
               value={optConfig.paramName}
               onChange={e => setOptConfig({ ...optConfig, paramName: e.target.value })}
               disabled={optRunning}
               style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             >
-              {optParams.map(p => (
+              <option value="">— Selecciona un parámetro —</option>
+              {filteredParams.map(p => (
                 <option key={p.key} value={p.key}>{p.label} (default: {p.defaultValue})</option>
               ))}
             </select>
