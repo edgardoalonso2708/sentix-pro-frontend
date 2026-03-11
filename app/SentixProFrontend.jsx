@@ -87,7 +87,11 @@ export default function SentixProFrontend() {
   const [btConfig, setBtConfig] = useState({
     asset: 'bitcoin', days: 90, capital: 10000, riskPerTrade: 0.02,
     minConfluence: 2, minRR: 1.5, stepInterval: '4h',
-    allowedStrength: ['STRONG BUY', 'STRONG SELL'], cooldownBars: 6
+    allowedStrength: ['STRONG BUY', 'STRONG SELL'], cooldownBars: 6,
+    kellySizing: {
+      kelly: { enabled: false, fraction: 0.5, minTrades: 20 },
+      volatilityTargeting: { enabled: false, targetATRPercent: 2.0 }
+    }
   });
   const [btRunning, setBtRunning] = useState(false);
   const [btResult, setBtResult] = useState(null);
@@ -3572,6 +3576,88 @@ export default function SentixProFrontend() {
             </div>
           </div>
 
+          {/* Kelly Criterion & Volatility Targeting */}
+          <div style={{ marginTop: 14, background: "rgba(168,85,247,0.05)", border: `1px solid ${border}`, borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: purple, marginBottom: 10, fontFamily: "monospace" }}>
+              POSITION SIZING AVANZADO
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {/* Kelly Criterion */}
+              <div>
+                <label style={{ fontSize: 10, color: text, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={btConfig.kellySizing.kelly.enabled}
+                    disabled={btRunning}
+                    onChange={e => setBtConfig(prev => ({
+                      ...prev,
+                      kellySizing: { ...prev.kellySizing, kelly: { ...prev.kellySizing.kelly, enabled: e.target.checked } }
+                    }))}
+                  />
+                  Kelly Criterion
+                </label>
+                {btConfig.kellySizing.kelly.enabled && (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Fracci{"\u00f3"}n</label>
+                      <input type="number" min={0.1} max={1.0} step={0.1}
+                        value={btConfig.kellySizing.kelly.fraction}
+                        onChange={e => setBtConfig(prev => ({
+                          ...prev,
+                          kellySizing: { ...prev.kellySizing, kelly: { ...prev.kellySizing.kelly, fraction: Number(e.target.value) } }
+                        }))}
+                        style={{ ...inputStyle, width: 60 }}
+                        disabled={btRunning}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Min trades</label>
+                      <input type="number" min={5} max={200}
+                        value={btConfig.kellySizing.kelly.minTrades}
+                        onChange={e => setBtConfig(prev => ({
+                          ...prev,
+                          kellySizing: { ...prev.kellySizing, kelly: { ...prev.kellySizing.kelly, minTrades: Number(e.target.value) } }
+                        }))}
+                        style={{ ...inputStyle, width: 60 }}
+                        disabled={btRunning}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Volatility Targeting */}
+              <div>
+                <label style={{ fontSize: 10, color: text, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={btConfig.kellySizing.volatilityTargeting.enabled}
+                    disabled={btRunning}
+                    onChange={e => setBtConfig(prev => ({
+                      ...prev,
+                      kellySizing: { ...prev.kellySizing, volatilityTargeting: { ...prev.kellySizing.volatilityTargeting, enabled: e.target.checked } }
+                    }))}
+                  />
+                  Vol Targeting
+                </label>
+                {btConfig.kellySizing.volatilityTargeting.enabled && (
+                  <div>
+                    <label style={{ fontSize: 8, color: muted, display: "block" }}>Target ATR%</label>
+                    <input type="number" min={0.5} max={10.0} step={0.5}
+                      value={btConfig.kellySizing.volatilityTargeting.targetATRPercent}
+                      onChange={e => setBtConfig(prev => ({
+                        ...prev,
+                        kellySizing: { ...prev.kellySizing, volatilityTargeting: { ...prev.kellySizing.volatilityTargeting, targetATRPercent: Number(e.target.value) } }
+                      }))}
+                      style={{ ...inputStyle, width: 70 }}
+                      disabled={btRunning}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Run button */}
           <div style={{ marginTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
             <button
@@ -3960,6 +4046,84 @@ export default function SentixProFrontend() {
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Kelly Criterion & Volatility Targeting Results */}
+            {btResult.kelly_sizing && (btResult.kelly_sizing.kellyEnabled || btResult.kelly_sizing.volTargetingEnabled) && (() => {
+              const ks = btResult.kelly_sizing;
+              return (
+                <div style={{
+                  background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                  padding: 16, marginBottom: 16
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                      {"\u2696\ufe0f"} KELLY CRITERION & VOL TARGETING
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+                    {ks.kellyEnabled && [
+                      {
+                        label: "Avg Kelly Fraction",
+                        value: ks.avgKellyFraction != null ? `${(ks.avgKellyFraction * 100).toFixed(2)}%` : "N/A",
+                        color: ks.avgKellyFraction != null ? green : muted
+                      },
+                      {
+                        label: "Kelly Range",
+                        value: ks.minKellyFraction != null
+                          ? `${(ks.minKellyFraction * 100).toFixed(1)}-${(ks.maxKellyFraction * 100).toFixed(1)}%`
+                          : "N/A",
+                        color: text
+                      },
+                      {
+                        label: "Trades w/ Kelly",
+                        value: `${ks.tradesWithKelly}/${ks.tradesWithKelly + ks.tradesWithoutKelly}`,
+                        color: ks.tradesWithKelly > 0 ? green : muted
+                      }
+                    ].map((item, i) => (
+                      <div key={`k${i}`} style={{
+                        background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "8px 10px",
+                        border: `1px solid ${border}`
+                      }}>
+                        <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>{item.label}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: item.color, fontFamily: "monospace" }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+
+                    {ks.volTargetingEnabled && [
+                      {
+                        label: "Avg Vol Scale",
+                        value: ks.avgVolScale != null ? `${ks.avgVolScale}x` : "N/A",
+                        color: ks.avgVolScale != null ? (ks.avgVolScale > 1 ? green : ks.avgVolScale < 0.8 ? amber : text) : muted
+                      },
+                      {
+                        label: "Trades w/ Vol Scale",
+                        value: `${ks.tradesWithVolScale}/${ks.tradesWithKelly + ks.tradesWithoutKelly}`,
+                        color: ks.tradesWithVolScale > 0 ? green : muted
+                      }
+                    ].map((item, i) => (
+                      <div key={`v${i}`} style={{
+                        background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "8px 10px",
+                        border: `1px solid ${border}`
+                      }}>
+                        <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>{item.label}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: item.color, fontFamily: "monospace" }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {ks.tradesWithoutKelly > 0 && ks.kellyEnabled && (
+                    <div style={{ fontSize: 9, color: muted, marginTop: 8, fontStyle: "italic" }}>
+                      {"\u2139\ufe0f"} {ks.tradesWithoutKelly} trades usaron risk fijo (antes de acumular {ks.kellyConfig?.kelly?.minTrades || 20} trades m{"\u00ed"}nimos para Kelly)
                     </div>
                   )}
                 </div>
