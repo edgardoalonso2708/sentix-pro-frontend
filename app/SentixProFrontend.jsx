@@ -3237,6 +3237,12 @@ export default function SentixProFrontend() {
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
     const savingConfig = paperSavingConfig, setSavingConfig = setPaperSavingConfig;
 
+    const inputStyle = {
+      width: '100%', padding: '8px 12px', background: bg3,
+      border: `1px solid ${border}`, borderRadius: 6,
+      color: text, fontFamily: 'monospace', fontSize: 12
+    };
+
     const handleSaveStrategy = async () => {
       if (!configForm) return;
       setSavingConfig(true);
