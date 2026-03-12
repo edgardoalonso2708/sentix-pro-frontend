@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useRouter } from 'next/navigation';
 import { useSSE } from './hooks/useSSE';
 import { useAuth } from './contexts/AuthContext';
 import { authFetch } from './lib/api';
@@ -50,8 +51,28 @@ export default function SentixProFrontend() {
   const [wallets, setWallets] = useState([]);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
-  const { userId: authUserId } = useAuth();
+  const { userId: authUserId, authEnabled, loading: authLoading, user: authUser } = useAuth();
+  const router = useRouter();
   const USER_ID = authUserId || 'default-user';
+
+  // Redirect to login if auth is enabled but no session
+  useEffect(() => {
+    if (!authLoading && authEnabled && !authUser) {
+      router.push('/auth');
+    }
+  }, [authLoading, authEnabled, authUser, router]);
+
+  // Show nothing while checking auth (prevents flash of dashboard)
+  if (authEnabled && (authLoading || !authUser)) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0a0f', color: '#888' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>⚡ SENTIX PRO</div>
+          <div>Verificando autenticación...</div>
+        </div>
+      </div>
+    );
+  }
 
   // Paper Trading
   const [paperConfig, setPaperConfig] = useState(null);
