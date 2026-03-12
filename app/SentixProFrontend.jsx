@@ -610,9 +610,9 @@ export default function SentixProFrontend() {
     }
   }, [paperHistoryPage, paperConfigForm]);
 
-  // Load paper data when page changes or tab becomes active
+  // Load paper data when page changes or tab becomes active (paper or strategy)
   useEffect(() => {
-    if (tab === 'paper') loadPaperData();
+    if (tab === 'paper' || tab === 'strategy') loadPaperData();
   }, [tab, paperHistoryPage, loadPaperData]);
 
   // Auto refresh paper data every 30s when on paper tab
