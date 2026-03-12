@@ -7,6 +7,15 @@ import {
   ReferenceLine
 } from 'recharts';
 
+// Execution components
+import OrderEntryForm from './components/execution/OrderEntryForm';
+import OrderBook from './components/execution/OrderBook';
+import PositionMonitor from './components/execution/PositionMonitor';
+import RiskDashboard from './components/execution/RiskDashboard';
+import KillSwitchButton from './components/execution/KillSwitchButton';
+import ExecutionModeToggle from './components/execution/ExecutionModeToggle';
+import ExecutionAuditLog from './components/execution/ExecutionAuditLog';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTIX PRO - FRONTEND COMPLETO
 // Dashboard, Señales, Portfolio, Alertas - Versión Full
@@ -54,6 +63,16 @@ export default function SentixProFrontend() {
   const [paperHistoryPage, setPaperHistoryPage] = useState(0);
   const [paperHistoryTotal, setPaperHistoryTotal] = useState(0);
   const [paperConfirmReset, setPaperConfirmReset] = useState(false);
+
+  // Execution system
+  const [execOrders, setExecOrders] = useState([]);
+  const [execRiskDashboard, setExecRiskDashboard] = useState(null);
+  const [execAuditLog, setExecAuditLog] = useState([]);
+  const [execKillSwitchActive, setExecKillSwitchActive] = useState(false);
+  const [execMode, setExecMode] = useState('paper');
+  const [execAutoExecute, setExecAutoExecute] = useState(true);
+  const [execLoading, setExecLoading] = useState(false);
+  const [execSubTab, setExecSubTab] = useState('orders'); // orders | positions | risk | audit
 
   // Advanced Performance
   const [advancedPerf, setAdvancedPerf] = useState(null);
@@ -604,6 +623,105 @@ export default function SentixProFrontend() {
   }, [tab, loadPaperData]);
 
   // Test alert is now handled directly in AlertsTab
+
+  // ─── EXECUTION SYSTEM FETCHES ───────────────────────────────────────────────
+  const loadExecutionData = useCallback(async () => {
+    setExecLoading(true);
+    try {
+      const [ordersRes, riskRes, auditRes, ksRes] = await Promise.allSettled([
+        fetch(`${API_URL}/api/orders/${USER_ID}?limit=50`),
+        fetch(`${API_URL}/api/risk/${USER_ID}/dashboard`),
+        fetch(`${API_URL}/api/execution-log/${USER_ID}?limit=50`),
+        fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`)
+      ]);
+
+      if (ordersRes.status === 'fulfilled' && ordersRes.value.ok) {
+        const data = await ordersRes.value.json();
+        setExecOrders(data.orders || []);
+      }
+      if (riskRes.status === 'fulfilled' && riskRes.value.ok) {
+        const data = await riskRes.value.json();
+        setExecRiskDashboard(data);
+        setExecMode(data.executionMode || 'paper');
+        setExecAutoExecute(data.autoExecute !== false);
+      }
+      if (auditRes.status === 'fulfilled' && auditRes.value.ok) {
+        const data = await auditRes.value.json();
+        setExecAuditLog(data.logs || []);
+      }
+      if (ksRes.status === 'fulfilled' && ksRes.value.ok) {
+        const data = await ksRes.value.json();
+        setExecKillSwitchActive(data.active || false);
+      }
+    } catch (err) {
+      console.error('Execution data load error:', err);
+    } finally {
+      setExecLoading(false);
+    }
+  }, [API_URL, USER_ID]);
+
+  useEffect(() => {
+    if (tab === 'execution') loadExecutionData();
+  }, [tab, loadExecutionData]);
+
+  useEffect(() => {
+    if (tab !== 'execution') return;
+    const interval = setInterval(loadExecutionData, 15000);
+    return () => clearInterval(interval);
+  }, [tab, loadExecutionData]);
+
+  const handleCreateOrder = async (orderSpec) => {
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${USER_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderSpec)
+      });
+      if (res.ok) {
+        loadExecutionData();
+        return { success: true };
+      }
+      const err = await res.json();
+      return { success: false, error: err.error || 'Error creating order' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    try {
+      await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
+      loadExecutionData();
+    } catch (err) {
+      console.error('Cancel order error:', err);
+    }
+  };
+
+  const handleSubmitOrder = async (orderId) => {
+    try {
+      await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
+      loadExecutionData();
+    } catch (err) {
+      console.error('Submit order error:', err);
+    }
+  };
+
+  const handleKillSwitch = async (activate, reason) => {
+    try {
+      if (activate) {
+        await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason || 'Manual activation' })
+        });
+      } else {
+        await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
+      }
+      loadExecutionData();
+    } catch (err) {
+      console.error('Kill switch error:', err);
+    }
+  };
 
   // ─── STYLES ────────────────────────────────────────────────────────────────
   const bg = "#0a0a0a";
@@ -2975,6 +3093,126 @@ export default function SentixProFrontend() {
             </div>
           )}
         </div>
+      </div>
+    );
+  };
+
+  // ─── EXECUTION TAB ───────────────────────────────────────────────────────
+  const ExecutionTab = () => {
+    const subTab = execSubTab;
+    const setSubTab = setExecSubTab;
+    const executionColors = { bg, bg2, bg3, border, text, muted, green, red, accent: purple };
+
+    const SUB_TABS = [
+      { k: 'orders', label: '📋 Órdenes', desc: 'Crear y gestionar' },
+      { k: 'positions', label: '📊 Posiciones', desc: 'Monitoreo live' },
+      { k: 'risk', label: '🛡️ Riesgo', desc: 'Dashboard de riesgo' },
+      { k: 'audit', label: '📜 Auditoría', desc: 'Historial de eventos' }
+    ];
+
+    return (
+      <div style={{ fontFamily: 'monospace' }}>
+        {/* Header with Kill Switch + Mode Toggle */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ExecutionModeToggle
+              mode={execMode}
+              autoExecute={execAutoExecute}
+              colors={executionColors}
+            />
+          </div>
+          <KillSwitchButton
+            active={execKillSwitchActive}
+            onActivate={(reason) => handleKillSwitch(true, reason)}
+            onDeactivate={() => handleKillSwitch(false)}
+            colors={executionColors}
+          />
+        </div>
+
+        {/* Sub-tabs */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {SUB_TABS.map(({ k, label, desc }) => (
+            <button
+              key={k}
+              onClick={() => setSubTab(k)}
+              style={{
+                flex: '1 1 auto',
+                padding: '8px 14px',
+                background: subTab === k ? `${purple}20` : bg2,
+                border: subTab === k ? `1px solid ${purple}` : `1px solid ${border}`,
+                borderRadius: 6,
+                color: subTab === k ? purple : muted,
+                fontFamily: 'monospace',
+                fontSize: 11,
+                fontWeight: subTab === k ? 700 : 500,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              {label}
+              <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{desc}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Orders sub-tab */}
+        {subTab === 'orders' && (
+          <div>
+            <OrderEntryForm
+              onSubmit={handleCreateOrder}
+              colors={executionColors}
+            />
+            <div style={{ marginTop: 16 }}>
+              <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                Libro de Órdenes
+              </div>
+              <OrderBook
+                orders={execOrders}
+                onCancel={handleCancelOrder}
+                onSubmit={handleSubmitOrder}
+                colors={executionColors}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Positions sub-tab */}
+        {subTab === 'positions' && (
+          <PositionMonitor
+            positions={paperPositions}
+            heatMap={execRiskDashboard?.heatMap}
+            colors={executionColors}
+          />
+        )}
+
+        {/* Risk sub-tab */}
+        {subTab === 'risk' && (
+          <RiskDashboard
+            dashboard={execRiskDashboard}
+            colors={executionColors}
+          />
+        )}
+
+        {/* Audit sub-tab */}
+        {subTab === 'audit' && (
+          <ExecutionAuditLog
+            logs={execAuditLog}
+            colors={executionColors}
+          />
+        )}
+
+        {execLoading && (
+          <div style={{ textAlign: 'center', padding: 10, fontSize: 10, color: muted, fontFamily: 'monospace' }}>
+            Actualizando datos de ejecución...
+          </div>
+        )}
       </div>
     );
   };
@@ -6624,6 +6862,7 @@ El sistema:
             { k: "signals", label: "🎯 SEÑALES", desc: "Todas las alertas" },
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
+            { k: "execution", label: "⚡ EJECUCIÓN", desc: "Órdenes y riesgo" },
             { k: "paper", label: "📈 PAPER", desc: "Trading simulado" },
             { k: "backtest", label: "🔬 BACKTEST", desc: "Validar estrategia" },
             { k: "optimize", label: "⚡ OPTIMIZAR", desc: "Ajustar parámetros" },
@@ -6660,6 +6899,7 @@ El sistema:
         {tab === "signals" && SignalsTab()}
         {tab === "portfolio" && PortfolioTab()}
         {tab === "alerts" && AlertsTab()}
+        {tab === "execution" && ExecutionTab()}
         {tab === "paper" && PaperTradingTab()}
         {tab === "backtest" && BacktestTab()}
         {tab === "optimize" && OptimizeTab()}
