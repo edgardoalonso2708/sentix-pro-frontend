@@ -51,7 +51,7 @@ export default function SentixProFrontend() {
   const [wallets, setWallets] = useState([]);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
-  const { userId: authUserId, authEnabled, loading: authLoading, user: authUser } = useAuth();
+  const { userId: authUserId, authEnabled, loading: authLoading, user: authUser, isAdmin, signOut } = useAuth();
   const router = useRouter();
   const USER_ID = authUserId || 'default-user';
 
@@ -7190,6 +7190,40 @@ El sistema:
               background: green,
               boxShadow: `0 0 8px ${green}`
             }} />
+            {authEnabled && isAdmin && (
+              <button
+                onClick={() => router.push('/admin')}
+                style={{
+                  padding: '6px 14px',
+                  background: 'rgba(99,102,241,0.15)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: 8,
+                  color: '#6366f1',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                ⚙ Admin
+              </button>
+            )}
+            {authEnabled && authUser && (
+              <button
+                onClick={() => signOut()}
+                style={{
+                  padding: '6px 14px',
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: 8,
+                  color: '#ef4444',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Salir
+              </button>
+            )}
           </div>
         </div>
 
