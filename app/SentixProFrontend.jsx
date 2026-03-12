@@ -73,6 +73,7 @@ export default function SentixProFrontend() {
   const [execAutoExecute, setExecAutoExecute] = useState(true);
   const [execLoading, setExecLoading] = useState(false);
   const [execSubTab, setExecSubTab] = useState('orders'); // orders | positions | risk | audit
+  const [execFeedback, setExecFeedback] = useState(null); // { type: 'success'|'error', message }
 
   // Advanced Performance
   const [advancedPerf, setAdvancedPerf] = useState(null);
@@ -703,38 +704,66 @@ export default function SentixProFrontend() {
     }
   };
 
+  const showFeedback = (type, message) => {
+    setExecFeedback({ type, message });
+    setTimeout(() => setExecFeedback(null), 5000);
+  };
+
   const handleCancelOrder = async (orderId) => {
     try {
-      await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
+      const res = await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
+      if (res.ok) {
+        showFeedback('success', 'Orden cancelada');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showFeedback('error', d.error || `Error cancelando orden (${res.status})`);
+      }
       loadExecutionData();
     } catch (err) {
-      console.error('Cancel order error:', err);
+      showFeedback('error', `Error de red: ${err.message}`);
     }
   };
 
   const handleSubmitOrder = async (orderId) => {
     try {
-      await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
+      const res = await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
+      if (res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showFeedback('success', d.trade ? `Orden ejecutada a $${d.trade.entry_price}` : 'Orden enviada');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showFeedback('error', d.error || `Error ejecutando orden (${res.status})`);
+      }
       loadExecutionData();
     } catch (err) {
-      console.error('Submit order error:', err);
+      showFeedback('error', `Error de red: ${err.message}`);
     }
   };
 
   const handleKillSwitch = async (activate, reason) => {
     try {
+      let res;
       if (activate) {
-        await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
+        res = await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason: reason || 'Manual activation' })
         });
       } else {
-        await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
+        res = await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
+      }
+      if (res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showFeedback('success', activate
+          ? `Kill switch activado — ${d.cancelledOrders || 0} órdenes canceladas, ${d.closedPositions || 0} posiciones cerradas`
+          : 'Trading re-habilitado');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showFeedback('error', d.error || `Error en kill switch (${res.status})`);
       }
       loadExecutionData();
     } catch (err) {
-      console.error('Kill switch error:', err);
+      showFeedback('error', `Error de red: ${err.message}`);
     }
   };
 
@@ -3127,6 +3156,28 @@ export default function SentixProFrontend() {
 
     return (
       <div style={{ fontFamily: 'monospace' }}>
+        {/* Feedback toast */}
+        {execFeedback && (
+          <div style={{
+            padding: '10px 16px',
+            marginBottom: 12,
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            fontFamily: 'monospace',
+            background: execFeedback.type === 'success' ? `${green}22` : `${red}22`,
+            border: `1px solid ${execFeedback.type === 'success' ? green : red}`,
+            color: execFeedback.type === 'success' ? green : red,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>{execFeedback.type === 'success' ? '✓' : '✗'} {execFeedback.message}</span>
+            <button onClick={() => setExecFeedback(null)} style={{
+              background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 14
+            }}>×</button>
+          </div>
+        )}
         {/* Header with Kill Switch + Mode Toggle */}
         <div style={{
           display: 'flex',
