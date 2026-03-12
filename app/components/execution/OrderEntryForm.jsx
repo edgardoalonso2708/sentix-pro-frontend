@@ -33,13 +33,78 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
 
   const currentPrice = marketData?.crypto?.[form.asset]?.price || 0;
 
+  const MIN_POSITION_USD = 50;
+
+  // Client-side validation
+  const validate = () => {
+    const errors = [];
+    const qty = parseFloat(form.quantity) || 0;
+    const sizeUsd = parseFloat(form.positionSizeUsd) || 0;
+
+    // Quantity or size required
+    if (qty <= 0 && sizeUsd <= 0) {
+      errors.push('Ingresa cantidad o tamano de posicion');
+    }
+
+    // Minimum position size $50
+    const effectiveSize = sizeUsd > 0 ? sizeUsd : (qty * currentPrice);
+    if (effectiveSize > 0 && effectiveSize < MIN_POSITION_USD) {
+      errors.push(`Tamano minimo de posicion: $${MIN_POSITION_USD}`);
+    }
+
+    // Price required for LIMIT/STOP_LIMIT
+    if (form.orderType !== 'MARKET' && !parseFloat(form.price)) {
+      errors.push('Precio limite requerido para ordenes LIMIT');
+    }
+
+    // Stop price required for STOP_LIMIT
+    if (form.orderType === 'STOP_LIMIT' && !parseFloat(form.stopPrice)) {
+      errors.push('Precio stop (trigger) requerido para STOP_LIMIT');
+    }
+
+    // Stop Loss direction validation
+    const sl = parseFloat(form.stopLoss);
+    const refPrice = form.orderType === 'MARKET' ? currentPrice : (parseFloat(form.price) || currentPrice);
+    if (sl > 0 && refPrice > 0) {
+      if (form.side === 'BUY' && sl >= refPrice) {
+        errors.push('Stop Loss debe ser menor al precio de entrada (BUY)');
+      }
+      if (form.side === 'SELL' && sl <= refPrice) {
+        errors.push('Stop Loss debe ser mayor al precio de entrada (SELL)');
+      }
+    }
+
+    // Take Profit direction validation
+    const tp1 = parseFloat(form.takeProfit1);
+    const tp2 = parseFloat(form.takeProfit2);
+    if (tp1 > 0 && refPrice > 0) {
+      if (form.side === 'BUY' && tp1 <= refPrice) {
+        errors.push('Take Profit 1 debe ser mayor al precio de entrada (BUY)');
+      }
+      if (form.side === 'SELL' && tp1 >= refPrice) {
+        errors.push('Take Profit 1 debe ser menor al precio de entrada (SELL)');
+      }
+    }
+    if (tp2 > 0 && tp1 > 0) {
+      if (form.side === 'BUY' && tp2 <= tp1) {
+        errors.push('Take Profit 2 debe ser mayor que Take Profit 1');
+      }
+      if (form.side === 'SELL' && tp2 >= tp1) {
+        errors.push('Take Profit 2 debe ser menor que Take Profit 1');
+      }
+    }
+
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!form.quantity && !form.positionSizeUsd) {
-      setError('Ingresa cantidad o tamano de posicion');
+    const validationErrors = validate();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' | '));
       return;
     }
 
