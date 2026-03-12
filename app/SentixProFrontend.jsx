@@ -610,10 +610,25 @@ export default function SentixProFrontend() {
     }
   }, [paperHistoryPage, paperConfigForm]);
 
-  // Load paper data when page changes or tab becomes active (paper or strategy)
+  // Load just config for strategy tab (lightweight, no positions/history)
+  const loadConfigOnly = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`);
+      if (res.ok) {
+        const d = await res.json();
+        setPaperConfig(d.config);
+        setPaperConfigForm(d.config);
+      }
+    } catch (err) {
+      console.error('Config load error:', err);
+    }
+  }, []);
+
+  // Load paper data when page changes or tab becomes active
   useEffect(() => {
-    if (tab === 'paper' || tab === 'strategy') loadPaperData();
-  }, [tab, paperHistoryPage, loadPaperData]);
+    if (tab === 'paper') loadPaperData();
+    else if (tab === 'strategy') loadConfigOnly();
+  }, [tab, paperHistoryPage, loadPaperData, loadConfigOnly]);
 
   // Auto refresh paper data every 30s when on paper tab
   useEffect(() => {
