@@ -163,7 +163,7 @@ export default function SentixProFrontend() {
   // ─── FETCH APM METRICS ───────────────────────────────────────────────────────
   const fetchMetrics = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/metrics`);
+      const res = await authFetch(`${API_URL}/api/metrics`);
       if (res.ok) setApmData(await res.json());
     } catch (_) { /* backend unavailable */ }
   }, [API_URL]);
@@ -171,7 +171,7 @@ export default function SentixProFrontend() {
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/market`);
+      const response = await authFetch(`${API_URL}/api/market`);
       const data = await response.json();
       setMarketData(data);
       setLastUpdate(new Date());
@@ -182,7 +182,7 @@ export default function SentixProFrontend() {
 
   const fetchSignals = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/signals`);
+      const response = await authFetch(`${API_URL}/api/signals`);
       const data = await response.json();
       setSignals(data);
     } catch (error) {
@@ -193,7 +193,7 @@ export default function SentixProFrontend() {
   const fetchAccuracy = useCallback(async (days) => {
     try {
       const d = days || accuracyDays;
-      const res = await fetch(`${API_URL}/api/signals/accuracy?days=${d}`);
+      const res = await authFetch(`${API_URL}/api/signals/accuracy?days=${d}`);
       if (res.ok) {
         const data = await res.json();
         setSignalAccuracy(data);
@@ -205,7 +205,7 @@ export default function SentixProFrontend() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/alerts`);
+      const response = await authFetch(`${API_URL}/api/alerts`);
       const data = await response.json();
       setAlerts(data);
     } catch (error) {
@@ -255,7 +255,7 @@ export default function SentixProFrontend() {
 
   const fetchBacktestHistory = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/backtest/history/${USER_ID}`);
       if (response.ok) {
         const data = await response.json();
         setBacktestHistory(data);
@@ -267,7 +267,7 @@ export default function SentixProFrontend() {
 
   const fetchSystemHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/`);
+      const response = await authFetch(`${API_URL}/`);
       if (response.ok) {
         const data = await response.json();
         setSystemHealth(data.services || null);
@@ -281,7 +281,7 @@ export default function SentixProFrontend() {
   const fetchWallets = useCallback(async () => {
     try {
       setWalletsLoading(true);
-      const response = await fetch(`${API_URL}/api/wallets/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/wallets/${USER_ID}`);
       if (response.ok) {
         const data = await response.json();
         setWallets(data.wallets || []);
@@ -296,7 +296,7 @@ export default function SentixProFrontend() {
   const fetchPortfolio = useCallback(async () => {
     try {
       setPortfolioLoading(true);
-      const response = await fetch(`${API_URL}/api/portfolio/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/portfolio/${USER_ID}`);
       if (response.ok) {
         const data = await response.json();
         // Flatten wallet positions into portfolio array
@@ -428,7 +428,7 @@ export default function SentixProFrontend() {
   // ─── BACKTEST TAB DATA LOADING (lifted from BacktestTab) ──────────────────
   const loadBtHistory = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+      const res = await authFetch(`${API_URL}/api/backtest/history/${USER_ID}`);
       if (res.ok) {
         const data = await res.json();
         // Mark stale running backtests (>15 min) as failed client-side
@@ -465,7 +465,7 @@ export default function SentixProFrontend() {
   // ─── OPTIMIZE TAB DATA LOADING (lifted from OptimizeTab) ──────────────────
   const loadOptParams = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/optimize/params`);
+      const res = await authFetch(`${API_URL}/api/optimize/params`);
       if (res.ok) {
         const data = await res.json();
         setOptParams(data.params || []);
@@ -478,7 +478,7 @@ export default function SentixProFrontend() {
 
   const loadOptHistory = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/optimize/history`);
+      const res = await authFetch(`${API_URL}/api/optimize/history`);
       if (res.ok) {
         const data = await res.json();
         setOptHistory(data);
@@ -570,7 +570,7 @@ export default function SentixProFrontend() {
     };
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/api/alert-filters/default-user`);
+        const res = await authFetch(`${API_URL}/api/alert-filters/default-user`);
         if (res.ok) {
           const data = await res.json();
           setAlertFilterForm({
@@ -629,7 +629,7 @@ export default function SentixProFrontend() {
       // Fetch correlation if ≥2 positions
       if (positionsCount >= 2) {
         try {
-          const corrRes = await fetch(`${API_URL}/api/paper/correlation/${USER_ID}`);
+          const corrRes = await authFetch(`${API_URL}/api/paper/correlation/${USER_ID}`);
           if (corrRes.ok) {
             const corrData = await corrRes.json();
             setCorrelationData(corrData.correlation || null);
@@ -648,7 +648,7 @@ export default function SentixProFrontend() {
   // Load just config for strategy tab (lightweight, no positions/history)
   const loadConfigOnly = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`);
+      const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`);
       if (res.ok) {
         const d = await res.json();
         setPaperConfig(d.config);
@@ -722,7 +722,7 @@ export default function SentixProFrontend() {
 
   const handleCreateOrder = async (orderSpec) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${USER_ID}`, {
+      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderSpec)
@@ -745,7 +745,7 @@ export default function SentixProFrontend() {
 
   const handleCancelOrder = async (orderId) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
+      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
       if (res.ok) {
         showFeedback('success', 'Orden cancelada');
       } else {
@@ -760,7 +760,7 @@ export default function SentixProFrontend() {
 
   const handleSubmitOrder = async (orderId) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
+      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
         showFeedback('success', d.trade ? `Orden ejecutada a $${d.trade.entry_price}` : 'Orden enviada');
@@ -778,13 +778,13 @@ export default function SentixProFrontend() {
     try {
       let res;
       if (activate) {
-        res = await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
+        res = await authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason: reason || 'Manual activation' })
         });
       } else {
-        res = await fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
+        res = await authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
       }
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -2175,7 +2175,7 @@ export default function SentixProFrontend() {
     const handleCreateWallet = async () => {
       if (!newWallet.name.trim()) return;
       try {
-        const response = await fetch(`${API_URL}/api/wallets`, {
+        const response = await authFetch(`${API_URL}/api/wallets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2210,7 +2210,7 @@ export default function SentixProFrontend() {
       setSaving(true);
       try {
         // Get current positions for this wallet, then add the new one
-        const res = await fetch(`${API_URL}/api/portfolio/${USER_ID}/wallet/${newPosition.walletId}`);
+        const res = await authFetch(`${API_URL}/api/portfolio/${USER_ID}/wallet/${newPosition.walletId}`);
         const data = res.ok ? await res.json() : { wallet: { positions: [] } };
         const existingPositions = (data.wallet?.positions || []).map(p => ({
           asset: p.asset,
@@ -2232,7 +2232,7 @@ export default function SentixProFrontend() {
         });
 
         // Save all positions to wallet via JSON endpoint
-        const saveRes = await fetch(`${API_URL}/api/portfolio/save`, {
+        const saveRes = await authFetch(`${API_URL}/api/portfolio/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2264,7 +2264,7 @@ export default function SentixProFrontend() {
 
     const handleRemovePosition = async (positionId) => {
       try {
-        const response = await fetch(`${API_URL}/api/portfolio/${USER_ID}/${positionId}`, {
+        const response = await authFetch(`${API_URL}/api/portfolio/${USER_ID}/${positionId}`, {
           method: 'DELETE'
         });
         if (response.ok) {
@@ -2295,7 +2295,7 @@ export default function SentixProFrontend() {
         formData.append('userId', USER_ID);
         formData.append('walletId', uploadWalletId);
 
-        const response = await fetch(`${API_URL}/api/portfolio/upload`, {
+        const response = await authFetch(`${API_URL}/api/portfolio/upload`, {
           method: 'POST',
           body: formData,
         });
@@ -2814,7 +2814,7 @@ export default function SentixProFrontend() {
       setSavingFilters(true);
       setFilterSaveMsg(null);
       try {
-        const res = await fetch(`${API_URL}/api/alert-filters/default-user`, {
+        const res = await authFetch(`${API_URL}/api/alert-filters/default-user`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(filterForm)
@@ -2836,7 +2836,7 @@ export default function SentixProFrontend() {
       setTesting(true);
       setTestResult(null);
       try {
-        const response = await fetch(`${API_URL}/api/send-alert`, {
+        const response = await authFetch(`${API_URL}/api/send-alert`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3338,7 +3338,7 @@ export default function SentixProFrontend() {
       if (!configForm) return;
       setSavingConfig(true);
       try {
-        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+        const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3609,7 +3609,7 @@ export default function SentixProFrontend() {
       if (!configForm) return;
       setSavingConfig(true);
       try {
-        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+        const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3632,7 +3632,7 @@ export default function SentixProFrontend() {
     const handleCloseTrade = async (tradeId) => {
       setClosingTrade(tradeId);
       try {
-        const res = await fetch(`${API_URL}/api/paper/close/${tradeId}`, {
+        const res = await authFetch(`${API_URL}/api/paper/close/${tradeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: USER_ID })
@@ -3647,7 +3647,7 @@ export default function SentixProFrontend() {
 
     const handleReset = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
+        const res = await authFetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
         if (res.ok) {
           setConfirmReset(false);
           await loadPaperData();
@@ -3664,7 +3664,7 @@ export default function SentixProFrontend() {
         const payload = newVal
           ? { is_enabled: true, daily_pnl: 0, daily_pnl_reset_at: new Date().toISOString() }
           : { is_enabled: false };
-        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+        const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -4162,10 +4162,10 @@ export default function SentixProFrontend() {
                     <button key={asset} onClick={async () => {
                       if (!confirm(`Borrar todos los trades cerrados de "${asset}"?`)) return;
                       try {
-                        const res = await fetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
+                        const res = await authFetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
                         if (res.ok) {
                           // Refresh trade history
-                          const hRes = await fetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
+                          const hRes = await authFetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
                           if (hRes.ok) {
                             const hData = await hRes.json();
                             setPaperHistory(hData.trades || []);
@@ -4401,7 +4401,7 @@ export default function SentixProFrontend() {
           return;
         }
         try {
-          const res = await fetch(`${API_URL}/api/backtest/results/${id}`);
+          const res = await authFetch(`${API_URL}/api/backtest/results/${id}`);
           if (!res.ok) {
             errorCount++;
             if (errorCount >= MAX_ERRORS) {
@@ -4442,7 +4442,7 @@ export default function SentixProFrontend() {
       setBtTradesPage(0);
 
       try {
-        const res = await fetch(`${API_URL}/api/backtest/run`, {
+        const res = await authFetch(`${API_URL}/api/backtest/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...btConfig, userId: USER_ID })
@@ -4461,7 +4461,7 @@ export default function SentixProFrontend() {
 
     const loadHistoricResult = async (id) => {
       try {
-        const res = await fetch(`${API_URL}/api/backtest/results/${id}`);
+        const res = await authFetch(`${API_URL}/api/backtest/results/${id}`);
         if (res.ok) {
           const data = await res.json();
           setBtResult(data);
@@ -5383,13 +5383,13 @@ export default function SentixProFrontend() {
                       try {
                         const idsToDelete = [...btSelected];
                         // Try DELETE first, fallback to POST /api/backtest/delete
-                        let res = await fetch(`${API_URL}/api/backtest`, {
+                        let res = await authFetch(`${API_URL}/api/backtest`, {
                           method: 'DELETE',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ ids: idsToDelete })
                         });
                         if (!res.ok && res.status === 404) {
-                          res = await fetch(`${API_URL}/api/backtest/delete`, {
+                          res = await authFetch(`${API_URL}/api/backtest/delete`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ids: idsToDelete })
@@ -5537,7 +5537,7 @@ export default function SentixProFrontend() {
     const pollOptStatus = (jobId) => {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_URL}/api/optimize/status/${jobId}`);
+          const res = await authFetch(`${API_URL}/api/optimize/status/${jobId}`);
           if (!res.ok) return;
           const data = await res.json();
 
@@ -5571,7 +5571,7 @@ export default function SentixProFrontend() {
       setOptProgress({ current: 0, total: 0, message: 'Iniciando...' });
 
       try {
-        const res = await fetch(`${API_URL}/api/optimize/run`, {
+        const res = await authFetch(`${API_URL}/api/optimize/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(optConfig)
@@ -6014,7 +6014,7 @@ export default function SentixProFrontend() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={async () => {
                         try {
-                          await fetch(`${API_URL}/api/autotune/approve`, {
+                          await authFetch(`${API_URL}/api/autotune/approve`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ runId: proposal.runId, decision: 'apply' })
                           });
@@ -6027,7 +6027,7 @@ export default function SentixProFrontend() {
 
                       <button onClick={async () => {
                         try {
-                          await fetch(`${API_URL}/api/autotune/approve`, {
+                          await authFetch(`${API_URL}/api/autotune/approve`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ runId: proposal.runId, decision: 'blend' })
                           });
@@ -6040,7 +6040,7 @@ export default function SentixProFrontend() {
 
                       <button onClick={async () => {
                         try {
-                          await fetch(`${API_URL}/api/autotune/approve`, {
+                          await authFetch(`${API_URL}/api/autotune/approve`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ runId: proposal.runId, decision: 'reject' })
                           });
@@ -6123,11 +6123,11 @@ export default function SentixProFrontend() {
                   onClick={async () => {
                     setAutoTuneRunning(true);
                     try {
-                      await fetch(`${API_URL}/api/autotune/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asset: 'bitcoin' }) });
+                      await authFetch(`${API_URL}/api/autotune/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asset: 'bitcoin' }) });
                       // Poll for completion
                       const poll = setInterval(async () => {
                         try {
-                          const r = await fetch(`${API_URL}/api/autotune/config`);
+                          const r = await authFetch(`${API_URL}/api/autotune/config`);
                           if (r.ok) {
                             const d = await r.json();
                             if (!d.isRunning) {
@@ -6151,7 +6151,7 @@ export default function SentixProFrontend() {
                 <button
                   onClick={async () => {
                     if (!confirm('¿Resetear a parámetros por defecto?')) return;
-                    await fetch(`${API_URL}/api/autotune/reset`, { method: 'POST' });
+                    await authFetch(`${API_URL}/api/autotune/reset`, { method: 'POST' });
                     loadAutoTuneData();
                   }}
                   disabled={autoTuneRunning || autoTuneConfig?.source !== 'saved'}
