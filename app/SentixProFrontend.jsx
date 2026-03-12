@@ -3217,6 +3217,269 @@ export default function SentixProFrontend() {
     );
   };
 
+  // ─── STRATEGY CONFIG TAB ──────────────────────────────────────────────────
+  const StrategyTab = () => {
+    const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
+    const savingConfig = paperSavingConfig, setSavingConfig = setPaperSavingConfig;
+
+    const handleSaveStrategy = async () => {
+      if (!configForm) return;
+      setSavingConfig(true);
+      try {
+        const res = await fetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // Risk management
+            risk_per_trade: parseFloat(configForm.risk_per_trade),
+            max_daily_loss_percent: parseFloat(configForm.max_daily_loss_percent),
+            max_position_percent: parseFloat(configForm.max_position_percent),
+            // Position management
+            max_open_positions: parseInt(configForm.max_open_positions),
+            cooldown_minutes: parseInt(configForm.cooldown_minutes),
+            max_holding_hours: parseInt(configForm.max_holding_hours),
+            partial_close_ratio: parseFloat(configForm.partial_close_ratio),
+            move_sl_to_breakeven_after_tp1: configForm.move_sl_to_breakeven_after_tp1,
+            // ATR multipliers
+            atr_stop_mult: parseFloat(configForm.atr_stop_mult),
+            atr_tp2_mult: parseFloat(configForm.atr_tp2_mult),
+            atr_trailing_mult: parseFloat(configForm.atr_trailing_mult),
+            atr_trailing_activation: parseFloat(configForm.atr_trailing_activation),
+            // Signal filters
+            min_confluence: parseInt(configForm.min_confluence),
+            min_rr_ratio: parseFloat(configForm.min_rr_ratio),
+            allowed_strength: configForm.allowed_strength,
+            // Portfolio limits
+            max_portfolio_correlation: parseFloat(configForm.max_portfolio_correlation),
+            max_sector_exposure_pct: parseFloat(configForm.max_sector_exposure_pct),
+            max_same_direction_crypto: parseInt(configForm.max_same_direction_crypto)
+          })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setPaperConfig(d.config);
+          setConfigForm(d.config);
+        }
+      } catch (err) {
+        console.error('Save strategy error:', err);
+      } finally {
+        setSavingConfig(false);
+      }
+    };
+
+    if (!configForm) return (
+      <div style={{ ...card, padding: 20, textAlign: "center" }}>
+        <div style={{ color: muted, fontSize: 12 }}>Cargando configuración...</div>
+      </div>
+    );
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Header */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>⚙ ESTRATEGIA DE TRADING</div>
+          <div style={{ fontSize: 10, color: muted, marginTop: 4 }}>
+            Parámetros que definen tu estrategia. Aplican tanto a Paper Trading como a trading real.
+          </div>
+        </div>
+
+        {/* ── GESTIÓN DE RIESGO ── */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>💰 GESTIÓN DE RIESGO</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Riesgo por Trade (%)</label>
+              <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade || 0.01) * 100}
+                onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% del capital arriesgado por operación</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Pérdida Diaria Máx (%)</label>
+              <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Detiene trading al alcanzar esta pérdida diaria</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Posición (%)</label>
+              <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent || 0.30) * 100}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_position_percent: parseFloat(e.target.value) / 100 }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx % del capital por posición</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── POSICIONES ── */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>📊 GESTIÓN DE POSICIONES</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Posiciones Abiertas</label>
+              <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
+                style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cooldown entre Trades (min)</label>
+              <input type="number" min="5" max="1440" value={configForm.cooldown_minutes || 30}
+                onChange={e => setConfigForm(prev => ({ ...prev, cooldown_minutes: e.target.value }))}
+                style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Holding (horas)</label>
+              <input type="number" min="0" max="720" value={configForm.max_holding_hours || 168}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_holding_hours: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>0 = sin límite</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cierre Parcial en TP1 (%)</label>
+              <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio || 0.5) * 100}
+                onChange={e => setConfigForm(prev => ({ ...prev, partial_close_ratio: parseFloat(e.target.value) / 100 }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% de posición cerrada al TP1</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="checkbox" checked={configForm.move_sl_to_breakeven_after_tp1 !== false}
+                onChange={e => setConfigForm(prev => ({ ...prev, move_sl_to_breakeven_after_tp1: e.target.checked }))} />
+              Mover SL a breakeven después de TP1
+            </label>
+          </div>
+        </div>
+
+        {/* ── STOP LOSS & TAKE PROFIT (ATR) ── */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>🎯 STOP LOSS & TAKE PROFIT (ATR)</div>
+          <div style={{ fontSize: 9, color: muted, marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
+            Multiplicadores del ATR (Average True Range). Mayor valor = más espacio para volatilidad. Crypto recomendado: SL ≥ 2.0, Trailing Activation ≥ 2.0
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Stop Loss (× ATR)</label>
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult || 2.5}
+                onChange={e => setConfigForm(prev => ({ ...prev, atr_stop_mult: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia SL desde soporte. Recomendado: 2.5</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Take Profit 2 (× ATR)</label>
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult || 2.0}
+                onChange={e => setConfigForm(prev => ({ ...prev, atr_tp2_mult: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia TP2 desde resistencia</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Stop (× ATR)</label>
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult || 2.5}
+                onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_mult: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia del trailing stop</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Activación (× ATR)</label>
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation || 2.0}
+                onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_activation: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Profit mínimo para activar trailing. Recomendado: 2.0</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── FILTROS DE SEÑALES ── */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>📡 FILTROS DE SEÑALES</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia Mínima</label>
+              <input type="number" min="1" max="5" value={configForm.min_confluence || 3}
+                onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Timeframes alineados requeridos (2-5)</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R Mínimo</label>
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio || 1.5}
+                onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Risk:Reward mínimo aceptable</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SEÑALES ACEPTADAS</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'].map(str => {
+                const isActive = (configForm.allowed_strength || []).includes(str);
+                const isBuy = str.includes('BUY');
+                const clr = isBuy ? green : red;
+                return (
+                  <button key={str} onClick={() => {
+                    setConfigForm(prev => {
+                      const current = prev.allowed_strength || [];
+                      return { ...prev, allowed_strength: isActive ? current.filter(s => s !== str) : [...current, str] };
+                    });
+                  }} style={{
+                    padding: "4px 10px", borderRadius: 4, fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+                    cursor: "pointer", border: `1px solid ${isActive ? clr : border}`,
+                    background: isActive ? `${clr}22` : "transparent",
+                    color: isActive ? clr : muted
+                  }}>{str}</button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
+              Solo STRONG = conservador · Incluir BUY/SELL = recomendado · WEAK = agresivo
+            </div>
+          </div>
+        </div>
+
+        {/* ── PORTFOLIO LIMITS ── */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={sTitle}>🛡 LÍMITES DE PORTFOLIO</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Correlación Máx Portfolio</label>
+              <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation || 0.70}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_portfolio_correlation: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Bloquea trades si correlación promedio excede</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Exposición Sector Máx (%)</label>
+              <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct || 0.60) * 100}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_sector_exposure_pct: parseFloat(e.target.value) / 100 }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx % capital en mismo sector</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Misma Dirección Crypto</label>
+              <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto || 3}
+                onChange={e => setConfigForm(prev => ({ ...prev, max_same_direction_crypto: e.target.value }))}
+                style={inputStyle} />
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx posiciones LONG o SHORT simultáneas</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Save button */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <button onClick={handleSaveStrategy} disabled={savingConfig}
+            style={{
+              padding: "10px 28px", background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
+              border: "none", borderRadius: 6, color: "#fff",
+              fontFamily: "monospace", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              opacity: savingConfig ? 0.6 : 1, width: "100%"
+            }}>
+            {savingConfig ? 'Guardando...' : '💾 GUARDAR ESTRATEGIA'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // ─── PAPER TRADING TAB ────────────────────────────────────────────────────
   const PaperTradingTab = () => {
     // State is lifted to parent to survive re-renders (parent re-creates this function on each render)
@@ -3239,28 +3502,7 @@ export default function SentixProFrontend() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             is_enabled: configForm.is_enabled,
-            initial_capital: parseFloat(configForm.initial_capital),
-            risk_per_trade: parseFloat(configForm.risk_per_trade),
-            max_open_positions: parseInt(configForm.max_open_positions),
-            max_daily_loss_percent: parseFloat(configForm.max_daily_loss_percent),
-            cooldown_minutes: parseInt(configForm.cooldown_minutes),
-            min_confluence: parseInt(configForm.min_confluence),
-            min_rr_ratio: parseFloat(configForm.min_rr_ratio),
-            allowed_strength: configForm.allowed_strength,
-            // Trade management
-            max_position_percent: parseFloat(configForm.max_position_percent),
-            partial_close_ratio: parseFloat(configForm.partial_close_ratio),
-            max_holding_hours: parseInt(configForm.max_holding_hours),
-            move_sl_to_breakeven_after_tp1: configForm.move_sl_to_breakeven_after_tp1,
-            // ATR multipliers
-            atr_stop_mult: parseFloat(configForm.atr_stop_mult),
-            atr_tp2_mult: parseFloat(configForm.atr_tp2_mult),
-            atr_trailing_mult: parseFloat(configForm.atr_trailing_mult),
-            atr_trailing_activation: parseFloat(configForm.atr_trailing_activation),
-            // Portfolio limits
-            max_portfolio_correlation: parseFloat(configForm.max_portfolio_correlation),
-            max_sector_exposure_pct: parseFloat(configForm.max_sector_exposure_pct),
-            max_same_direction_crypto: parseInt(configForm.max_same_direction_crypto)
+            initial_capital: parseFloat(configForm.initial_capital)
           })
         });
         if (res.ok) {
@@ -3907,18 +4149,16 @@ export default function SentixProFrontend() {
           )}
         </div>
 
-        {/* Configuration Panel */}
+        {/* Paper-specific settings: capital & account */}
         <div style={{ ...card, padding: "16px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
             onClick={() => setShowConfig(!showConfig)}>
-            <div style={sTitle}>⚙ CONFIGURACIÓN</div>
+            <div style={sTitle}>⚙ CUENTA PAPER</div>
             <span style={{ color: muted, fontSize: 12 }}>{showConfig ? '▲' : '▼'}</span>
           </div>
 
           {showConfig && configForm && (
             <div style={{ marginTop: 12 }}>
-              {/* ── CAPITAL & RIESGO ── */}
-              <div style={{ fontSize: 10, color: purple, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>💰 CAPITAL & RIESGO</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
                 <div>
                   <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Capital Inicial ($)</label>
@@ -3927,168 +4167,12 @@ export default function SentixProFrontend() {
                     style={inputStyle} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Riesgo por Trade (%)</label>
-                  <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade || 0.01) * 100}
-                    onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
-                    style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Pérdida Diaria Máx (%)</label>
-                  <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
-                    style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Posición (%)</label>
-                  <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent || 0.30) * 100}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_position_percent: parseFloat(e.target.value) / 100 }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx % del capital por posición</div>
-                </div>
-              </div>
-
-              {/* ── POSICIONES ── */}
-              <div style={{ fontSize: 10, color: purple, fontWeight: 700, marginTop: 18, marginBottom: 8, letterSpacing: 1 }}>📊 POSICIONES</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Posiciones Abiertas</label>
-                  <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
-                    style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cooldown entre Trades (min)</label>
-                  <input type="number" min="5" max="1440" value={configForm.cooldown_minutes || 30}
-                    onChange={e => setConfigForm(prev => ({ ...prev, cooldown_minutes: e.target.value }))}
-                    style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Holding (horas)</label>
-                  <input type="number" min="0" max="720" value={configForm.max_holding_hours || 168}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_holding_hours: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>0 = sin límite</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cierre Parcial en TP1 (%)</label>
-                  <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio || 0.5) * 100}
-                    onChange={e => setConfigForm(prev => ({ ...prev, partial_close_ratio: parseFloat(e.target.value) / 100 }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% de posición cerrada al TP1</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                  <input type="checkbox" checked={configForm.move_sl_to_breakeven_after_tp1 !== false}
-                    onChange={e => setConfigForm(prev => ({ ...prev, move_sl_to_breakeven_after_tp1: e.target.checked }))} />
-                  Mover SL a breakeven después de TP1
-                </label>
-              </div>
-
-              {/* ── STOP LOSS & TAKE PROFIT (ATR) ── */}
-              <div style={{ fontSize: 10, color: purple, fontWeight: 700, marginTop: 18, marginBottom: 8, letterSpacing: 1 }}>🎯 STOP LOSS & TAKE PROFIT (ATR)</div>
-              <div style={{ fontSize: 9, color: muted, marginBottom: 8, lineHeight: 1.5 }}>
-                Multiplicadores del ATR (Average True Range). Mayor valor = más espacio para volatilidad. Crypto recomendado: SL ≥ 2.0, Trailing Activation ≥ 2.0
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Stop Loss (× ATR)</label>
-                  <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult || 2.5}
-                    onChange={e => setConfigForm(prev => ({ ...prev, atr_stop_mult: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia SL desde soporte. Recomendado: 2.5</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Take Profit 2 (× ATR)</label>
-                  <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult || 2.0}
-                    onChange={e => setConfigForm(prev => ({ ...prev, atr_tp2_mult: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia TP2 desde resistencia</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Stop (× ATR)</label>
-                  <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult || 2.5}
-                    onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_mult: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia del trailing stop</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Activación (× ATR)</label>
-                  <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation || 2.0}
-                    onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_activation: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Profit mínimo para activar trailing. Recomendado: 2.0</div>
-                </div>
-              </div>
-
-              {/* ── SEÑALES ── */}
-              <div style={{ fontSize: 10, color: purple, fontWeight: 700, marginTop: 18, marginBottom: 8, letterSpacing: 1 }}>🎯 SEÑALES</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia Mínima</label>
-                  <input type="number" min="1" max="5" value={configForm.min_confluence || 3}
-                    onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Timeframes alineados requeridos (2-5)</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R Mínimo</label>
-                  <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio || 1.5}
-                    onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Risk:Reward mínimo aceptable</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SEÑALES ACEPTADAS</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'].map(str => {
-                    const isActive = (configForm.allowed_strength || []).includes(str);
-                    const isBuy = str.includes('BUY');
-                    const clr = isBuy ? green : red;
-                    return (
-                      <button key={str} onClick={() => {
-                        setConfigForm(prev => {
-                          const current = prev.allowed_strength || [];
-                          return { ...prev, allowed_strength: isActive ? current.filter(s => s !== str) : [...current, str] };
-                        });
-                      }} style={{
-                        padding: "4px 10px", borderRadius: 4, fontSize: 10, fontFamily: "monospace", fontWeight: 700,
-                        cursor: "pointer", border: `1px solid ${isActive ? clr : border}`,
-                        background: isActive ? `${clr}22` : "transparent",
-                        color: isActive ? clr : muted
-                      }}>{str}</button>
-                    );
-                  })}
-                </div>
-                <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
-                  Solo STRONG = conservador · Incluir BUY/SELL = recomendado · WEAK = agresivo
-                </div>
-              </div>
-
-              {/* ── PORTFOLIO LIMITS ── */}
-              <div style={{ fontSize: 10, color: purple, fontWeight: 700, marginTop: 18, marginBottom: 8, letterSpacing: 1 }}>🛡 LÍMITES DE PORTFOLIO</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Correlación Máx Portfolio</label>
-                  <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation || 0.70}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_portfolio_correlation: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Bloquea trades si correlación promedio excede</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Exposición Sector Máx (%)</label>
-                  <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct || 0.60) * 100}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_sector_exposure_pct: parseFloat(e.target.value) / 100 }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx % capital en mismo sector</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Máx Misma Dirección Crypto</label>
-                  <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto || 3}
-                    onChange={e => setConfigForm(prev => ({ ...prev, max_same_direction_crypto: e.target.value }))}
-                    style={inputStyle} />
-                  <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Máx posiciones LONG o SHORT simultáneas</div>
+                  <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trading Habilitado</label>
+                  <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginTop: 4 }}>
+                    <input type="checkbox" checked={configForm.is_enabled !== false}
+                      onChange={e => setConfigForm(prev => ({ ...prev, is_enabled: e.target.checked }))} />
+                    {configForm.is_enabled !== false ? 'Activo' : 'Pausado'}
+                  </label>
                 </div>
               </div>
 
@@ -4100,7 +4184,7 @@ export default function SentixProFrontend() {
                     fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
                     opacity: savingConfig ? 0.6 : 1
                   }}>
-                  {savingConfig ? 'Guardando...' : '💾 GUARDAR CONFIG'}
+                  {savingConfig ? 'Guardando...' : '💾 GUARDAR'}
                 </button>
 
                 {!confirmReset ? (
@@ -4125,6 +4209,10 @@ export default function SentixProFrontend() {
                     }}>NO</button>
                   </div>
                 )}
+              </div>
+
+              <div style={{ fontSize: 9, color: muted, marginTop: 12, padding: 8, background: `${purple}11`, borderRadius: 4 }}>
+                Para configurar parámetros de estrategia (riesgo, ATR, señales, portfolio), usa la tab <strong>⚙ ESTRATEGIA</strong>
               </div>
             </div>
           )}
@@ -6980,7 +7068,8 @@ El sistema:
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
             { k: "execution", label: "⚡ EJECUCIÓN", desc: "Órdenes y riesgo" },
-            { k: "paper", label: "📈 PAPER", desc: "Trading simulado" },
+            { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config de trading" },
+            { k: "paper", label: "📈 PAPER", desc: "Cuenta simulada" },
             { k: "backtest", label: "🔬 BACKTEST", desc: "Validar estrategia" },
             { k: "optimize", label: "⚡ OPTIMIZAR", desc: "Ajustar parámetros" },
             { k: "apm", label: "📡 MONITOR", desc: "Sistema" },
@@ -7017,6 +7106,7 @@ El sistema:
         {tab === "portfolio" && PortfolioTab()}
         {tab === "alerts" && AlertsTab()}
         {tab === "execution" && ExecutionTab()}
+        {tab === "strategy" && StrategyTab()}
         {tab === "paper" && PaperTradingTab()}
         {tab === "backtest" && BacktestTab()}
         {tab === "optimize" && OptimizeTab()}
