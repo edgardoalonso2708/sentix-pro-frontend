@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useSSE } from './hooks/useSSE';
+import { useAuth } from './contexts/AuthContext';
+import { authFetch } from './lib/api';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -47,7 +50,8 @@ export default function SentixProFrontend() {
   const [wallets, setWallets] = useState([]);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
-  const USER_ID = 'default-user';
+  const { userId: authUserId } = useAuth();
+  const USER_ID = authUserId || 'default-user';
 
   // Paper Trading
   const [paperConfig, setPaperConfig] = useState(null);
@@ -324,6 +328,34 @@ export default function SentixProFrontend() {
     }
   }, [API_URL]);
 
+  // ─── SSE (Server-Sent Events) — Real-time updates ─────────────────────────
+  const sseHandlers = useMemo(() => ({
+    market: (data) => {
+      if (data) {
+        setMarketData(data);
+        setLastUpdate(new Date());
+      }
+    },
+    signals: (data) => {
+      if (Array.isArray(data)) {
+        setSignals(data);
+      }
+    },
+    paper_trade: () => {
+      // Refresh paper data when a trade event occurs
+      fetchDashboardPaper();
+      if (tab === 'paper') loadPaperData();
+      if (tab === 'execution') loadExecutionData();
+    },
+    kill_switch: (data) => {
+      if (data) {
+        setExecKillSwitchActive(data.active || false);
+      }
+    },
+  }), [fetchDashboardPaper, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { connected: sseConnected } = useSSE(API_URL, sseHandlers);
+
   // ─── INITIAL LOAD & AUTO-REFRESH ───────────────────────────────────────────
   useEffect(() => {
     const loadData = async () => {
@@ -343,11 +375,13 @@ export default function SentixProFrontend() {
 
     loadData();
 
-    // Auto-refresh every 30 seconds (market + signals + paper positions)
+    // Fallback polling only when SSE is disconnected (market + signals covered by SSE)
     const interval = setInterval(() => {
-      fetchMarketData();
-      fetchSignals();
-      fetchDashboardPaper();
+      if (!sseConnected) {
+        fetchMarketData();
+        fetchSignals();
+      }
+      fetchDashboardPaper(); // Always poll paper positions (not covered by SSE push)
     }, 30000);
 
     // Slow refresh every 5 minutes (health + backtest history + metrics + accuracy)
@@ -362,7 +396,7 @@ export default function SentixProFrontend() {
       clearInterval(interval);
       clearInterval(slowInterval);
     };
-  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy]);
+  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy, sseConnected]);
 
   // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
   useEffect(() => {
@@ -933,14 +967,20 @@ export default function SentixProFrontend() {
               animation: "pulse 2s infinite"
             }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: green }}>
-              🔴 LIVE - Datos actualizándose cada 30 segundos
+              🔴 LIVE - {sseConnected ? 'SSE tiempo real' : 'Polling cada 30s'}
             </span>
           </div>
-          {lastUpdate && (
-            <span style={{ fontSize: 11, color: muted, fontFamily: "monospace" }}>
-              Última actualización: {lastUpdate.toLocaleTimeString()}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+              background: sseConnected ? '#22c55e' : '#ef4444',
+              boxShadow: sseConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444'
+            }} />
+            <span style={{ fontSize: 11, color: muted, fontFamily: 'monospace' }}>
+              {sseConnected ? 'SSE' : 'Polling'}
+              {lastUpdate && ` · ${lastUpdate.toLocaleTimeString()}`}
             </span>
-          )}
+          </div>
         </div>
 
         {/* Macro Stats */}
