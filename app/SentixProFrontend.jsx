@@ -62,18 +62,6 @@ export default function SentixProFrontend() {
     }
   }, [authLoading, authEnabled, authUser, router]);
 
-  // Show nothing while checking auth (prevents flash of dashboard)
-  if (authEnabled && (authLoading || !authUser)) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0a0f', color: '#888' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>⚡ SENTIX PRO</div>
-          <div>Verificando autenticación...</div>
-        </div>
-      </div>
-    );
-  }
-
   // Paper Trading
   const [paperConfig, setPaperConfig] = useState(null);
   const [paperPositions, setPaperPositions] = useState([]);
@@ -740,6 +728,19 @@ export default function SentixProFrontend() {
     const interval = setInterval(loadExecutionData, 15000);
     return () => clearInterval(interval);
   }, [tab, loadExecutionData]);
+
+  // Show nothing while checking auth (prevents flash of dashboard)
+  // IMPORTANT: This must be AFTER all hooks to avoid React rules violation
+  if (authEnabled && (authLoading || !authUser)) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0a0f', color: '#888' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>⚡ SENTIX PRO</div>
+          <div>Verificando autenticación...</div>
+        </div>
+      </div>
+    );
+  }
 
   const handleCreateOrder = async (orderSpec) => {
     try {
