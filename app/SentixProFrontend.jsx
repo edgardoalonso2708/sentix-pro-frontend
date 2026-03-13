@@ -62,6 +62,21 @@ export default function SentixProFrontend() {
     }
   }, [authLoading, authEnabled, authUser, router]);
 
+  // ─── SHARED CONSTANTS ──────────────────────────────────────────────────────
+  const SHARED_ASSETS = [
+    { value: 'bitcoin', label: 'Bitcoin (BTC)' },
+    { value: 'ethereum', label: 'Ethereum (ETH)' },
+    { value: 'solana', label: 'Solana (SOL)' },
+    { value: 'binancecoin', label: 'BNB' },
+    { value: 'cardano', label: 'Cardano (ADA)' },
+    { value: 'ripple', label: 'XRP' },
+    { value: 'polkadot', label: 'Polkadot (DOT)' },
+    { value: 'avalanche-2', label: 'Avalanche (AVAX)' },
+    { value: 'chainlink', label: 'Chainlink (LINK)' },
+    { value: 'dogecoin', label: 'Dogecoin (DOGE)' }
+  ];
+  const SHARED_DAY_OPTIONS = [30, 60, 90, 180];
+
   // Paper Trading
   const [paperConfig, setPaperConfig] = useState(null);
   const [paperPositions, setPaperPositions] = useState([]);
@@ -145,6 +160,8 @@ export default function SentixProFrontend() {
   const [btTradesPage, setBtTradesPage] = useState(0);
   const [btSelected, setBtSelected] = useState(new Set());
   const [btDeleting, setBtDeleting] = useState(false);
+  const [btStrategyOverrides, setBtStrategyOverrides] = useState({});
+  const [btInherited, setBtInherited] = useState(false);
 
   // Optimize tab state (lifted to parent to survive re-renders)
   const [optParams, setOptParams] = useState([]);
@@ -155,6 +172,9 @@ export default function SentixProFrontend() {
   const [optError, setOptError] = useState(null);
   const [optProgress, setOptProgress] = useState({ current: 0, total: 0, message: '' });
   const [optHistory, setOptHistory] = useState([]);
+
+  const [optApplying, setOptApplying] = useState(false);
+  const [showSignalParams, setShowSignalParams] = useState(false);
 
   // Auto-tune state
   const [autoTuneHistory, setAutoTuneHistory] = useState([]);
@@ -524,7 +544,21 @@ export default function SentixProFrontend() {
       loadOptHistory();
       loadAutoTuneData();
     }
-  }, [tab, loadOptParams, loadOptHistory, loadAutoTuneData]);
+    if (tab === 'strategy') {
+      loadAutoTuneData();
+      loadOptParams();
+    }
+    if (tab === 'backtest' && paperConfigForm) {
+      setBtConfig(prev => ({
+        ...prev,
+        riskPerTrade: paperConfigForm.risk_per_trade ?? prev.riskPerTrade,
+        minConfluence: paperConfigForm.min_confluence ?? prev.minConfluence,
+        minRR: paperConfigForm.min_rr_ratio ?? prev.minRR,
+        allowedStrength: paperConfigForm.allowed_strength ?? prev.allowedStrength,
+      }));
+      setBtInherited(true);
+    }
+  }, [tab, loadOptParams, loadOptHistory, loadAutoTuneData, paperConfigForm]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -3610,6 +3644,54 @@ export default function SentixProFrontend() {
             {savingConfig ? 'Guardando...' : '💾 GUARDAR ESTRATEGIA'}
           </button>
         </div>
+
+        {/* Signal Generation Parameters (read-only, from strategyConfig) */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div
+            onClick={() => setShowSignalParams(!showSignalParams)}
+            style={{ ...sTitle, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showSignalParams ? 12 : 0 }}
+          >
+            <span>
+              🧠 PARAMETROS DE GENERACION DE SENALES
+              {autoTuneConfig?.source === 'saved' && (
+                <span style={{ color: green, fontSize: 9, marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>AUTO-TUNED</span>
+              )}
+            </span>
+            <span style={{ fontSize: 12 }}>{showSignalParams ? '▼' : '▶'}</span>
+          </div>
+          {showSignalParams && (
+            <div>
+              <div style={{ fontSize: 10, color: muted, marginBottom: 12 }}>
+                Estos parametros controlan la generacion de senales. Se modifican desde el tab Optimizar o Auto-Tune.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                {optParams.map(p => {
+                  const currentVal = autoTuneConfig?.config?.[p.key] ?? p.defaultValue;
+                  const isModified = currentVal !== p.defaultValue;
+                  return (
+                    <div key={p.key} style={{
+                      background: bg3, borderRadius: 6, padding: '8px 10px',
+                      border: isModified ? `1px solid ${green}30` : `1px solid ${border}`
+                    }}>
+                      <div style={{ fontSize: 9, color: muted, marginBottom: 2 }}>{p.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'monospace', color: isModified ? green : text }}>
+                        {currentVal}
+                        {isModified && (
+                          <span style={{ fontSize: 9, color: muted, marginLeft: 4, fontWeight: 400 }}>(def: {p.defaultValue})</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {optParams.length === 0 && (
+                <div style={{ fontSize: 11, color: muted, textAlign: 'center', padding: 20 }}>
+                  Cargando parametros...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -4388,18 +4470,7 @@ export default function SentixProFrontend() {
     // NOTE: All useState/useEffect moved to parent level to avoid remount issues
     const BT_TRADES_PER_PAGE = 15;
 
-    const ASSETS = [
-      { value: 'bitcoin', label: 'Bitcoin (BTC)' },
-      { value: 'ethereum', label: 'Ethereum (ETH)' },
-      { value: 'solana', label: 'Solana (SOL)' },
-      { value: 'binancecoin', label: 'BNB' },
-      { value: 'cardano', label: 'Cardano (ADA)' },
-      { value: 'ripple', label: 'XRP' },
-      { value: 'polkadot', label: 'Polkadot (DOT)' },
-      { value: 'avalanche-2', label: 'Avalanche (AVAX)' },
-      { value: 'chainlink', label: 'Chainlink (LINK)' },
-      { value: 'dogecoin', label: 'Dogecoin (DOGE)' }
-    ];
+    const ASSETS = SHARED_ASSETS;
 
     // Poll for results (with 12min hard timeout and error counting)
     const pollResults = (id) => {
@@ -4467,7 +4538,11 @@ export default function SentixProFrontend() {
         const res = await authFetch(`${API_URL}/api/backtest/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...btConfig, userId: USER_ID })
+          body: JSON.stringify({
+            ...btConfig,
+            userId: USER_ID,
+            strategyConfig: Object.keys(btStrategyOverrides).length > 0 ? btStrategyOverrides : undefined
+          })
         });
         if (!res.ok) {
           const err = await res.json();
@@ -4544,6 +4619,39 @@ export default function SentixProFrontend() {
 
     return (
       <div>
+        {/* Strategy Overrides Banner */}
+        {Object.keys(btStrategyOverrides).length > 0 && (
+          <div style={{
+            padding: '10px 16px', background: `${purple}15`, border: `1px solid ${purple}50`,
+            borderRadius: 8, marginBottom: 12, fontSize: 11, fontFamily: 'monospace',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <div>
+              <strong style={{ color: purple }}>Strategy Overrides:</strong>{' '}
+              {Object.entries(btStrategyOverrides).map(([k, v]) => `${k}=${v}`).join(', ')}
+            </div>
+            <button
+              onClick={() => setBtStrategyOverrides({})}
+              style={{
+                fontSize: 10, color: red, background: 'none', border: `1px solid ${red}40`,
+                borderRadius: 4, padding: '2px 8px', cursor: 'pointer'
+              }}
+            >
+              Limpiar
+            </button>
+          </div>
+        )}
+
+        {/* Inherited Config Badge */}
+        {btInherited && Object.keys(btStrategyOverrides).length === 0 && (
+          <div style={{
+            padding: '8px 16px', background: `${green}10`, border: `1px solid ${green}30`,
+            borderRadius: 8, marginBottom: 12, fontSize: 10, color: green, fontFamily: 'monospace'
+          }}>
+            Config heredada de Estrategia (risk, confluencia, R:R, strength)
+          </div>
+        )}
+
         {/* Header */}
         <div style={{
           background: `linear-gradient(135deg, ${bg2}, #1a0a2a)`,
@@ -4598,10 +4706,7 @@ export default function SentixProFrontend() {
                 style={inputStyle}
                 disabled={btRunning}
               >
-                <option value={30}>30 d&iacute;as</option>
-                <option value={60}>60 d&iacute;as</option>
-                <option value={90}>90 d&iacute;as</option>
-                <option value={180}>180 d&iacute;as</option>
+                {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} días</option>)}
               </select>
             </div>
 
@@ -5546,14 +5651,7 @@ export default function SentixProFrontend() {
   const OptimizeTab = () => {
     // NOTE: All useState/useEffect moved to parent level to avoid remount issues
 
-    const OPT_ASSETS = [
-      { value: 'bitcoin', label: 'Bitcoin (BTC)' },
-      { value: 'ethereum', label: 'Ethereum (ETH)' },
-      { value: 'solana', label: 'Solana (SOL)' },
-      { value: 'binancecoin', label: 'BNB' },
-      { value: 'cardano', label: 'Cardano (ADA)' },
-      { value: 'ripple', label: 'XRP' }
-    ];
+    const OPT_ASSETS = SHARED_ASSETS;
 
     // Poll for optimization progress
     const pollOptStatus = (jobId) => {
@@ -5698,7 +5796,7 @@ export default function SentixProFrontend() {
               disabled={optRunning}
               style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             >
-              {[30, 60, 90, 120].map(d => <option key={d} value={d}>{d} días{d >= 90 ? ' ✓' : ''}</option>)}
+              {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} días{d >= 90 ? ' ✓' : ''}</option>)}
             </select>
           </div>
 
@@ -5914,6 +6012,69 @@ export default function SentixProFrontend() {
                 : ''}
               ⏱ {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} días
             </div>
+
+            {/* Action Buttons: Apply + Verify */}
+            {optResult.bestValue !== undefined && (
+              <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+                {!optResult.validation?.overfitWarning && (
+                  <button
+                    onClick={async () => {
+                      setOptApplying(true);
+                      try {
+                        const applyRes = await authFetch(`${API_URL}/api/autotune/apply-param`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            paramName: optResult.paramKey || optConfig.paramName,
+                            value: optResult.bestValue,
+                            source: 'optimizer'
+                          })
+                        });
+                        if (applyRes.ok) {
+                          loadAutoTuneData();
+                          alert(`${optResult.paramLabel || optConfig.paramName} = ${optResult.bestValue} aplicado a la estrategia`);
+                        } else {
+                          const err = await applyRes.json();
+                          alert(`Error: ${err.error}`);
+                        }
+                      } catch (e) {
+                        alert(`Error: ${e.message}`);
+                      }
+                      setOptApplying(false);
+                    }}
+                    disabled={optApplying}
+                    style={{
+                      padding: '10px 20px', background: green, color: '#000',
+                      borderRadius: 8, fontWeight: 700, fontSize: 12,
+                      border: 'none', cursor: 'pointer', opacity: optApplying ? 0.5 : 1
+                    }}
+                  >
+                    {optApplying ? 'Aplicando...' : `Aplicar ${optResult.paramLabel || optConfig.paramName} = ${optResult.bestValue}`}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setBtConfig(prev => ({
+                      ...prev,
+                      asset: optConfig.asset || prev.asset,
+                      days: optConfig.days || prev.days
+                    }));
+                    setBtStrategyOverrides(prev => ({
+                      ...prev,
+                      [optResult.paramKey || optConfig.paramName]: optResult.bestValue
+                    }));
+                    setTab('backtest');
+                  }}
+                  style={{
+                    padding: '10px 20px', background: purple, color: '#fff',
+                    borderRadius: 8, fontWeight: 700, fontSize: 12,
+                    border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  Verificar con Backtest
+                </button>
+              </div>
+            )}
           </div>
         )}
 
