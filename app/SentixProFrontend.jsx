@@ -101,6 +101,7 @@ export default function SentixProFrontend() {
   const [execAutoExecute, setExecAutoExecute] = useState(true);
   const [execLoading, setExecLoading] = useState(false);
   const [execSubTab, setExecSubTab] = useState('orders'); // orders | positions | risk | audit
+  const [strategySubTab, setStrategySubTab] = useState('config'); // config | backtest | optimize
   const [execFeedback, setExecFeedback] = useState(null); // { type: 'success'|'error', message }
 
   // Advanced Performance
@@ -475,8 +476,8 @@ export default function SentixProFrontend() {
   }, [API_URL]);
 
   useEffect(() => {
-    if (tab === 'backtest') loadBtHistory();
-  }, [tab, loadBtHistory]);
+    if (tab === 'strategy' && strategySubTab === 'backtest') loadBtHistory();
+  }, [tab, strategySubTab, loadBtHistory]);
 
   // Cleanup backtest polling
   useEffect(() => {
@@ -539,16 +540,16 @@ export default function SentixProFrontend() {
   }, [API_URL]);
 
   useEffect(() => {
-    if (tab === 'optimize') {
+    if (tab === 'strategy' && strategySubTab === 'optimize') {
       loadOptParams();
       loadOptHistory();
       loadAutoTuneData();
     }
-    if (tab === 'strategy') {
+    if (tab === 'strategy' && strategySubTab === 'config') {
       loadAutoTuneData();
       loadOptParams();
     }
-    if (tab === 'backtest' && paperConfigForm) {
+    if (tab === 'strategy' && strategySubTab === 'backtest' && paperConfigForm) {
       setBtConfig(prev => ({
         ...prev,
         riskPerTrade: paperConfigForm.risk_per_trade ?? prev.riskPerTrade,
@@ -558,7 +559,7 @@ export default function SentixProFrontend() {
       }));
       setBtInherited(true);
     }
-  }, [tab, loadOptParams, loadOptHistory, loadAutoTuneData, paperConfigForm]);
+  }, [tab, strategySubTab, loadOptParams, loadOptHistory, loadAutoTuneData, paperConfigForm]);
 
   // ─── PORTFOLIO FUNCTIONS ───────────────────────────────────────────────────
   const addToPortfolio = (asset, amount, buyPrice) => {
@@ -1507,7 +1508,7 @@ export default function SentixProFrontend() {
             if (!latest) {
               return (
                 <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
-                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => setTab('backtest')}>BACKTEST</span>
+                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => { setTab('strategy'); setStrategySubTab('backtest'); }}>ESTRATEGIA → Backtest</span>
                 </div>
               );
             }
@@ -3379,8 +3380,59 @@ export default function SentixProFrontend() {
     );
   };
 
-  // ─── STRATEGY CONFIG TAB ──────────────────────────────────────────────────
+  // ─── STRATEGY CONFIG TAB (with sub-tabs: Config, Backtest, Optimize) ─────
   const StrategyTab = () => {
+    const subTab = strategySubTab;
+    const setSubTab = setStrategySubTab;
+
+    const STRATEGY_SUB_TABS = [
+      { k: 'config', label: '⚙ Configuración', desc: 'Parámetros de trading' },
+      { k: 'backtest', label: '🔬 Backtest', desc: 'Validar estrategia' },
+      { k: 'optimize', label: '⚡ Optimizar', desc: 'Ajustar parámetros' }
+    ];
+
+    return (
+      <div style={{ fontFamily: 'monospace' }}>
+        {/* Sub-tabs */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {STRATEGY_SUB_TABS.map(({ k, label, desc }) => (
+            <button
+              key={k}
+              onClick={() => setSubTab(k)}
+              style={{
+                flex: '1 1 auto',
+                padding: '8px 14px',
+                background: subTab === k ? `${purple}20` : bg2,
+                border: subTab === k ? `1px solid ${purple}` : `1px solid ${border}`,
+                borderRadius: 6,
+                color: subTab === k ? purple : muted,
+                fontFamily: 'monospace',
+                fontSize: 11,
+                fontWeight: subTab === k ? 700 : 500,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              {label}
+              <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{desc}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Config sub-tab */}
+        {subTab === 'config' && StrategyConfigContent()}
+
+        {/* Backtest sub-tab */}
+        {subTab === 'backtest' && BacktestTab()}
+
+        {/* Optimize sub-tab */}
+        {subTab === 'optimize' && OptimizeTab()}
+      </div>
+    );
+  };
+
+  // ─── STRATEGY CONFIG CONTENT (extracted from old StrategyTab) ─────────────
+  const StrategyConfigContent = () => {
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
     const savingConfig = paperSavingConfig, setSavingConfig = setPaperSavingConfig;
 
@@ -6063,7 +6115,7 @@ export default function SentixProFrontend() {
                       ...prev,
                       [optResult.paramKey || optConfig.paramName]: optResult.bestValue
                     }));
-                    setTab('backtest');
+                    setStrategySubTab('backtest');
                   }}
                   style={{
                     padding: '10px 20px', background: purple, color: '#fff',
@@ -7397,10 +7449,8 @@ El sistema:
             { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
             { k: "execution", label: "⚡ EJECUCIÓN", desc: "Órdenes y riesgo" },
-            { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config de trading" },
+            { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config, Backtest y Optimización" },
             { k: "paper", label: "📈 PAPER", desc: "Cuenta simulada" },
-            { k: "backtest", label: "🔬 BACKTEST", desc: "Validar estrategia" },
-            { k: "optimize", label: "⚡ OPTIMIZAR", desc: "Ajustar parámetros" },
             { k: "apm", label: "📡 MONITOR", desc: "Sistema" },
             { k: "guide", label: "📖 GUÍA", desc: "Cómo usar" }
           ].map(({ k, label, desc }) => (
@@ -7437,8 +7487,6 @@ El sistema:
         {tab === "execution" && ExecutionTab()}
         {tab === "strategy" && StrategyTab()}
         {tab === "paper" && PaperTradingTab()}
-        {tab === "backtest" && BacktestTab()}
-        {tab === "optimize" && OptimizeTab()}
         {tab === "apm" && APMTab()}
         {tab === "guide" && GuideTab()}
 
