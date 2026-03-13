@@ -854,6 +854,7 @@ export default function SentixProFrontend() {
         showFeedback('error', d.error || `Error en kill switch (${res.status})`);
       }
       loadExecutionData();
+      fetchDashboardPaper(); // Refresh positions after kill switch closes them
     } catch (err) {
       showFeedback('error', `Error de red: ${err.message}`);
     }
