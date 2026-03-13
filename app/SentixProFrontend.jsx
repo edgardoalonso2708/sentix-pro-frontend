@@ -103,6 +103,7 @@ export default function SentixProFrontend() {
   const [execSubTab, setExecSubTab] = useState('orders'); // orders | positions | risk | audit
   const [strategySubTab, setStrategySubTab] = useState('config'); // config | backtest | optimize
   const [execFeedback, setExecFeedback] = useState(null); // { type: 'success'|'error', message }
+  const [execManualOrdersEnabled, setExecManualOrdersEnabled] = useState(false); // manual order entry OFF by default
 
   // Advanced Performance
   const [advancedPerf, setAdvancedPerf] = useState(null);
@@ -723,10 +724,10 @@ export default function SentixProFrontend() {
     setExecLoading(true);
     try {
       const [ordersRes, riskRes, auditRes, ksRes] = await Promise.allSettled([
-        fetch(`${API_URL}/api/orders/${USER_ID}?limit=50`),
-        fetch(`${API_URL}/api/risk/${USER_ID}/dashboard`),
-        fetch(`${API_URL}/api/execution-log/${USER_ID}?limit=50`),
-        fetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`)
+        authFetch(`${API_URL}/api/orders/${USER_ID}?limit=50`),
+        authFetch(`${API_URL}/api/risk/${USER_ID}/dashboard`),
+        authFetch(`${API_URL}/api/execution-log/${USER_ID}?limit=50`),
+        authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`)
       ]);
 
       if (ordersRes.status === 'fulfilled' && ordersRes.value.ok) {
@@ -3288,6 +3289,7 @@ export default function SentixProFrontend() {
             <ExecutionModeToggle
               mode={execMode}
               autoExecute={execAutoExecute}
+              onAutoExecuteChange={(val) => setExecAutoExecute(val)}
               colors={executionColors}
             />
           </div>
@@ -3328,11 +3330,53 @@ export default function SentixProFrontend() {
         {/* Orders sub-tab */}
         {subTab === 'orders' && (
           <div>
-            <OrderEntryForm
-              onSubmit={handleCreateOrder}
-              colors={executionColors}
-            />
-            <div style={{ marginTop: 16 }}>
+            {/* Manual order entry toggle */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 16px', marginBottom: 12, borderRadius: 6,
+              background: execManualOrdersEnabled ? `${green}10` : bg2,
+              border: `1px solid ${execManualOrdersEnabled ? green + '40' : border}`
+            }}>
+              <div>
+                <div style={{ color: text, fontSize: 12, fontWeight: 700 }}>📝 Órdenes Manuales</div>
+                <div style={{ color: muted, fontSize: 10, marginTop: 2 }}>
+                  {execManualOrdersEnabled
+                    ? 'Formulario de entrada manual habilitado'
+                    : 'Desactivado — el sistema opera con órdenes automáticas'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  onClick={() => setExecManualOrdersEnabled(!execManualOrdersEnabled)}
+                  style={{
+                    width: 44, height: 24, borderRadius: 12, border: 'none',
+                    background: execManualOrdersEnabled ? green : 'rgba(107,114,128,0.3)',
+                    cursor: 'pointer', position: 'relative', transition: 'background 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3,
+                    left: execManualOrdersEnabled ? 23 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+                <span style={{ color: execManualOrdersEnabled ? green : muted, fontSize: 11, fontWeight: 600 }}>
+                  {execManualOrdersEnabled ? 'ON' : 'OFF'}
+                </span>
+              </div>
+            </div>
+
+            {/* Order entry form — only shown when manual orders enabled */}
+            {execManualOrdersEnabled && (
+              <OrderEntryForm
+                onSubmit={handleCreateOrder}
+                colors={executionColors}
+              />
+            )}
+
+            {/* Order book — always visible */}
+            <div style={{ marginTop: execManualOrdersEnabled ? 16 : 0 }}>
               <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
                 Libro de Órdenes
               </div>
