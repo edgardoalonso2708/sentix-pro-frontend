@@ -122,8 +122,7 @@ export default function SentixProFrontend() {
   const [backtestHistory, setBacktestHistory] = useState([]);
   const [systemHealth, setSystemHealth] = useState(null);
 
-  // Dashboard charts data
-  const [dashboardClosedTrades, setDashboardClosedTrades] = useState([]);
+  // Dashboard charts data (uses paperHistory for closed trades — single source of truth)
   const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
   const [realtimeEquityCurve, setRealtimeEquityCurve] = useState([]);
 
@@ -264,7 +263,7 @@ export default function SentixProFrontend() {
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
-        setPaperConfig(d);
+        setPaperConfig(d.config || d);
       }
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const d = await posRes.value.json();
@@ -276,7 +275,8 @@ export default function SentixProFrontend() {
       }
       if (histRes.status === 'fulfilled' && histRes.value.ok) {
         const d = await histRes.value.json();
-        setDashboardClosedTrades(d.trades || []);
+        setPaperHistory(d.trades || []);
+        setPaperHistoryTotal(d.total || 0);
       }
       if (eqRes.status === 'fulfilled' && eqRes.value.ok) {
         const d = await eqRes.value.json();
@@ -699,7 +699,7 @@ export default function SentixProFrontend() {
       setPaperLoading(false);
       paperDataFetching.current = false;
     }
-  }, [paperHistoryPage, paperConfigForm]);
+  }, [paperHistoryPage, paperConfigForm, API_URL]);
 
   // Load just config for strategy tab (lightweight, no positions/history)
   const loadConfigOnly = useCallback(async () => {
@@ -1308,7 +1308,7 @@ export default function SentixProFrontend() {
         {/* CURVA DE EQUITY (Paper Trading) — Real-time + trade-derived        */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {(() => {
-          const initialCap = paperConfig?.initial_capital || paperConfig?.config?.initial_capital || 10000;
+          const initialCap = paperConfig?.initial_capital || 10000;
 
           // Prefer real-time snapshots if available, fallback to trade-derived
           const hasRealtime = realtimeEquityCurve && realtimeEquityCurve.length >= 2;
@@ -1330,7 +1330,7 @@ export default function SentixProFrontend() {
               };
             });
           } else {
-            equityData = computePaperEquityCurve(dashboardClosedTrades, initialCap);
+            equityData = computePaperEquityCurve(paperHistory, initialCap);
           }
 
           if (equityData.length < 2) return null;
@@ -1379,7 +1379,7 @@ export default function SentixProFrontend() {
         {/* P&L DIARIO                                                           */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {(() => {
-          const dailyData = computeDailyPnl(dashboardClosedTrades);
+          const dailyData = computeDailyPnl(paperHistory);
           if (dailyData.length < 1) return null;
           return (
             <div style={{ ...card, marginTop: 4 }}>
@@ -1411,7 +1411,7 @@ export default function SentixProFrontend() {
         {/* RENDIMIENTO POR ACTIVO                                               */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {(() => {
-          const assetData = computeAssetPerformance(dashboardClosedTrades);
+          const assetData = computeAssetPerformance(paperHistory);
           if (assetData.length < 1) return null;
           return (
             <div style={{ ...card, marginTop: 4 }}>
