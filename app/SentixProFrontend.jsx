@@ -100,7 +100,7 @@ export default function SentixProFrontend() {
   const [execMode, setExecMode] = useState('paper');
   const [execAutoExecute, setExecAutoExecute] = useState(true);
   const [execLoading, setExecLoading] = useState(false);
-  const [execSubTab, setExecSubTab] = useState('orders'); // orders | positions | risk | audit
+  const [execSubTab, setExecSubTab] = useState('positions'); // positions | risk | audit | orders (orders only when manual enabled)
   const [strategySubTab, setStrategySubTab] = useState('config'); // config | backtest | optimize
   const [execFeedback, setExecFeedback] = useState(null); // { type: 'success'|'error', message }
   const [execManualOrdersEnabled, setExecManualOrdersEnabled] = useState(false); // manual order entry OFF by default
@@ -248,12 +248,12 @@ export default function SentixProFrontend() {
   const fetchDashboardPaper = useCallback(async () => {
     try {
       const [cfgRes, posRes, perfRes, histRes, eqRes, advRes] = await Promise.allSettled([
-        fetch(`${API_URL}/api/paper/config/${USER_ID}`),
-        fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
-        fetch(`${API_URL}/api/paper/performance/${USER_ID}`),
-        fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
-        fetch(`${API_URL}/api/paper/equity/${USER_ID}?days=7`),
-        fetch(`${API_URL}/api/paper/performance-advanced/${USER_ID}?days=${advancedPerfDays}`),
+        authFetch(`${API_URL}/api/paper/config/${USER_ID}`),
+        authFetch(`${API_URL}/api/paper/positions/${USER_ID}`),
+        authFetch(`${API_URL}/api/paper/performance/${USER_ID}`),
+        authFetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
+        authFetch(`${API_URL}/api/paper/equity/${USER_ID}?days=7`),
+        authFetch(`${API_URL}/api/paper/performance-advanced/${USER_ID}?days=${advancedPerfDays}`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
@@ -432,7 +432,7 @@ export default function SentixProFrontend() {
   // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
   useEffect(() => {
     if (backtestHistory.length > 0 && backtestHistory[0].id && backtestHistory[0].status === 'completed') {
-      fetch(`${API_URL}/api/backtest/results/${backtestHistory[0].id}`)
+      authFetch(`${API_URL}/api/backtest/results/${backtestHistory[0].id}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.equity_curve) setBacktestEquityCurve(data.equity_curve);
@@ -520,9 +520,9 @@ export default function SentixProFrontend() {
   const loadAutoTuneData = useCallback(async () => {
     try {
       const [histRes, cfgRes, pendRes] = await Promise.all([
-        fetch(`${API_URL}/api/autotune/history?limit=10`),
-        fetch(`${API_URL}/api/autotune/config`),
-        fetch(`${API_URL}/api/autotune/pending`),
+        authFetch(`${API_URL}/api/autotune/history?limit=10`),
+        authFetch(`${API_URL}/api/autotune/config`),
+        authFetch(`${API_URL}/api/autotune/pending`),
       ]);
       if (histRes.ok) {
         const d = await histRes.json();
@@ -646,10 +646,10 @@ export default function SentixProFrontend() {
     setPaperLoading(true);
     try {
       const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
-        fetch(`${API_URL}/api/paper/config/${USER_ID}`),
-        fetch(`${API_URL}/api/paper/positions/${USER_ID}`),
-        fetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${PAPER_HISTORY_PAGE_SIZE}&offset=${paperHistoryPage * PAPER_HISTORY_PAGE_SIZE}`),
-        fetch(`${API_URL}/api/paper/performance/${USER_ID}`)
+        authFetch(`${API_URL}/api/paper/config/${USER_ID}`),
+        authFetch(`${API_URL}/api/paper/positions/${USER_ID}`),
+        authFetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${PAPER_HISTORY_PAGE_SIZE}&offset=${paperHistoryPage * PAPER_HISTORY_PAGE_SIZE}`),
+        authFetch(`${API_URL}/api/paper/performance/${USER_ID}`)
       ]);
       if (configRes.status === 'fulfilled' && configRes.value.ok) {
         const d = await configRes.value.json();
@@ -3246,10 +3246,10 @@ export default function SentixProFrontend() {
     const executionColors = { bg, bg2, bg3, border, text, muted, green, red, accent: purple };
 
     const SUB_TABS = [
-      { k: 'orders', label: '📋 Órdenes', desc: 'Crear y gestionar' },
       { k: 'positions', label: '📊 Posiciones', desc: 'Monitoreo live' },
       { k: 'risk', label: '🛡️ Riesgo', desc: 'Dashboard de riesgo' },
-      { k: 'audit', label: '📜 Auditoría', desc: 'Historial de eventos' }
+      { k: 'audit', label: '📜 Auditoría', desc: 'Historial de eventos' },
+      ...(execManualOrdersEnabled ? [{ k: 'orders', label: '📋 Órdenes', desc: 'Crear y gestionar' }] : [])
     ];
 
     return (
@@ -3285,13 +3285,41 @@ export default function SentixProFrontend() {
           flexWrap: 'wrap',
           gap: 12
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <ExecutionModeToggle
               mode={execMode}
+              onModeChange={(val) => setExecMode(val)}
               autoExecute={execAutoExecute}
               onAutoExecuteChange={(val) => setExecAutoExecute(val)}
               colors={executionColors}
             />
+            {/* Manual orders toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: muted, fontSize: 12 }}>Órdenes manuales:</span>
+              <button
+                onClick={() => {
+                  const next = !execManualOrdersEnabled;
+                  setExecManualOrdersEnabled(next);
+                  if (next && execSubTab !== 'orders') setExecSubTab('orders');
+                  if (!next && execSubTab === 'orders') setExecSubTab('positions');
+                }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none',
+                  background: execManualOrdersEnabled ? green : 'rgba(107,114,128,0.3)',
+                  cursor: 'pointer', position: 'relative', transition: 'background 0.2s'
+                }}
+              >
+                <div style={{
+                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3,
+                  left: execManualOrdersEnabled ? 23 : 3,
+                  transition: 'left 0.2s'
+                }} />
+              </button>
+              <span style={{ color: execManualOrdersEnabled ? green : muted, fontSize: 11, fontWeight: 600 }}>
+                {execManualOrdersEnabled ? 'ON' : 'OFF'}
+              </span>
+            </div>
           </div>
           <KillSwitchButton
             active={execKillSwitchActive}
@@ -3327,56 +3355,14 @@ export default function SentixProFrontend() {
           ))}
         </div>
 
-        {/* Orders sub-tab */}
-        {subTab === 'orders' && (
+        {/* Orders sub-tab (only visible when manual orders enabled) */}
+        {subTab === 'orders' && execManualOrdersEnabled && (
           <div>
-            {/* Manual order entry toggle */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 16px', marginBottom: 12, borderRadius: 6,
-              background: execManualOrdersEnabled ? `${green}10` : bg2,
-              border: `1px solid ${execManualOrdersEnabled ? green + '40' : border}`
-            }}>
-              <div>
-                <div style={{ color: text, fontSize: 12, fontWeight: 700 }}>📝 Órdenes Manuales</div>
-                <div style={{ color: muted, fontSize: 10, marginTop: 2 }}>
-                  {execManualOrdersEnabled
-                    ? 'Formulario de entrada manual habilitado'
-                    : 'Desactivado — el sistema opera con órdenes automáticas'}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  onClick={() => setExecManualOrdersEnabled(!execManualOrdersEnabled)}
-                  style={{
-                    width: 44, height: 24, borderRadius: 12, border: 'none',
-                    background: execManualOrdersEnabled ? green : 'rgba(107,114,128,0.3)',
-                    cursor: 'pointer', position: 'relative', transition: 'background 0.2s'
-                  }}
-                >
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                    position: 'absolute', top: 3,
-                    left: execManualOrdersEnabled ? 23 : 3,
-                    transition: 'left 0.2s'
-                  }} />
-                </button>
-                <span style={{ color: execManualOrdersEnabled ? green : muted, fontSize: 11, fontWeight: 600 }}>
-                  {execManualOrdersEnabled ? 'ON' : 'OFF'}
-                </span>
-              </div>
-            </div>
-
-            {/* Order entry form — only shown when manual orders enabled */}
-            {execManualOrdersEnabled && (
-              <OrderEntryForm
-                onSubmit={handleCreateOrder}
-                colors={executionColors}
-              />
-            )}
-
-            {/* Order book — always visible */}
-            <div style={{ marginTop: execManualOrdersEnabled ? 16 : 0 }}>
+            <OrderEntryForm
+              onSubmit={handleCreateOrder}
+              colors={executionColors}
+            />
+            <div style={{ marginTop: 16 }}>
               <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
                 Libro de Órdenes
               </div>

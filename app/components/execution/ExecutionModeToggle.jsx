@@ -28,17 +28,16 @@ export default function ExecutionModeToggle({ mode, onModeChange, autoExecute, o
           📝 PAPER
         </button>
         <button
-          disabled
-          title="Disponible cuando se conecte Bybit"
+          onClick={() => onModeChange?.('live')}
           style={{
             padding: '8px 16px',
-            background: bg,
-            color: 'rgba(107,114,128,0.4)',
+            background: mode === 'live' ? green : bg,
+            color: mode === 'live' ? '#fff' : muted,
             border: 'none',
             borderLeft: `1px solid ${border}`,
             fontSize: 12,
             fontWeight: 600,
-            cursor: 'not-allowed'
+            cursor: 'pointer'
           }}
         >
           🔗 LIVE
