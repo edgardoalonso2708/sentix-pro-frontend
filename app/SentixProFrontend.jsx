@@ -100,7 +100,7 @@ export default function SentixProFrontend() {
   const [execMode, setExecMode] = useState('paper');
   const [execAutoExecute, setExecAutoExecute] = useState(true);
   const [execLoading, setExecLoading] = useState(false);
-  const [execSubTab, setExecSubTab] = useState('positions'); // positions | risk | audit | orders (orders only when manual enabled)
+  const [execSubTab, setExecSubTab] = useState('dashboard'); // dashboard | positions | history | risk | orders | audit
   const [strategySubTab, setStrategySubTab] = useState('config'); // config | backtest | optimize
   const [execFeedback, setExecFeedback] = useState(null); // { type: 'success'|'error', message }
   const [execManualOrdersEnabled, setExecManualOrdersEnabled] = useState(false); // manual order entry OFF by default
@@ -704,18 +704,11 @@ export default function SentixProFrontend() {
     }
   }, []);
 
-  // Load paper data when page changes or tab becomes active
+  // Load paper data when history page changes or strategy tab becomes active
   useEffect(() => {
-    if (tab === 'paper') loadPaperData();
+    if (tab === 'execution') loadPaperData();
     else if (tab === 'strategy') loadConfigOnly();
   }, [tab, paperHistoryPage, loadPaperData, loadConfigOnly]);
-
-  // Auto refresh paper data every 30s when on paper tab
-  useEffect(() => {
-    if (tab !== 'paper') return;
-    const interval = setInterval(loadPaperData, 30000);
-    return () => clearInterval(interval);
-  }, [tab, loadPaperData]);
 
   // Test alert is now handled directly in AlertsTab
 
@@ -758,18 +751,20 @@ export default function SentixProFrontend() {
   useEffect(() => {
     if (tab === 'execution') {
       loadExecutionData();
-      fetchDashboardPaper(); // Always refresh positions when entering execution tab
+      fetchDashboardPaper(); // Positions, performance, advanced analytics
+      loadPaperData();       // Paginated history + correlation
     }
-  }, [tab, loadExecutionData, fetchDashboardPaper]);
+  }, [tab, loadExecutionData, fetchDashboardPaper, loadPaperData]);
 
   useEffect(() => {
     if (tab !== 'execution') return;
     const interval = setInterval(() => {
       loadExecutionData();
-      fetchDashboardPaper(); // Keep positions in sync
+      fetchDashboardPaper();
+      loadPaperData();
     }, 15000);
     return () => clearInterval(interval);
-  }, [tab, loadExecutionData, fetchDashboardPaper]);
+  }, [tab, loadExecutionData, fetchDashboardPaper, loadPaperData]);
 
   // Show nothing while checking auth (prevents flash of dashboard)
   // IMPORTANT: This must be AFTER all hooks to avoid React rules violation
@@ -3252,11 +3247,73 @@ export default function SentixProFrontend() {
     const setSubTab = setExecSubTab;
     const executionColors = { bg, bg2, bg3, border, text, muted, green, red, accent: purple };
 
+    // Aliases for paper state (used by moved Paper content)
+    const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
+    const closingTrade = paperClosingTrade, setClosingTrade = setPaperClosingTrade;
+    const historyPage = paperHistoryPage, setHistoryPage = setPaperHistoryPage;
+    const historyTotal = paperHistoryTotal;
+
+    // Derived values for status banner
+    const isEnabled = paperConfig?.is_enabled;
+    const capital = parseFloat(paperConfig?.current_capital || 10000);
+    const initialCap = parseFloat(paperConfig?.initial_capital || 10000);
+    const capitalPnl = capital - initialCap;
+    const capitalPnlPct = initialCap > 0 ? ((capitalPnl / initialCap) * 100) : 0;
+
+    // Handlers (moved from PaperTradingTab)
+    const handleCloseTrade = async (tradeId) => {
+      setClosingTrade(tradeId);
+      try {
+        const res = await authFetch(`${API_URL}/api/paper/close/${tradeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: USER_ID })
+        });
+        if (res.ok) await loadPaperData();
+      } catch (err) {
+        console.error('Close trade error:', err);
+      } finally {
+        setClosingTrade(null);
+      }
+    };
+
+    const handleToggleEnabled = async () => {
+      const newVal = !paperConfig?.is_enabled;
+      try {
+        const payload = newVal
+          ? { is_enabled: true, daily_pnl: 0, daily_pnl_reset_at: new Date().toISOString() }
+          : { is_enabled: false };
+        const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setPaperConfig(d.config);
+          if (configForm) setConfigForm(prev => ({ ...prev, is_enabled: newVal }));
+        }
+      } catch (err) {
+        console.error('Toggle error:', err);
+      }
+    };
+
+    const formatDuration = (entryAt, exitAt) => {
+      const ms = new Date(exitAt || Date.now()) - new Date(entryAt);
+      const hours = Math.floor(ms / 3600000);
+      const mins = Math.floor((ms % 3600000) / 60000);
+      if (hours > 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+      if (hours > 0) return `${hours}h ${mins}m`;
+      return `${mins}m`;
+    };
+
     const SUB_TABS = [
-      { k: 'positions', label: '📊 Posiciones', desc: 'Monitoreo live' },
-      { k: 'risk', label: '🛡️ Riesgo', desc: 'Dashboard de riesgo' },
-      { k: 'audit', label: '📜 Auditoría', desc: 'Historial de eventos' },
-      ...(execManualOrdersEnabled ? [{ k: 'orders', label: '📋 Órdenes', desc: 'Crear y gestionar' }] : [])
+      { k: 'dashboard', label: '📊 Dashboard', desc: 'Métricas y analytics' },
+      { k: 'positions', label: '📈 Posiciones', desc: 'Monitor + correlación' },
+      { k: 'history', label: '📋 Historial', desc: 'Trades cerrados' },
+      { k: 'risk', label: '⚠️ Riesgo', desc: 'Dashboard de riesgo' },
+      ...(execManualOrdersEnabled ? [{ k: 'orders', label: '📝 Órdenes', desc: 'Crear y gestionar' }] : []),
+      { k: 'audit', label: '🔍 Auditoría', desc: 'Historial de eventos' }
     ];
 
     return (
@@ -3326,7 +3383,7 @@ export default function SentixProFrontend() {
                   const next = !execManualOrdersEnabled;
                   setExecManualOrdersEnabled(next);
                   if (next && execSubTab !== 'orders') setExecSubTab('orders');
-                  if (!next && execSubTab === 'orders') setExecSubTab('positions');
+                  if (!next && execSubTab === 'orders') setExecSubTab('dashboard');
                 }}
                 style={{
                   width: 44, height: 24, borderRadius: 12, border: 'none',
@@ -3355,7 +3412,7 @@ export default function SentixProFrontend() {
         </div>
 
         {/* Sub-tabs */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
           {SUB_TABS.map(({ k, label, desc }) => (
             <button
               key={k}
@@ -3380,7 +3437,483 @@ export default function SentixProFrontend() {
           ))}
         </div>
 
-        {/* Orders sub-tab (only visible when manual orders enabled) */}
+        {/* ═══ DASHBOARD SUB-TAB (no live guard — always visible) ═══ */}
+        {subTab === 'dashboard' && (
+          <div>
+            {/* Status Banner */}
+            <div style={{
+              background: isEnabled ? "rgba(0, 212, 170, 0.08)" : "rgba(239, 68, 68, 0.08)",
+              border: `1px solid ${isEnabled ? green : red}`,
+              borderRadius: 8, padding: "14px 18px", marginBottom: 16,
+              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: isEnabled ? green : red,
+                  boxShadow: `0 0 8px ${isEnabled ? green : red}`,
+                  animation: isEnabled ? "pulse 2s infinite" : "none"
+                }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isEnabled ? green : red }}>
+                    PAPER TRADING {isEnabled ? 'ACTIVO' : 'DESACTIVADO'}
+                  </div>
+                  <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                    Capital: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} ·
+                    P&L: <span style={{ color: capitalPnl >= 0 ? green : red }}>
+                      {capitalPnl >= 0 ? '+' : ''}${capitalPnl.toFixed(2)} ({capitalPnlPct.toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={handleToggleEnabled} style={{
+                padding: "6px 16px", background: isEnabled ? "rgba(239,68,68,0.2)" : "rgba(0,212,170,0.2)",
+                border: `1px solid ${isEnabled ? red : green}`, borderRadius: 6,
+                color: isEnabled ? red : green, fontFamily: "monospace", fontSize: 11,
+                fontWeight: 700, cursor: "pointer"
+              }}>
+                {isEnabled ? '⏸ PAUSAR' : '▶ ACTIVAR'}
+              </button>
+            </div>
+
+            {/* Performance Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+              {[
+                { label: "P&L TOTAL", value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
+                { label: "WIN RATE", value: `${paperMetrics?.winRate || 0}%`, color: (paperMetrics?.winRate || 0) >= 50 ? green : (paperMetrics?.winRate || 0) > 0 ? amber : muted },
+                { label: "TRADES", value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
+                { label: "CAPITAL", value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
+                { label: "MAX DRAWDOWN", value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
+                { label: "PROFIT FACTOR", value: paperMetrics?.profitFactor === Infinity ? '∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
+              ].map((stat, i) => (
+                <div key={i} style={{ ...card, padding: "12px 14px", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 6 }}>{stat.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", color: stat.color }}>{stat.value}</div>
+                  {stat.sub && <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 2 }}>{stat.sub}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* Advanced Performance Analytics */}
+            <div style={{ ...card, padding: "16px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+                onClick={() => setShowAdvancedPerf(!showAdvancedPerf)}>
+                <div style={sTitle}>📊 ANALYTICS AVANZADOS {showAdvancedPerf ? '▾' : '▸'}</div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {[30, 90, 0].map(d => (
+                    <button key={d} onClick={(e) => { e.stopPropagation(); setAdvancedPerfDays(d); }} style={{
+                      padding: "3px 10px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700,
+                      background: advancedPerfDays === d ? green : bg3, color: advancedPerfDays === d ? "#000" : muted
+                    }}>{d === 0 ? 'Todo' : `${d}d`}</button>
+                  ))}
+                </div>
+              </div>
+
+              {showAdvancedPerf && (() => {
+                if (!advancedPerf || advancedPerf.total < 5) {
+                  return <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
+                    Necesitas al menos 5 trades cerrados para ver analytics avanzados ({advancedPerf?.total || 0} actuales)
+                  </div>;
+                }
+                const hitColor = (rate) => rate >= 55 ? green : rate >= 45 ? amber : red;
+                return (
+                  <div style={{ marginTop: 14 }}>
+                    {/* P&L Por Asset */}
+                    {advancedPerf.byAsset && advancedPerf.byAsset.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L POR ASSET</div>
+                        <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                          <ResponsiveContainer width="100%" height={Math.max(120, advancedPerf.byAsset.length * 32)}>
+                            <BarChart data={advancedPerf.byAsset} layout="vertical" margin={{ left: 60, right: 20, top: 5, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 9, fill: muted }} />
+                              <YAxis type="category" dataKey="asset" tick={{ fontSize: 10, fill: "#e5e7eb" }} width={55} />
+                              <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
+                                formatter={(v, name, props) => {
+                                  const d = props.payload;
+                                  return [`$${v} | WR: ${d.winRate}% | ${d.trades} trades | avg: $${d.avgPnl}`, 'P&L'];
+                                }} />
+                              <Bar dataKey="totalPnl" radius={[0, 4, 4, 0]}>
+                                {advancedPerf.byAsset.map((entry, i) => (
+                                  <Cell key={i} fill={entry.totalPnl >= 0 ? green : red} fillOpacity={0.8} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* By Hour + By Day */}
+                    <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 12, marginBottom: 16 }}>
+                      {advancedPerf.byHour && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR HORA (UTC)</div>
+                          <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                            <ResponsiveContainer width="100%" height={140}>
+                              <BarChart data={advancedPerf.byHour}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                                <XAxis dataKey="hour" tick={{ fontSize: 8, fill: muted }} />
+                                <YAxis tick={{ fontSize: 8, fill: muted }} domain={[0, 100]} unit="%" />
+                                <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                                  formatter={(v, name, props) => {
+                                    const d = props.payload;
+                                    return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                                  }} />
+                                <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
+                                <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
+                                  {advancedPerf.byHour.map((entry, i) => (
+                                    <Cell key={i} fill={entry.trades === 0 ? "#1a1a1a" : entry.totalPnl >= 0 ? green : red} fillOpacity={entry.trades === 0 ? 0.1 : 0.7} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                      {advancedPerf.byDayOfWeek && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR DIA</div>
+                          <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                            <ResponsiveContainer width="100%" height={140}>
+                              <BarChart data={advancedPerf.byDayOfWeek}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                                <XAxis dataKey="label" tick={{ fontSize: 9, fill: muted }} />
+                                <YAxis tick={{ fontSize: 8, fill: muted }} domain={[0, 100]} unit="%" />
+                                <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                                  formatter={(v, name, props) => {
+                                    const d = props.payload;
+                                    return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                                  }} />
+                                <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
+                                <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
+                                  {advancedPerf.byDayOfWeek.map((entry, i) => (
+                                    <Cell key={i} fill={entry.trades === 0 ? "#1a1a1a" : entry.totalPnl >= 0 ? green : red} fillOpacity={entry.trades === 0 ? 0.1 : 0.7} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* P&L Distribution */}
+                    {advancedPerf.pnlDistribution && advancedPerf.pnlDistribution.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>DISTRIBUCION DE P&L (%)</div>
+                        <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                          <ResponsiveContainer width="100%" height={140}>
+                            <BarChart data={advancedPerf.pnlDistribution}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                              <XAxis dataKey="bucket" tick={{ fontSize: 7, fill: muted }} interval={0} angle={-45} textAnchor="end" height={50} />
+                              <YAxis tick={{ fontSize: 8, fill: muted }} allowDecimals={false} />
+                              <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                                formatter={(v) => [v, 'Trades']} />
+                              <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                                {advancedPerf.pnlDistribution.map((entry, i) => (
+                                  <Cell key={i} fill={entry.bucket.includes('-') || entry.bucket.startsWith('<') ? red : green} fillOpacity={0.7} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Exit Reason + Direction */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {advancedPerf.byExitReason && advancedPerf.byExitReason.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR RAZON DE CIERRE</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {advancedPerf.byExitReason.map(r => {
+                              const reasonColor = r.reason === 'stop_loss' ? red : r.reason.includes('take_profit') ? green : r.reason === 'trailing_stop' ? amber : muted;
+                              return (
+                                <div key={r.reason} style={{ background: bg3, borderRadius: 6, padding: "8px 12px", borderLeft: `3px solid ${reasonColor}` }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: reasonColor }}>{r.reason.replace(/_/g, ' ').toUpperCase()}</span>
+                                    <span style={{ fontSize: 10, color: muted }}>{r.count} trades</span>
+                                  </div>
+                                  <div style={{ display: "flex", gap: 14, fontSize: 10, marginTop: 4 }}>
+                                    <span style={{ color: hitColor(r.winRate) }}>WR: {r.winRate}%</span>
+                                    <span style={{ color: r.avgPnl >= 0 ? green : red }}>Avg: ${r.avgPnl}</span>
+                                    <span style={{ color: r.avgPnlPct >= 0 ? green : red }}>Avg: {r.avgPnlPct}%</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {advancedPerf.byDirection && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR DIRECCION</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {["LONG", "SHORT"].map(dir => {
+                              const d = advancedPerf.byDirection[dir];
+                              if (!d || d.trades === 0) return null;
+                              const dirColor = dir === "LONG" ? green : red;
+                              return (
+                                <div key={dir} style={{ background: bg3, borderRadius: 6, padding: "10px 14px", borderLeft: `3px solid ${dirColor}` }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 800, color: dirColor }}>{dir === "LONG" ? "▲ LONG" : "▼ SHORT"}</span>
+                                    <span style={{ fontSize: 11, color: muted }}>{d.trades} trades</span>
+                                  </div>
+                                  <div style={{ display: "flex", gap: 16, fontSize: 11 }}>
+                                    <div><span style={{ color: muted }}>Win Rate: </span><span style={{ color: hitColor(d.winRate), fontWeight: 700 }}>{d.winRate}%</span></div>
+                                    <div><span style={{ color: muted }}>P&L: </span><span style={{ color: d.totalPnl >= 0 ? green : red, fontWeight: 700 }}>${d.totalPnl}</span></div>
+                                    <div><span style={{ color: muted }}>W/L: </span><span style={{ fontWeight: 600 }}>{d.wins}/{d.trades - d.wins}</span></div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {advancedPerf.tradesByMonth && advancedPerf.tradesByMonth.length > 1 && (
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L MENSUAL</div>
+                              <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
+                                <ResponsiveContainer width="100%" height={100}>
+                                  <BarChart data={advancedPerf.tradesByMonth}>
+                                    <XAxis dataKey="month" tick={{ fontSize: 8, fill: muted }} tickFormatter={m => m.substring(5)} />
+                                    <YAxis tick={{ fontSize: 8, fill: muted }} />
+                                    <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
+                                      formatter={(v, name, props) => [`$${v} | WR: ${props.payload.winRate}% | ${props.payload.trades}t`, 'P&L']} />
+                                    <Bar dataKey="totalPnl" radius={[2, 2, 0, 0]}>
+                                      {advancedPerf.tradesByMonth.map((entry, i) => (
+                                        <Cell key={i} fill={entry.totalPnl >= 0 ? green : red} fillOpacity={0.8} />
+                                      ))}
+                                    </Bar>
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Detailed Statistics */}
+            {paperMetrics && paperMetrics.totalTrades > 0 && (
+              <div style={{ ...card, padding: "16px 20px" }}>
+                <div style={sTitle}>ESTADÍSTICAS DETALLADAS</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                  {[
+                    { label: "Promedio Ganancia", value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
+                    { label: "Promedio Pérdida", value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
+                    { label: "Mejor Trade", value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
+                    { label: "Peor Trade", value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
+                    { label: "Tiempo Promedio", value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
+                    { label: "Racha Actual", value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? 'victorias' : paperMetrics.streakType === 'loss' ? 'derrotas' : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
+                  ].map((stat, i) => (
+                    <div key={i} style={{ background: bg3, padding: "10px 14px", borderRadius: 6 }}>
+                      <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{stat.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: stat.color }}>{stat.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ POSITIONS SUB-TAB (with live guard) ═══ */}
+        {subTab === 'positions' && execMode !== 'live' && (
+          <div>
+            <PositionMonitor
+              positions={paperPositions}
+              heatMap={execRiskDashboard?.heatMap}
+              colors={executionColors}
+            />
+            {/* Position Correlation */}
+            {correlationData && correlationData.pairs && correlationData.pairs.length > 0 && (
+              <div style={{ ...card, padding: "16px 20px", marginTop: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={sTitle}>CORRELACIÓN DE POSICIONES</div>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
+                    background: correlationData.riskLevel === 'high' ? `${red}20` : correlationData.riskLevel === 'medium' ? `${amber}20` : `${green}20`,
+                    color: correlationData.riskLevel === 'high' ? red : correlationData.riskLevel === 'medium' ? amber : green,
+                    textTransform: "uppercase"
+                  }}>
+                    Riesgo: {correlationData.riskLevel}
+                  </div>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11, marginBottom: 10 }}>
+                  <thead>
+                    <tr>
+                      {["Par", "Correlación", "Nivel"].map((h, i) => (
+                        <th key={i} style={{ textAlign: "left", padding: "4px 8px", color: muted, fontSize: 9, fontWeight: 600, borderBottom: `1px solid ${bg3}`, textTransform: "uppercase" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {correlationData.pairs.map((pair, i) => {
+                      const absCorr = Math.abs(pair.correlation);
+                      const corrColor = absCorr >= 0.75 ? red : absCorr >= 0.5 ? amber : absCorr >= 0.3 ? "#eab308" : green;
+                      return (
+                        <tr key={i}>
+                          <td style={{ padding: "4px 8px", fontSize: 11 }}>{pair.assetA} ↔ {pair.assetB}</td>
+                          <td style={{ padding: "4px 8px", fontWeight: 700, color: corrColor }}>{pair.correlation > 0 ? '+' : ''}{pair.correlation}</td>
+                          <td style={{ padding: "4px 8px" }}>
+                            <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 3, background: `${corrColor}20`, color: corrColor, fontWeight: 600 }}>
+                              {pair.level.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: muted, marginBottom: 4 }}>
+                    <span>Diversificación Efectiva</span>
+                    <span style={{ fontWeight: 700, color: text }}>{(correlationData.effectiveDiversification * 100).toFixed(0)}%</span>
+                  </div>
+                  <div style={{ height: 6, background: bg3, borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 3,
+                      width: `${Math.max(2, correlationData.effectiveDiversification * 100)}%`,
+                      background: correlationData.effectiveDiversification >= 0.5 ? green : correlationData.effectiveDiversification >= 0.25 ? amber : red
+                    }} />
+                  </div>
+                </div>
+                {correlationData.warnings && correlationData.warnings.length > 0 && (
+                  <div style={{ fontSize: 10, color: amber, marginTop: 6 }}>
+                    {correlationData.warnings.map((w, i) => (
+                      <div key={i} style={{ marginBottom: 2 }}>⚠ {w}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ HISTORY SUB-TAB (no live guard — always visible) ═══ */}
+        {subTab === 'history' && (
+          <div style={{ ...card, padding: "16px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={sTitle}>HISTORIAL DE TRADES ({historyTotal})</div>
+            </div>
+
+            {/* Delete trades by asset (non-crypto only) */}
+            {paperHistory.length > 0 && (() => {
+              const uniqueAssets = [...new Set(paperHistory.map(t => t.asset))];
+              const nonCryptoAssets = uniqueAssets.filter(a =>
+                a && (a.includes('GOLD') || a.includes('SILVER') || a.includes('XAU') || a.includes('XAG') || a.includes('pax-gold'))
+              );
+              if (nonCryptoAssets.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 10, padding: "8px 10px", background: "rgba(239,68,68,0.05)", borderRadius: 6, border: `1px solid rgba(239,68,68,0.15)` }}>
+                  <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>Borrar trades cerrados (no-crypto):</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {nonCryptoAssets.map(asset => (
+                      <button key={asset} onClick={async () => {
+                        if (!confirm(`Borrar todos los trades cerrados de "${asset}"?`)) return;
+                        try {
+                          const res = await authFetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
+                          if (res.ok) {
+                            const hRes = await authFetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
+                            if (hRes.ok) {
+                              const hData = await hRes.json();
+                              setPaperHistory(hData.trades || []);
+                              setPaperHistoryTotal(hData.total || 0);
+                            }
+                          }
+                        } catch (e) { console.error('Delete trades error:', e); }
+                      }} style={{
+                        padding: "3px 10px", background: "rgba(239,68,68,0.15)", border: `1px solid ${red}`,
+                        borderRadius: 4, color: red, fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer"
+                      }}>
+                        🗑 {asset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {paperHistory.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
+                Aún no hay trades cerrados.
+              </div>
+            ) : (
+              <>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        {["Asset", "Dir", "Entrada", "Salida", "P&L", "%", "Duración", "Razón"].map((h, i) => (
+                          <th key={i} style={{
+                            padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
+                            textTransform: "uppercase", letterSpacing: "0.08em",
+                            borderBottom: `1px solid ${border}`, fontWeight: 700
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paperHistory.map((trade, i) => {
+                        const pnl = parseFloat(trade.realized_pnl || 0);
+                        const pnlPct = parseFloat(trade.realized_pnl_percent || 0);
+                        const isWin = pnl > 0;
+                        return (
+                          <tr key={trade.id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{trade.asset}</td>
+                            <td style={{ padding: "6px 8px", color: trade.direction === 'LONG' ? green : red }}>{trade.direction === 'LONG' ? '▲ L' : '▼ S'}</td>
+                            <td style={{ padding: "6px 8px" }}>${Number(trade.entry_price).toLocaleString()}</td>
+                            <td style={{ padding: "6px 8px" }}>${Number(trade.exit_price).toLocaleString()}</td>
+                            <td style={{ padding: "6px 8px", color: isWin ? green : red, fontWeight: 700 }}>{isWin ? '+' : ''}${pnl.toFixed(2)}</td>
+                            <td style={{ padding: "6px 8px", color: isWin ? green : red }}>{isWin ? '+' : ''}{pnlPct.toFixed(2)}%</td>
+                            <td style={{ padding: "6px 8px", color: muted }}>{formatDuration(trade.entry_at, trade.exit_at)}</td>
+                            <td style={{ padding: "6px 8px" }}>
+                              <span style={{
+                                padding: "2px 6px", borderRadius: 4, fontSize: 9,
+                                background: trade.exit_reason === 'stop_loss' ? "rgba(239,68,68,0.15)" :
+                                  trade.exit_reason?.includes('take_profit') ? "rgba(0,212,170,0.15)" :
+                                  trade.exit_reason === 'trailing_stop' ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)",
+                                color: trade.exit_reason === 'stop_loss' ? red :
+                                  trade.exit_reason?.includes('take_profit') ? green :
+                                  trade.exit_reason === 'trailing_stop' ? amber : muted
+                              }}>
+                                {(trade.exit_reason || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination */}
+                {historyTotal > PAPER_HISTORY_PAGE_SIZE && (
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
+                    <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
+                      style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
+                      ← Prev
+                    </button>
+                    <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
+                      {historyPage + 1} / {Math.ceil(historyTotal / PAPER_HISTORY_PAGE_SIZE)}
+                    </span>
+                    <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal}
+                      style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? "default" : "pointer" }}>
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ═══ ORDERS SUB-TAB ═══ */}
         {subTab === 'orders' && execManualOrdersEnabled && (
           <div>
             <OrderEntryForm
@@ -3443,15 +3976,6 @@ export default function SentixProFrontend() {
           </div>
         )}
 
-        {/* Positions sub-tab (paper mode) */}
-        {subTab === 'positions' && execMode !== 'live' && (
-          <PositionMonitor
-            positions={paperPositions}
-            heatMap={execRiskDashboard?.heatMap}
-            colors={executionColors}
-          />
-        )}
-
         {/* Risk sub-tab (paper mode) */}
         {subTab === 'risk' && execMode !== 'live' && (
           <RiskDashboard
@@ -3468,9 +3992,9 @@ export default function SentixProFrontend() {
           />
         )}
 
-        {execLoading && (
+        {(execLoading || paperLoading) && (
           <div style={{ textAlign: 'center', padding: 10, fontSize: 10, color: muted, fontFamily: 'monospace' }}>
-            Actualizando datos de ejecución...
+            Actualizando datos...
           </div>
         )}
       </div>
@@ -3794,6 +4318,109 @@ export default function SentixProFrontend() {
           </button>
         </div>
 
+        {/* Paper Account Settings (capital, enabled, reset) */}
+        <div style={{ ...card, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setPaperShowConfig(!paperShowConfig)}>
+            <div style={sTitle}>💰 CUENTA PAPER</div>
+            <span style={{ color: muted, fontSize: 12 }}>{paperShowConfig ? '▲' : '▼'}</span>
+          </div>
+
+          {paperShowConfig && paperConfigForm && (() => {
+            const inputStyle = {
+              width: '100%', padding: '8px 12px', background: bg3,
+              border: `1px solid ${border}`, borderRadius: 6,
+              color: text, fontFamily: 'monospace', fontSize: 12
+            };
+            const handleSaveConfig = async () => {
+              setPaperSavingConfig(true);
+              try {
+                const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    is_enabled: paperConfigForm.is_enabled,
+                    initial_capital: parseFloat(paperConfigForm.initial_capital)
+                  })
+                });
+                if (res.ok) {
+                  const d = await res.json();
+                  setPaperConfig(d.config);
+                  setPaperConfigForm(d.config);
+                }
+              } catch (err) {
+                console.error('Save config error:', err);
+              } finally {
+                setPaperSavingConfig(false);
+              }
+            };
+            const handleReset = async () => {
+              try {
+                const res = await authFetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
+                if (res.ok) {
+                  setPaperConfirmReset(false);
+                  await loadPaperData();
+                }
+              } catch (err) {
+                console.error('Reset error:', err);
+              }
+            };
+            return (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+                  <div>
+                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Capital Inicial ($)</label>
+                    <input type="number" value={paperConfigForm.initial_capital || 10000}
+                      onChange={e => setPaperConfigForm(prev => ({ ...prev, initial_capital: e.target.value }))}
+                      style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trading Habilitado</label>
+                    <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginTop: 4 }}>
+                      <input type="checkbox" checked={paperConfigForm.is_enabled !== false}
+                        onChange={e => setPaperConfigForm(prev => ({ ...prev, is_enabled: e.target.checked }))} />
+                      {paperConfigForm.is_enabled !== false ? 'Activo' : 'Pausado'}
+                    </label>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                  <button onClick={handleSaveConfig} disabled={paperSavingConfig}
+                    style={{
+                      padding: "8px 20px", background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
+                      border: "none", borderRadius: 6, color: "#fff",
+                      fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      opacity: paperSavingConfig ? 0.6 : 1
+                    }}>
+                    {paperSavingConfig ? 'Guardando...' : '💾 GUARDAR'}
+                  </button>
+                  {!paperConfirmReset ? (
+                    <button onClick={() => setPaperConfirmReset(true)}
+                      style={{
+                        padding: "8px 20px", background: "rgba(239,68,68,0.1)",
+                        border: `1px solid ${red}`, borderRadius: 6,
+                        color: red, fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer"
+                      }}>
+                      🔄 RESET CUENTA
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: red }}>¿Seguro? Cierra todos los trades y resetea capital.</span>
+                      <button onClick={handleReset} style={{
+                        padding: "6px 14px", background: red, border: "none", borderRadius: 4,
+                        color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
+                      }}>SÍ</button>
+                      <button onClick={() => setPaperConfirmReset(false)} style={{
+                        padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
+                        color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
+                      }}>NO</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
         {/* Signal Generation Parameters (read-only, from strategyConfig) */}
         <div style={{ ...card, padding: "16px 20px" }}>
           <div
@@ -3845,8 +4472,8 @@ export default function SentixProFrontend() {
     );
   };
 
-  // ─── PAPER TRADING TAB ────────────────────────────────────────────────────
-  const PaperTradingTab = () => {
+  // ─── PAPER TRADING TAB (REMOVED — consolidated into ExecutionTab) ────────
+  const PaperTradingTab_REMOVED = () => {
     // State is lifted to parent to survive re-renders (parent re-creates this function on each render)
     const showConfig = paperShowConfig, setShowConfig = setPaperShowConfig;
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
@@ -7577,11 +8204,10 @@ El sistema:
           {[
             { k: "dashboard", label: "📊 DASHBOARD", desc: "Overview" },
             { k: "signals", label: "🎯 SEÑALES", desc: "Todas las alertas" },
-            { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
-            { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
-            { k: "execution", label: "⚡ EJECUCIÓN", desc: "Órdenes y riesgo" },
+            { k: "execution", label: "⚡ EJECUCIÓN", desc: "Trading y métricas" },
             { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config, Backtest y Optimización" },
-            { k: "paper", label: "📈 PAPER", desc: "Cuenta simulada" }
+            { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
+            { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" }
           ].map(({ k, label, desc }) => (
             <button
               key={k}
@@ -7615,7 +8241,7 @@ El sistema:
         {tab === "alerts" && AlertsTab()}
         {tab === "execution" && ExecutionTab()}
         {tab === "strategy" && StrategyTab()}
-        {tab === "paper" && PaperTradingTab()}
+        {/* Paper tab removed — content consolidated into Execution tab */}
         {tab === "apm" && APMTab()}
         {tab === "guide" && GuideTab()}
 
