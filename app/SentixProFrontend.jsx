@@ -873,7 +873,6 @@ export default function SentixProFrontend() {
   const amber = "#f59e0b";
   const blue = "#3b82f6";
   const purple = "#a855f7";
-  const gold = "#d4af37";
 
   const getSignalFreshness = (signal) => {
     if (!signal.timestamp) return { label: '—', color: muted, opacity: 1 };
@@ -1069,18 +1068,6 @@ export default function SentixProFrontend() {
               value: formatLargeNumber(marketData.macro?.globalMcap || 0),
               sublabel: "All cryptocurrencies",
               color: blue
-            },
-            { 
-              label: "Gold Price", 
-              value: formatPrice(marketData.metals?.gold?.price || 0),
-              sublabel: "Per ounce",
-              color: gold 
-            },
-            { 
-              label: "Silver Price", 
-              value: formatPrice(marketData.metals?.silver?.price || 0),
-              sublabel: "Per ounce",
-              color: text 
             },
           ].map(({ label, value, sublabel, color }) => (
             <div key={label} style={card}>
@@ -3803,43 +3790,6 @@ export default function SentixProFrontend() {
               <div style={sTitle}>HISTORIAL DE TRADES ({historyTotal})</div>
             </div>
 
-            {/* Delete trades by asset (non-crypto only) */}
-            {paperHistory.length > 0 && (() => {
-              const uniqueAssets = [...new Set(paperHistory.map(t => t.asset))];
-              const nonCryptoAssets = uniqueAssets.filter(a =>
-                a && (a.includes('GOLD') || a.includes('SILVER') || a.includes('XAU') || a.includes('XAG') || a.includes('pax-gold'))
-              );
-              if (nonCryptoAssets.length === 0) return null;
-              return (
-                <div style={{ marginBottom: 10, padding: "8px 10px", background: "rgba(239,68,68,0.05)", borderRadius: 6, border: `1px solid rgba(239,68,68,0.15)` }}>
-                  <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>Borrar trades cerrados (no-crypto):</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {nonCryptoAssets.map(asset => (
-                      <button key={asset} onClick={async () => {
-                        if (!confirm(`Borrar todos los trades cerrados de "${asset}"?`)) return;
-                        try {
-                          const res = await authFetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
-                          if (res.ok) {
-                            const hRes = await authFetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
-                            if (hRes.ok) {
-                              const hData = await hRes.json();
-                              setPaperHistory(hData.trades || []);
-                              setPaperHistoryTotal(hData.total || 0);
-                            }
-                          }
-                        } catch (e) { console.error('Delete trades error:', e); }
-                      }} style={{
-                        padding: "3px 10px", background: "rgba(239,68,68,0.15)", border: `1px solid ${red}`,
-                        borderRadius: 4, color: red, fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer"
-                      }}>
-                        🗑 {asset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
             {paperHistory.length === 0 ? (
               <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
                 Aún no hay trades cerrados.
@@ -5026,44 +4976,6 @@ export default function SentixProFrontend() {
               HISTORIAL DE TRADES ({historyTotal})
             </div>
           </div>
-
-          {/* Delete trades by asset */}
-          {paperHistory.length > 0 && (() => {
-            const uniqueAssets = [...new Set(paperHistory.map(t => t.asset))];
-            const nonCryptoAssets = uniqueAssets.filter(a =>
-              a && (a.includes('GOLD') || a.includes('SILVER') || a.includes('XAU') || a.includes('XAG') || a.includes('pax-gold'))
-            );
-            if (nonCryptoAssets.length === 0) return null;
-            return (
-              <div style={{ marginBottom: 10, padding: "8px 10px", background: "rgba(239,68,68,0.05)", borderRadius: 6, border: `1px solid rgba(239,68,68,0.15)` }}>
-                <div style={{ fontSize: 9, color: muted, marginBottom: 6 }}>Borrar trades cerrados (no-crypto):</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {nonCryptoAssets.map(asset => (
-                    <button key={asset} onClick={async () => {
-                      if (!confirm(`Borrar todos los trades cerrados de "${asset}"?`)) return;
-                      try {
-                        const res = await authFetch(`${API_URL}/api/paper/trades/${USER_ID}?asset=${encodeURIComponent(asset)}`, { method: 'DELETE' });
-                        if (res.ok) {
-                          // Refresh trade history
-                          const hRes = await authFetch(`${API_URL}/api/paper/history/${USER_ID}?page=${historyPage}&limit=${PAPER_HISTORY_PAGE_SIZE}`);
-                          if (hRes.ok) {
-                            const hData = await hRes.json();
-                            setPaperHistory(hData.trades || []);
-                            setHistoryTotal(hData.total || 0);
-                          }
-                        }
-                      } catch (e) { console.error('Delete trades error:', e); }
-                    }} style={{
-                      padding: "3px 10px", background: "rgba(239,68,68,0.15)", border: `1px solid ${red}`,
-                      borderRadius: 4, color: red, fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer"
-                    }}>
-                      {"\ud83d\uddd1"} {asset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
 
           {paperHistory.length === 0 ? (
             <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
@@ -7682,7 +7594,6 @@ export default function SentixProFrontend() {
             [<strong>BTC Dominance</strong>, "% del mercado total que es Bitcoin", "> 55% = BTC season. < 45% = alt season."],
             [<strong>DXY (Dollar)</strong>, "Índice de fuerza del dólar", "Rising = bearish crypto. Falling = bullish crypto."],
             [<strong>Total Market Cap</strong>, "Capitalización total crypto", "Tendencia general del mercado"],
-            [<strong>Gold / Silver</strong>, "Precios de metales preciosos", "Refugios de valor. Si suben junto con crypto, el movimiento es más fuerte."],
           ]} />
         </div>);
 
