@@ -3288,9 +3288,27 @@ export default function SentixProFrontend() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <ExecutionModeToggle
               mode={execMode}
-              onModeChange={(val) => setExecMode(val)}
+              onModeChange={async (val) => {
+                setExecMode(val);
+                try {
+                  await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ execution_mode: val })
+                  });
+                  await loadExecutionData();
+                } catch (e) { console.error('Mode change failed:', e); }
+              }}
               autoExecute={execAutoExecute}
-              onAutoExecuteChange={(val) => setExecAutoExecute(val)}
+              onAutoExecuteChange={async (val) => {
+                setExecAutoExecute(val);
+                try {
+                  await authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ auto_execute: val })
+                  });
+                  await loadExecutionData();
+                } catch (e) { console.error('Auto-execute change failed:', e); }
+              }}
               colors={executionColors}
             />
             {/* Manual orders toggle */}
