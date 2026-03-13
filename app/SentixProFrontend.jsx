@@ -298,10 +298,10 @@ export default function SentixProFrontend() {
 
   const fetchSystemHealth = useCallback(async () => {
     try {
-      const response = await authFetch(`${API_URL}/`);
+      const response = await authFetch(`${API_URL}/api/health`);
       if (response.ok) {
         const data = await response.json();
-        setSystemHealth(data.services || null);
+        setSystemHealth(data);
       }
     } catch (error) {
       console.error('Error fetching system health:', error);
@@ -6581,7 +6581,7 @@ export default function SentixProFrontend() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {pill(h ? 'CONNECTED' : 'OFFLINE', h ? 'ok' : 'down')}
+            {pill(h?.status === 'healthy' ? 'HEALTHY' : h?.status?.toUpperCase() || 'OFFLINE', h?.status === 'healthy' ? 'ok' : h?.status || 'down')}
             {m && <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
               {new Date(m.collectedAt).toLocaleTimeString()}
             </span>}
@@ -6598,7 +6598,7 @@ export default function SentixProFrontend() {
             <div style={card}>
               <div style={sTitle}>ESTADO DEL SISTEMA</div>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                {metricCard("Uptime", fmtUptime(m.uptimeSeconds || gauges['process.uptime']))}
+                {metricCard("Uptime", fmtUptime(m.uptimeSeconds || gauges['process.uptime'] || h?.uptime))}
                 {metricCard("Database", h?.checks?.database?.status === 'ok' ? 'OK' : 'DOWN', h?.checks?.database?.latencyMs ? `${h.checks.database.latencyMs}ms` : null,
                   h?.checks?.database?.status === 'ok' ? green : red)}
                 {metricCard("Market Data", h?.checks?.marketData?.status === 'ok' ? 'FRESH' : h?.checks?.marketData?.status || '--',
@@ -7452,6 +7452,40 @@ El sistema:
               background: green,
               boxShadow: `0 0 8px ${green}`
             }} />
+            {/* Monitor — admin only */}
+            {authEnabled && isAdmin && (
+              <button
+                onClick={() => setTab('apm')}
+                style={{
+                  padding: '6px 14px',
+                  background: tab === 'apm' ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.1)',
+                  border: `1px solid ${tab === 'apm' ? 'rgba(168,85,247,0.5)' : 'rgba(168,85,247,0.2)'}`,
+                  borderRadius: 8,
+                  color: '#a855f7',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                📡 Monitor
+              </button>
+            )}
+            {/* Help — always visible */}
+            <button
+              onClick={() => setTab('guide')}
+              style={{
+                padding: '6px 14px',
+                background: tab === 'guide' ? 'rgba(107,114,128,0.25)' : 'rgba(107,114,128,0.1)',
+                border: `1px solid ${tab === 'guide' ? 'rgba(107,114,128,0.4)' : 'rgba(107,114,128,0.2)'}`,
+                borderRadius: 8,
+                color: '#9ca3af',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              📖 Ayuda
+            </button>
             {authEnabled && isAdmin && (
               <button
                 onClick={() => router.push('/admin')}
@@ -7498,9 +7532,7 @@ El sistema:
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
             { k: "execution", label: "⚡ EJECUCIÓN", desc: "Órdenes y riesgo" },
             { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config, Backtest y Optimización" },
-            { k: "paper", label: "📈 PAPER", desc: "Cuenta simulada" },
-            { k: "apm", label: "📡 MONITOR", desc: "Sistema" },
-            { k: "guide", label: "📖 GUÍA", desc: "Cómo usar" }
+            { k: "paper", label: "📈 PAPER", desc: "Cuenta simulada" }
           ].map(({ k, label, desc }) => (
             <button
               key={k}
