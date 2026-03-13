@@ -3394,8 +3394,50 @@ export default function SentixProFrontend() {
           </div>
         )}
 
-        {/* Positions sub-tab */}
-        {subTab === 'positions' && (
+        {/* Live mode: exchange not connected yet */}
+        {execMode === 'live' && (subTab === 'positions' || subTab === 'risk' || subTab === 'audit' || subTab === 'orders') && (
+          <div style={{
+            ...card,
+            textAlign: 'center',
+            padding: '48px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12
+          }}>
+            <div style={{ fontSize: 40, opacity: 0.4 }}>🔗</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>Modo LIVE — Exchange no conectado</div>
+            <div style={{ fontSize: 11, color: muted, maxWidth: 400, lineHeight: 1.6 }}>
+              La integración con Bybit aún no está activa. Cuando se conecte, aquí verás posiciones reales,
+              órdenes ejecutadas en el exchange y métricas de riesgo en tiempo real.
+            </div>
+            <button
+              onClick={() => {
+                setExecMode('paper');
+                authFetch(`${API_URL}/api/paper/config/${USER_ID}`, {
+                  method: 'POST',
+                  body: JSON.stringify({ execution_mode: 'paper' })
+                }).then(() => loadExecutionData()).catch(() => {});
+              }}
+              style={{
+                marginTop: 8,
+                padding: '8px 20px',
+                background: `${purple}22`,
+                border: `1px solid ${purple}44`,
+                borderRadius: 6,
+                color: purple,
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              📝 Volver a Paper Trading
+            </button>
+          </div>
+        )}
+
+        {/* Positions sub-tab (paper mode) */}
+        {subTab === 'positions' && execMode !== 'live' && (
           <PositionMonitor
             positions={paperPositions}
             heatMap={execRiskDashboard?.heatMap}
@@ -3403,16 +3445,16 @@ export default function SentixProFrontend() {
           />
         )}
 
-        {/* Risk sub-tab */}
-        {subTab === 'risk' && (
+        {/* Risk sub-tab (paper mode) */}
+        {subTab === 'risk' && execMode !== 'live' && (
           <RiskDashboard
             dashboard={execRiskDashboard}
             colors={executionColors}
           />
         )}
 
-        {/* Audit sub-tab */}
-        {subTab === 'audit' && (
+        {/* Audit sub-tab (paper mode) */}
+        {subTab === 'audit' && execMode !== 'live' && (
           <ExecutionAuditLog
             logs={execAuditLog}
             colors={executionColors}
