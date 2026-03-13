@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from 'next/navigation';
 import { useSSE } from './hooks/useSSE';
 import { useAuth } from './contexts/AuthContext';
@@ -244,8 +244,15 @@ export default function SentixProFrontend() {
     }
   }, [API_URL]);
 
+  // ─── FETCH LOCKS (prevent concurrent overlapping calls) ─────────────────
+  const dashboardPaperFetching = useRef(false);
+  const paperDataFetching = useRef(false);
+  const executionDataFetching = useRef(false);
+
   // ─── DASHBOARD CONSOLIDATED FETCHES ─────────────────────────────────────
   const fetchDashboardPaper = useCallback(async () => {
+    if (dashboardPaperFetching.current) return;
+    dashboardPaperFetching.current = true;
     try {
       const [cfgRes, posRes, perfRes, histRes, eqRes, advRes] = await Promise.allSettled([
         authFetch(`${API_URL}/api/paper/config/${USER_ID}`),
@@ -281,6 +288,8 @@ export default function SentixProFrontend() {
       }
     } catch (error) {
       console.error('Error fetching dashboard paper data:', error);
+    } finally {
+      dashboardPaperFetching.current = false;
     }
   }, [API_URL, advancedPerfDays]);
 
@@ -375,7 +384,6 @@ export default function SentixProFrontend() {
     paper_trade: () => {
       // Refresh paper data when a trade event occurs
       fetchDashboardPaper();
-      if (tab === 'paper') loadPaperData();
       if (tab === 'execution') loadExecutionData();
     },
     kill_switch: (data) => {
@@ -643,6 +651,8 @@ export default function SentixProFrontend() {
   const PAPER_HISTORY_PAGE_SIZE = 10;
 
   const loadPaperData = useCallback(async () => {
+    if (paperDataFetching.current) return;
+    paperDataFetching.current = true;
     setPaperLoading(true);
     try {
       const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
@@ -687,6 +697,7 @@ export default function SentixProFrontend() {
       console.error('Paper data load error:', err);
     } finally {
       setPaperLoading(false);
+      paperDataFetching.current = false;
     }
   }, [paperHistoryPage, paperConfigForm]);
 
@@ -714,6 +725,8 @@ export default function SentixProFrontend() {
 
   // ─── EXECUTION SYSTEM FETCHES ───────────────────────────────────────────────
   const loadExecutionData = useCallback(async () => {
+    if (executionDataFetching.current) return;
+    executionDataFetching.current = true;
     setExecLoading(true);
     try {
       const [ordersRes, riskRes, auditRes, ksRes] = await Promise.allSettled([
@@ -745,26 +758,16 @@ export default function SentixProFrontend() {
       console.error('Execution data load error:', err);
     } finally {
       setExecLoading(false);
+      executionDataFetching.current = false;
     }
   }, [API_URL, USER_ID]);
 
   useEffect(() => {
     if (tab === 'execution') {
       loadExecutionData();
-      fetchDashboardPaper(); // Positions, performance, advanced analytics
-      loadPaperData();       // Paginated history + correlation
-    }
-  }, [tab, loadExecutionData, fetchDashboardPaper, loadPaperData]);
-
-  useEffect(() => {
-    if (tab !== 'execution') return;
-    const interval = setInterval(() => {
-      loadExecutionData();
       fetchDashboardPaper();
-      loadPaperData();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [tab, loadExecutionData, fetchDashboardPaper, loadPaperData]);
+    }
+  }, [tab, loadExecutionData, fetchDashboardPaper]);
 
   // Show nothing while checking auth (prevents flash of dashboard)
   // IMPORTANT: This must be AFTER all hooks to avoid React rules violation
