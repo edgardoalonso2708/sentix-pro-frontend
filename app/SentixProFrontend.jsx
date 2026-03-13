@@ -756,14 +756,20 @@ export default function SentixProFrontend() {
   }, [API_URL, USER_ID]);
 
   useEffect(() => {
-    if (tab === 'execution') loadExecutionData();
-  }, [tab, loadExecutionData]);
+    if (tab === 'execution') {
+      loadExecutionData();
+      fetchDashboardPaper(); // Always refresh positions when entering execution tab
+    }
+  }, [tab, loadExecutionData, fetchDashboardPaper]);
 
   useEffect(() => {
     if (tab !== 'execution') return;
-    const interval = setInterval(loadExecutionData, 15000);
+    const interval = setInterval(() => {
+      loadExecutionData();
+      fetchDashboardPaper(); // Keep positions in sync
+    }, 15000);
     return () => clearInterval(interval);
-  }, [tab, loadExecutionData]);
+  }, [tab, loadExecutionData, fetchDashboardPaper]);
 
   // Show nothing while checking auth (prevents flash of dashboard)
   // IMPORTANT: This must be AFTER all hooks to avoid React rules violation
