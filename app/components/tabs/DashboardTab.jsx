@@ -5,16 +5,13 @@ import {
   ReferenceLine
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
-import { SHARED_ASSETS } from '../../lib/constants';
 import { formatPrice, formatLargeNumber, computePaperEquityCurve, computeDailyPnl, computeAssetPerformance } from '../../lib/utils';
-import CandlestickChart from '../charts/CandlestickChart';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
 export default function DashboardTab({
   marketData, signals, paperMetrics, paperHistory, paperPositions, paperConfig,
   realtimeEquityCurve, backtestHistory, backtestEquityCurve,
-  chartAsset, setChartAsset, chartInterval, setChartInterval,
   systemHealth, sseConnected, lastUpdate,
   setTab, setStrategySubTab, apiUrl,
 }) {
@@ -607,30 +604,6 @@ export default function DashboardTab({
             </div>
           );
         })()}
-
-        {/* PRICE ACTION — TradingView Candlestick Chart */}
-        <div style={{ ...card, marginTop: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-            <div style={sTitle}>PRICE ACTION</div>
-            <select
-              value={chartAsset}
-              onChange={e => setChartAsset(e.target.value)}
-              style={{
-                padding: '4px 8px', background: bg2, color: text, border: `1px solid ${border}`,
-                borderRadius: 4, fontSize: 10, fontFamily: 'monospace'
-              }}
-            >
-              {SHARED_ASSETS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-            </select>
-          </div>
-          <CandlestickChart
-            apiUrl={apiUrl}
-            asset={chartAsset}
-            interval={chartInterval}
-            onIntervalChange={setChartInterval}
-            height={360}
-          />
-        </div>
 
         {/* ESTADO DEL SISTEMA */}
         <div style={{ ...card, marginTop: 4 }}>

@@ -121,8 +121,6 @@ export default function SentixProFrontend() {
   const [systemHealth, setSystemHealth] = useState(null);
 
   // Candlestick chart
-  const [chartAsset, setChartAsset] = useState('bitcoin');
-  const [chartInterval, setChartInterval] = useState('1h');
 
   // Dashboard charts data (uses paperHistory for closed trades — single source of truth)
   const [backtestEquityCurve, setBacktestEquityCurve] = useState([]);
@@ -2132,7 +2130,7 @@ export default function SentixProFrontend() {
 
         {/* Tab Content — ALL tabs use direct function calls to prevent remount on 30s re-render.
             All hooks lifted to parent level. */}
-        {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} chartAsset={chartAsset} setChartAsset={setChartAsset} chartInterval={chartInterval} setChartInterval={setChartInterval} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} />}
+        {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} />}
         {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
         {tab === "portfolio" && <PortfolioTab
           portfolio={portfolio} wallets={wallets} marketData={marketData}
