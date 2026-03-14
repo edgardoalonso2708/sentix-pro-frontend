@@ -5691,6 +5691,204 @@ export default function SentixProFrontend() {
               </div>
             )}
 
+            {/* Buy & Hold Benchmark */}
+            {btResult.benchmark && btResult.benchmark.buyAndHold && (() => {
+              const bh = btResult.benchmark.buyAndHold;
+              const comp = btResult.benchmark.comparison;
+              const stratReturn = Number(btResult.total_pnl_percent || 0);
+              const stratDD = Number(btResult.max_drawdown_percent || 0);
+              const stratSharpe = Number(btResult.sharpe_ratio || 0);
+              const alpha = comp.returnDiff;
+              const beatsMarket = alpha > 0;
+
+              // Merge equity curves for chart
+              const stratCurve = btResult.equity_curve || [];
+              const bhCurve = bh.equityCurve || [];
+              const chartData = [];
+              const initialCap = Number(btResult.initial_capital || 10000);
+
+              if (stratCurve.length > 0 && bhCurve.length > 0) {
+                const step = Math.max(1, Math.floor(stratCurve.length / 60));
+                for (let i = 0; i < stratCurve.length; i += step) {
+                  const s = stratCurve[i];
+                  // Find closest B&H point by timestamp
+                  const bhPoint = bhCurve.reduce((best, p) =>
+                    Math.abs(p.timestamp - s.timestamp) < Math.abs(best.timestamp - s.timestamp) ? p : best
+                  , bhCurve[0]);
+                  chartData.push({
+                    date: new Date(s.timestamp).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+                    strategy: Math.round(s.equity * 100) / 100,
+                    buyHold: Math.round(bhPoint.equity * 100) / 100
+                  });
+                }
+                // Always include last point
+                const lastS = stratCurve[stratCurve.length - 1];
+                const lastBH = bhCurve[bhCurve.length - 1];
+                if (chartData.length === 0 || chartData[chartData.length - 1].date !== new Date(lastS.timestamp).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })) {
+                  chartData.push({
+                    date: new Date(lastS.timestamp).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+                    strategy: Math.round(lastS.equity * 100) / 100,
+                    buyHold: Math.round(lastBH.equity * 100) / 100
+                  });
+                }
+              }
+
+              return (
+                <div style={{
+                  background: bg2, border: `1px solid ${border}`, borderRadius: 10,
+                  padding: 16, marginBottom: 16
+                }}>
+                  {/* Header with Alpha badge */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
+                        STRATEGY vs BUY & HOLD
+                      </span>
+                      <span style={{
+                        fontSize: 10, padding: "3px 10px", borderRadius: 20, fontWeight: 700, fontFamily: "monospace",
+                        background: beatsMarket ? `${green}18` : `${red}18`,
+                        color: beatsMarket ? green : red,
+                        border: `1px solid ${beatsMarket ? green : red}40`
+                      }}>
+                        {beatsMarket ? `+${alpha.toFixed(2)}% ALPHA` : `${alpha.toFixed(2)}% vs MARKET`}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 22, fontWeight: 800, fontFamily: "monospace",
+                      color: beatsMarket ? green : red
+                    }}>
+                      {beatsMarket ? "BEATS MARKET" : "UNDERPERFORMS"}
+                    </span>
+                  </div>
+
+                  {/* Head-to-Head Comparison Table */}
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 100px 100px 80px",
+                    gap: 0, marginBottom: 16, fontSize: 11, fontFamily: "monospace"
+                  }}>
+                    {/* Header row */}
+                    <div style={{ padding: "8px 10px", color: muted, fontWeight: 600, fontSize: 9, borderBottom: `1px solid ${border}` }}>METRIC</div>
+                    <div style={{ padding: "8px 10px", color: purple, fontWeight: 700, fontSize: 9, textAlign: "center", borderBottom: `1px solid ${border}` }}>STRATEGY</div>
+                    <div style={{ padding: "8px 10px", color: amber, fontWeight: 700, fontSize: 9, textAlign: "center", borderBottom: `1px solid ${border}` }}>BUY & HOLD</div>
+                    <div style={{ padding: "8px 10px", color: muted, fontWeight: 600, fontSize: 9, textAlign: "center", borderBottom: `1px solid ${border}` }}>DIFF</div>
+
+                    {/* Return row */}
+                    {[
+                      {
+                        label: "Return",
+                        strat: `${stratReturn.toFixed(2)}%`,
+                        bh: `${bh.totalReturn.toFixed(2)}%`,
+                        diff: comp.returnDiff,
+                        suffix: "%",
+                        higherIsBetter: true
+                      },
+                      {
+                        label: "Max Drawdown",
+                        strat: `${stratDD.toFixed(2)}%`,
+                        bh: `${bh.maxDrawdown.toFixed(2)}%`,
+                        diff: comp.drawdownDiff,
+                        suffix: "%",
+                        higherIsBetter: false
+                      },
+                      {
+                        label: "Sharpe Ratio",
+                        strat: stratSharpe.toFixed(2),
+                        bh: bh.sharpeRatio.toFixed(2),
+                        diff: comp.sharpeDiff,
+                        suffix: "",
+                        higherIsBetter: true
+                      },
+                      {
+                        label: "Ann. Return",
+                        strat: btResult.metrics?.annualizedReturn != null ? `${btResult.metrics.annualizedReturn}%` : "—",
+                        bh: `${bh.annualizedReturn.toFixed(2)}%`,
+                        diff: btResult.metrics?.annualizedReturn != null
+                          ? Math.round((btResult.metrics.annualizedReturn - bh.annualizedReturn) * 100) / 100
+                          : null,
+                        suffix: "%",
+                        higherIsBetter: true
+                      }
+                    ].map((row, i) => {
+                      const diffPositive = row.diff > 0;
+                      const stratWins = row.higherIsBetter ? diffPositive : !diffPositive;
+                      return [
+                        <div key={`l${i}`} style={{ padding: "8px 10px", color: text, borderBottom: `1px solid ${border}`, background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+                          {row.label}
+                        </div>,
+                        <div key={`s${i}`} style={{
+                          padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: `1px solid ${border}`,
+                          background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                          color: stratWins ? green : (row.diff === 0 ? text : red)
+                        }}>
+                          {row.strat}
+                        </div>,
+                        <div key={`b${i}`} style={{
+                          padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: `1px solid ${border}`,
+                          background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                          color: !stratWins ? green : (row.diff === 0 ? text : red)
+                        }}>
+                          {row.bh}
+                        </div>,
+                        <div key={`d${i}`} style={{
+                          padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: `1px solid ${border}`,
+                          background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                          color: row.diff == null ? muted : (stratWins ? green : red)
+                        }}>
+                          {row.diff == null ? "—" : `${row.diff > 0 ? "+" : ""}${row.diff.toFixed(2)}${row.suffix}`}
+                        </div>
+                      ];
+                    })}
+                  </div>
+
+                  {/* Dual Equity Curve Chart */}
+                  {chartData.length > 2 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: text, marginBottom: 8, fontFamily: "monospace" }}>
+                        EQUITY CURVE COMPARISON
+                      </div>
+                      <div style={{ height: 200, background: "#0a0a0a", borderRadius: 8, padding: "8px 0", border: `1px solid ${border}` }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 15, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                            <XAxis
+                              dataKey="date"
+                              tick={{ fontSize: 9, fill: muted }}
+                              interval={Math.max(0, Math.floor(chartData.length / 6) - 1)}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 9, fill: muted }}
+                              tickFormatter={v => `$${(v / 1000).toFixed(1)}k`}
+                              width={55}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: "#1a1a1a", border: `1px solid ${border}`,
+                                borderRadius: 6, fontSize: 10, fontFamily: "monospace"
+                              }}
+                              formatter={(value, name) => [`$${Number(value).toLocaleString()}`, name === 'strategy' ? 'Strategy' : 'Buy & Hold']}
+                            />
+                            <ReferenceLine y={initialCap} stroke={muted} strokeDasharray="3 3" label={{ value: "Inicio", fill: muted, fontSize: 9 }} />
+                            <Line type="monotone" dataKey="strategy" stroke={purple} strokeWidth={2} dot={false} name="strategy" />
+                            <Line type="monotone" dataKey="buyHold" stroke={amber} strokeWidth={2} dot={false} name="buyHold" strokeDasharray="5 3" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontFamily: "monospace" }}>
+                          <div style={{ width: 16, height: 3, background: purple, borderRadius: 2 }} />
+                          <span style={{ color: text }}>Strategy</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontFamily: "monospace" }}>
+                          <div style={{ width: 16, height: 3, background: amber, borderRadius: 2, borderTop: "1px dashed transparent" }} />
+                          <span style={{ color: text }}>Buy & Hold</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Additional Metrics */}
             {btResult.metrics && (
               <div style={{
