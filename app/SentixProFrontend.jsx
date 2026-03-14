@@ -263,7 +263,9 @@ export default function SentixProFrontend() {
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
-        setPaperConfig(d.config || d);
+        const cfg = d.config || d;
+        setPaperConfig(cfg);
+        if (!paperConfigForm) setPaperConfigForm(cfg);
       }
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const d = await posRes.value.json();
@@ -291,7 +293,7 @@ export default function SentixProFrontend() {
     } finally {
       dashboardPaperFetching.current = false;
     }
-  }, [API_URL, advancedPerfDays]);
+  }, [API_URL, advancedPerfDays]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchBacktestHistory = useCallback(async () => {
     try {
@@ -650,39 +652,14 @@ export default function SentixProFrontend() {
   // ─── PAPER TRADING: Load data & auto-refresh (moved from PaperTradingTab) ──
   const PAPER_HISTORY_PAGE_SIZE = 10;
 
+  // loadPaperData: only fetches correlation data (config/positions/history/metrics already covered by fetchDashboardPaper)
   const loadPaperData = useCallback(async () => {
     if (paperDataFetching.current) return;
     paperDataFetching.current = true;
     setPaperLoading(true);
     try {
-      const [configRes, posRes, histRes, perfRes] = await Promise.allSettled([
-        authFetch(`${API_URL}/api/paper/config/${USER_ID}`),
-        authFetch(`${API_URL}/api/paper/positions/${USER_ID}`),
-        authFetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=${PAPER_HISTORY_PAGE_SIZE}&offset=${paperHistoryPage * PAPER_HISTORY_PAGE_SIZE}`),
-        authFetch(`${API_URL}/api/paper/performance/${USER_ID}`)
-      ]);
-      if (configRes.status === 'fulfilled' && configRes.value.ok) {
-        const d = await configRes.value.json();
-        setPaperConfig(d.config);
-        if (!paperConfigForm) setPaperConfigForm(d.config);
-      }
-      let positionsCount = 0;
-      if (posRes.status === 'fulfilled' && posRes.value.ok) {
-        const d = await posRes.value.json();
-        setPaperPositions(d.positions || []);
-        positionsCount = (d.positions || []).length;
-      }
-      if (histRes.status === 'fulfilled' && histRes.value.ok) {
-        const d = await histRes.value.json();
-        setPaperHistory(d.trades || []);
-        setPaperHistoryTotal(d.total || 0);
-      }
-      if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
-        const d = await perfRes.value.json();
-        setPaperMetrics(d.metrics);
-      }
-      // Fetch correlation if ≥2 positions
-      if (positionsCount >= 2) {
+      // Correlation needs ≥2 positions
+      if (paperPositions.length >= 2) {
         try {
           const corrRes = await authFetch(`${API_URL}/api/paper/correlation/${USER_ID}`);
           if (corrRes.ok) {
@@ -699,7 +676,7 @@ export default function SentixProFrontend() {
       setPaperLoading(false);
       paperDataFetching.current = false;
     }
-  }, [paperHistoryPage, paperConfigForm, API_URL]);
+  }, [paperPositions.length, API_URL]);
 
   // Load just config for strategy tab (lightweight, no positions/history)
   const loadConfigOnly = useCallback(async () => {
@@ -715,11 +692,11 @@ export default function SentixProFrontend() {
     }
   }, []);
 
-  // Load paper data when history page changes or strategy tab becomes active
+  // Load correlation when execution tab is active, load config for strategy tab
   useEffect(() => {
-    if (tab === 'execution') loadPaperData();
+    if (tab === 'execution') loadPaperData(); // Only fetches correlation now
     else if (tab === 'strategy') loadConfigOnly();
-  }, [tab, paperHistoryPage, loadPaperData, loadConfigOnly]);
+  }, [tab, loadPaperData, loadConfigOnly]);
 
   // Test alert is now handled directly in AlertsTab
 
@@ -3259,7 +3236,7 @@ export default function SentixProFrontend() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: USER_ID })
         });
-        if (res.ok) await loadPaperData();
+        if (res.ok) await fetchDashboardPaper();
       } catch (err) {
         console.error('Close trade error:', err);
       } finally {
@@ -3787,13 +3764,17 @@ export default function SentixProFrontend() {
         )}
 
         {/* ═══ HISTORY SUB-TAB (no live guard — always visible) ═══ */}
-        {subTab === 'history' && (
+        {subTab === 'history' && (() => {
+          // Client-side pagination from full paperHistory (fetched with limit=200)
+          const totalTrades = paperHistory.length;
+          const paginatedTrades = paperHistory.slice(historyPage * PAPER_HISTORY_PAGE_SIZE, (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE);
+          return (
           <div style={{ ...card, padding: "16px 20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={sTitle}>HISTORIAL DE TRADES ({historyTotal})</div>
+              <div style={sTitle}>HISTORIAL DE TRADES ({totalTrades})</div>
             </div>
 
-            {paperHistory.length === 0 ? (
+            {totalTrades === 0 ? (
               <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
                 Aún no hay trades cerrados.
               </div>
@@ -3813,7 +3794,7 @@ export default function SentixProFrontend() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paperHistory.map((trade, i) => {
+                      {paginatedTrades.map((trade, i) => {
                         const pnl = parseFloat(trade.realized_pnl || 0);
                         const pnlPct = parseFloat(trade.realized_pnl_percent || 0);
                         const isWin = pnl > 0;
@@ -3846,17 +3827,17 @@ export default function SentixProFrontend() {
                   </table>
                 </div>
                 {/* Pagination */}
-                {historyTotal > PAPER_HISTORY_PAGE_SIZE && (
+                {totalTrades > PAPER_HISTORY_PAGE_SIZE && (
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
                     <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
                       style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
                       ← Prev
                     </button>
                     <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
-                      {historyPage + 1} / {Math.ceil(historyTotal / PAPER_HISTORY_PAGE_SIZE)}
+                      {historyPage + 1} / {Math.ceil(totalTrades / PAPER_HISTORY_PAGE_SIZE)}
                     </span>
-                    <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal}
-                      style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= historyTotal ? "default" : "pointer" }}>
+                    <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades}
+                      style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? "default" : "pointer" }}>
                       Next →
                     </button>
                   </div>
@@ -3864,7 +3845,8 @@ export default function SentixProFrontend() {
               </>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* ═══ ORDERS SUB-TAB ═══ */}
         {subTab === 'orders' && execManualOrdersEnabled && (
@@ -4312,7 +4294,7 @@ export default function SentixProFrontend() {
                 const res = await authFetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
                 if (res.ok) {
                   setPaperConfirmReset(false);
-                  await loadPaperData();
+                  await fetchDashboardPaper();
                 }
               } catch (err) {
                 console.error('Reset error:', err);
@@ -4470,7 +4452,7 @@ export default function SentixProFrontend() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: USER_ID })
         });
-        if (res.ok) await loadPaperData();
+        if (res.ok) await fetchDashboardPaper();
       } catch (err) {
         console.error('Close trade error:', err);
       } finally {
@@ -4483,7 +4465,7 @@ export default function SentixProFrontend() {
         const res = await authFetch(`${API_URL}/api/paper/reset/${USER_ID}`, { method: 'POST' });
         if (res.ok) {
           setConfirmReset(false);
-          await loadPaperData();
+          await fetchDashboardPaper();
         }
       } catch (err) {
         console.error('Reset error:', err);
