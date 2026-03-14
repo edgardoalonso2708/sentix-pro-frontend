@@ -1,32 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1025"/>
-      <stop offset="100%" stop-color="#0d0d1a"/>
+      <stop offset="0%" stop-color="#1a1028"/>
+      <stop offset="100%" stop-color="#0a0a14"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
+    <linearGradient id="s-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00d4aa"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
-    <linearGradient id="glow" x1="0.5" y1="0" x2="0.5" y2="1">
-      <stop offset="0%" stop-color="#c084fc"/>
+    <linearGradient id="arrow-grad" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#c054fc"/>
+    </linearGradient>
+    <linearGradient id="circle-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00d4aa"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
   </defs>
   <!-- Background -->
   <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- Outer glow ring -->
-  <circle cx="256" cy="256" r="180" stroke="url(#accent)" stroke-width="3" fill="none" opacity="0.3"/>
-  <!-- Diamond / ◈ shape -->
-  <path d="M256 76 L436 256 L256 436 L76 256 Z" stroke="url(#accent)" stroke-width="4" fill="none" opacity="0.2"/>
-  <path d="M256 116 L396 256 L256 396 L116 256 Z" stroke="url(#glow)" stroke-width="3" fill="rgba(168,85,247,0.08)"/>
-  <!-- Inner S shape (stylized) -->
-  <path d="M310 180 C310 180 340 180 340 210 C340 240 280 240 256 240 C232 240 172 240 172 270 C172 300 202 310 232 310 L310 310"
-        stroke="url(#glow)" stroke-width="16" stroke-linecap="round" fill="none"/>
-  <!-- Chart line overlay -->
-  <path d="M140 340 L200 300 L240 320 L280 260 L320 280 L372 200"
-        stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6"/>
-  <!-- Pulse dot -->
-  <circle cx="372" cy="200" r="6" fill="#22c55e" opacity="0.8"/>
-  <circle cx="372" cy="200" r="12" fill="none" stroke="#22c55e" stroke-width="2" opacity="0.3"/>
+  <!-- Circular arc (open ring) — flows from bottom-left cyan to top-right purple -->
+  <path d="M256 96 A160 160 0 1 1 136 376" stroke="url(#circle-grad)" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <!-- Stylized S — large, centered, cyan-to-blue gradient -->
+  <path d="M300 160 C220 160 170 185 170 225 C170 270 230 275 270 280 C310 285 340 300 340 335 C340 375 290 400 220 395"
+        stroke="url(#s-grad)" stroke-width="28" stroke-linecap="round" fill="none"/>
+  <!-- Upward arrow emerging from ring (top-right) — represents growth -->
+  <path d="M340 220 L380 140" stroke="url(#arrow-grad)" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <path d="M350 145 L383 133 L375 168" fill="#c054fc"/>
+  <!-- Bitcoin symbol — golden, small, positioned inside upper curve of S -->
+  <text x="272" y="238" font-family="Arial, sans-serif" font-weight="900" font-size="62" fill="#f5a623" text-anchor="middle">&#x20BF;</text>
 </svg>
