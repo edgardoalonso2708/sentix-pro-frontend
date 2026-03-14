@@ -26,7 +26,7 @@ export default function CandlestickChart({
   const candleSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
   const [interval, setInterval_] = useState(initialInterval);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchCandles = useCallback(async (iv) => {
@@ -117,7 +117,7 @@ export default function CandlestickChart({
     };
   }, [height]);
 
-  // Fetch and set data when asset/interval changes
+  // Fetch and set data when asset/interval changes (no polling — data is static for backtest)
   useEffect(() => {
     let cancelled = false;
 
@@ -136,7 +136,6 @@ export default function CandlestickChart({
         }))
       );
 
-      // Apply markers if provided
       if (markers.length > 0) {
         candleSeriesRef.current.setMarkers(
           markers.sort((a, b) => a.time - b.time)
@@ -148,26 +147,7 @@ export default function CandlestickChart({
 
     loadData();
 
-    // Poll latest candle every 60s
-    const pollInterval = globalThis.setInterval(async () => {
-      const data = await fetchCandles(interval);
-      if (cancelled || !data || !candleSeriesRef.current) return;
-      candleSeriesRef.current.setData(data);
-      volumeSeriesRef.current.setData(
-        data.map(d => ({
-          time: d.time,
-          value: d.volume,
-          color: d.close >= d.open
-            ? 'rgba(0,212,170,0.3)'
-            : 'rgba(239,68,68,0.3)',
-        }))
-      );
-    }, 60000);
-
-    return () => {
-      cancelled = true;
-      globalThis.clearInterval(pollInterval);
-    };
+    return () => { cancelled = true; };
   }, [asset, interval, fetchCandles, markers]);
 
   const handleIntervalChange = (iv) => {
@@ -210,7 +190,7 @@ export default function CandlestickChart({
             background: 'rgba(10,10,10,0.7)', color: colors.muted,
             fontSize: 11, fontFamily: 'monospace',
           }}>
-            Loading candles...
+            Cargando velas...
           </div>
         )}
         {error && (

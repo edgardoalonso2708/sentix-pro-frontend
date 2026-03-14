@@ -19,10 +19,7 @@ import StrategyTab from './components/tabs/StrategyTab';
 import { useBacktest } from './hooks/useBacktest';
 import { useOptimization } from './hooks/useOptimization';
 
-// Shared modules
-import { SHARED_ASSETS, SHARED_DAY_OPTIONS } from './lib/constants';
-import { colors, card, sTitle } from './lib/theme';
-import { getSignalFreshness, formatPrice, formatLargeNumber, computePaperEquityCurve, computeDailyPnl, computeAssetPerformance } from './lib/utils';
+import { colors } from './lib/theme';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTIX PRO - FRONTEND COMPLETO

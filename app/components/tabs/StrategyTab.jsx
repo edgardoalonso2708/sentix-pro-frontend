@@ -1,9 +1,4 @@
 'use client';
-import {
-  BarChart, Bar, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceLine
-} from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
 import BacktestTab from './BacktestTab';
 import OptimizeTab from './OptimizeTab';
