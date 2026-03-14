@@ -91,6 +91,15 @@ export function AuthProvider({ children }) {
     return { data, error };
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    if (!supabase) return { error: { message: 'Auth not configured' } };
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    return { data, error };
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -113,6 +122,7 @@ export function AuthProvider({ children }) {
       isViewer: role === 'viewer',
       signIn,
       signUp,
+      signInWithGoogle,
       signOut,
       refreshProfile: fetchProfile,
     }}>
