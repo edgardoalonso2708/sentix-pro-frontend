@@ -1,6 +1,7 @@
 'use client';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice, formatLargeNumber } from '../../lib/utils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
@@ -21,6 +22,7 @@ export default function PortfolioTab({
   addToPortfolio, removeFromPortfolio,
   authFetch, apiUrl, userId
 }) {
+    const { t } = useLanguage();
     const portfolioValue = calculatePortfolioValue();
     const { pnl, percentage } = calculatePortfolioPnL();
 
@@ -59,7 +61,7 @@ export default function PortfolioTab({
     const handleAdd = async () => {
       if (!newPosition.amount || !newPosition.buyPrice || !newPosition.walletId) {
         if (!newPosition.walletId) {
-          alert('Primero crea una wallet para agregar posiciones');
+          alert(t('port.createWalletFirst'));
           setShowCreateWallet(true);
         }
         return;
@@ -133,7 +135,7 @@ export default function PortfolioTab({
       const file = e.target.files[0];
       if (!file) return;
       if (!uploadWalletId) {
-        setUploadStatus({ type: 'error', message: 'Selecciona una wallet primero' });
+        setUploadStatus({ type: 'error', message: t('port.selectWalletFirst') });
         e.target.value = '';
         return;
       }
@@ -194,13 +196,13 @@ export default function PortfolioTab({
         {/* Portfolio Summary */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
           <div style={card}>
-            <div style={sTitle}>Valor Total</div>
+            <div style={sTitle}>{t('port.totalValue')}</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>
               {formatLargeNumber(portfolioValue)}
             </div>
           </div>
           <div style={card}>
-            <div style={sTitle}>P&L</div>
+            <div style={sTitle}>{t('port.pnl')}</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: pnl >= 0 ? green : red }}>
               {pnl >= 0 ? '+' : ''}{formatLargeNumber(pnl)}
             </div>
@@ -209,11 +211,11 @@ export default function PortfolioTab({
             </div>
           </div>
           <div style={card}>
-            <div style={sTitle}>Posiciones</div>
+            <div style={sTitle}>{t('port.positions')}</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>{portfolio.length}</div>
           </div>
           <div style={card}>
-            <div style={sTitle}>Wallets</div>
+            <div style={sTitle}>{t('port.wallets')}</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>{wallets.length}</div>
           </div>
         </div>
@@ -234,7 +236,7 @@ export default function PortfolioTab({
                 cursor: "pointer"
               }}
             >
-              Todas ({portfolio.length})
+              {t('port.all')} ({portfolio.length})
             </button>
             {wallets.map(w => {
               const count = portfolio.filter(p => p.walletId === w.id).length;
@@ -275,7 +277,7 @@ export default function PortfolioTab({
               cursor: "pointer"
             }}
           >
-            {showAddForm ? 'Cancelar' : 'Agregar Posicion'}
+            {showAddForm ? t('port.cancel') : t('port.addPosition')}
           </button>
           <button
             onClick={() => { setShowBatchUpload(!showBatchUpload); setShowAddForm(false); setShowCreateWallet(false); }}
@@ -290,7 +292,7 @@ export default function PortfolioTab({
               cursor: "pointer"
             }}
           >
-            {showBatchUpload ? 'Cancelar' : 'Subir CSV'}
+            {showBatchUpload ? t('port.cancel') : t('port.uploadCsv')}
           </button>
           <button
             onClick={() => { setShowCreateWallet(!showCreateWallet); setShowAddForm(false); setShowBatchUpload(false); }}
@@ -305,17 +307,17 @@ export default function PortfolioTab({
               cursor: "pointer"
             }}
           >
-            {showCreateWallet ? 'Cancelar' : 'Nueva Wallet'}
+            {showCreateWallet ? t('port.cancel') : t('port.newWallet')}
           </button>
         </div>
 
         {/* Create Wallet Form */}
         {showCreateWallet && (
           <div style={{ ...card, marginBottom: 16, borderColor: green }}>
-            <div style={sTitle}>CREAR NUEVA WALLET</div>
+            <div style={sTitle}>{t('port.createWallet')}</div>
             <div style={{ display: "grid", gap: 12 }}>
               <div>
-                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>NOMBRE</label>
+                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.name')}</label>
                 <input
                   type="text"
                   value={newWallet.name}
@@ -326,7 +328,7 @@ export default function PortfolioTab({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>TIPO</label>
+                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.type')}</label>
                   <select
                     value={newWallet.type}
                     onChange={e => setNewWallet(prev => ({ ...prev, type: e.target.value }))}
@@ -338,7 +340,7 @@ export default function PortfolioTab({
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>PROVEEDOR</label>
+                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.provider')}</label>
                   <select
                     value={newWallet.provider}
                     onChange={e => setNewWallet(prev => ({ ...prev, provider: e.target.value }))}
@@ -351,7 +353,7 @@ export default function PortfolioTab({
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>COLOR</label>
+                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.color')}</label>
                 <div style={{ display: "flex", gap: 8 }}>
                   {walletColors.map(c => (
                     <button
@@ -377,7 +379,7 @@ export default function PortfolioTab({
                   cursor: "pointer"
                 }}
               >
-                Crear Wallet
+                {t('port.createWallet')}
               </button>
             </div>
           </div>
@@ -386,14 +388,14 @@ export default function PortfolioTab({
         {/* Batch Upload Section */}
         {showBatchUpload && (
           <div style={{ ...card, marginBottom: 16, borderColor: blue }}>
-            <div style={sTitle}>IMPORTAR PORTFOLIO (CSV/EXCEL)</div>
+            <div style={sTitle}>{t('port.importPortfolio')}</div>
 
             {/* Wallet selector for upload */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>WALLET DESTINO</label>
+              <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.walletDest')}</label>
               {wallets.length === 0 ? (
                 <div style={{ fontSize: 12, color: amber, padding: "8px 12px", background: `${amber}15`, borderRadius: 6 }}>
-                  Crea una wallet primero para poder subir posiciones
+                  {t('port.createWalletFirst')}
                 </div>
               ) : (
                 <select
@@ -413,7 +415,7 @@ export default function PortfolioTab({
               border: `1px dashed ${border}`, textAlign: "center"
             }}>
               <div style={{ fontSize: 13, color: text, marginBottom: 12 }}>
-                Sube un archivo CSV o Excel con tus posiciones
+                {t('port.uploadFileDesc')}
               </div>
               <input
                 type="file"
@@ -423,7 +425,7 @@ export default function PortfolioTab({
                 style={{ display: "block", margin: "0 auto 12px", fontSize: 12, color: text }}
               />
               {uploading && (
-                <div style={{ fontSize: 12, color: amber, marginTop: 8 }}>Procesando archivo...</div>
+                <div style={{ fontSize: 12, color: amber, marginTop: 8 }}>{t('port.processingFile')}</div>
               )}
               {uploadStatus && (
                 <div style={{
@@ -445,7 +447,7 @@ export default function PortfolioTab({
                 borderRadius: 6, color: text, fontSize: 12, fontWeight: 600, cursor: "pointer"
               }}
             >
-              Descargar plantilla CSV
+              {t('port.downloadTemplate')}
             </button>
             <div style={{ fontSize: 11, color: muted, marginTop: 10, lineHeight: 1.6 }}>
               Formato: Asset, Amount, Buy Price, Purchase Date, Notes<br />
@@ -457,19 +459,19 @@ export default function PortfolioTab({
         {/* Add Position Form */}
         {showAddForm && (
           <div style={{ ...card, marginBottom: 16 }}>
-            <div style={sTitle}>Nueva Posicion</div>
+            <div style={sTitle}>{t('port.newPosition')}</div>
             <div style={{ display: "grid", gap: 12 }}>
               {/* Wallet Selector */}
               <div>
-                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>WALLET</label>
+                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.wallets')}</label>
                 {wallets.length === 0 ? (
                   <div style={{ fontSize: 12, color: amber, padding: "8px 12px", background: `${amber}15`, borderRadius: 6 }}>
-                    Crea una wallet primero
+                    {t('port.emptyWallet')}
                     <button
                       onClick={() => { setShowAddForm(false); setShowCreateWallet(true); }}
                       style={{ marginLeft: 8, padding: "4px 10px", background: green, border: "none", borderRadius: 4, color: "#000", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
                     >
-                      Crear
+                      {t('port.create')}
                     </button>
                   </div>
                 ) : (
@@ -485,7 +487,7 @@ export default function PortfolioTab({
                 )}
               </div>
               <div>
-                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>ACTIVO</label>
+                <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.asset')}</label>
                 <select
                   value={newPosition.asset}
                   onChange={e => setNewPosition(prev => ({ ...prev, asset: e.target.value }))}
@@ -498,7 +500,7 @@ export default function PortfolioTab({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>CANTIDAD</label>
+                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.amount')}</label>
                   <input
                     type="number" step="0.00000001" value={newPosition.amount}
                     onChange={e => setNewPosition(prev => ({ ...prev, amount: e.target.value }))}
@@ -507,7 +509,7 @@ export default function PortfolioTab({
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>PRECIO COMPRA</label>
+                  <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>{t('port.buyPrice')}</label>
                   <input
                     type="number" step="0.01" value={newPosition.buyPrice}
                     onChange={e => setNewPosition(prev => ({ ...prev, buyPrice: e.target.value }))}
@@ -526,7 +528,7 @@ export default function PortfolioTab({
                   cursor: saving ? "not-allowed" : "pointer"
                 }}
               >
-                {saving ? 'Guardando...' : 'Agregar'}
+                {saving ? t('port.saving') : t('port.add')}
               </button>
             </div>
           </div>
@@ -535,22 +537,22 @@ export default function PortfolioTab({
         {/* Loading indicator */}
         {(portfolioLoading || walletsLoading) && (
           <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 13 }}>
-            Cargando portfolio...
+            {t('port.loadingPortfolio')}
           </div>
         )}
 
         {/* Positions List */}
         <div style={card}>
           <div style={sTitle}>
-            MIS POSICIONES {selectedWalletFilter !== 'all' && wallets.find(w => w.id === selectedWalletFilter)
+            {t('port.myPositions')} {selectedWalletFilter !== 'all' && wallets.find(w => w.id === selectedWalletFilter)
               ? `- ${wallets.find(w => w.id === selectedWalletFilter).name}`
               : ''}
           </div>
           {filteredPositions.length === 0 && !portfolioLoading ? (
             <div style={{ padding: 30, textAlign: "center", color: muted }}>
               {wallets.length === 0
-                ? 'Crea una wallet primero, luego agrega posiciones.'
-                : 'No tienes posiciones. Agrega una arriba o sube un archivo CSV.'}
+                ? t('port.createWalletFirst')
+                : t('port.noPositions')}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
@@ -597,7 +599,7 @@ export default function PortfolioTab({
                         border: `1px solid ${red}`, borderRadius: 6, color: red, fontSize: 11, cursor: "pointer"
                       }}
                     >
-                      Eliminar
+                      {t('port.delete')}
                     </button>
                   </div>
                 );
@@ -609,7 +611,7 @@ export default function PortfolioTab({
         {/* Wallet Summary Cards */}
         {wallets.length > 0 && (
           <div style={{ ...card, marginTop: 14 }}>
-            <div style={sTitle}>MIS WALLETS</div>
+            <div style={sTitle}>{t('port.myWallets')}</div>
             <div style={{ display: "grid", gap: 10 }}>
               {wallets.map(w => {
                 const walletPositions = portfolio.filter(p => p.walletId === w.id);

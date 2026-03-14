@@ -5,6 +5,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 import OrderEntryForm from '../execution/OrderEntryForm';
 import OrderBook from '../execution/OrderBook';
@@ -35,6 +36,7 @@ export default function ExecutionTab({
   fetchDashboardPaper, loadExecutionData,
   authFetch, apiUrl, userId
 }) {
+    const { t } = useLanguage();
     const subTab = execSubTab;
     const setSubTab = setExecSubTab;
     const executionColors = { bg, bg2, bg3, border, text, muted, green, red, accent: purple };
@@ -100,12 +102,12 @@ export default function ExecutionTab({
     };
 
     const SUB_TABS = [
-      { k: 'dashboard', label: '\u{1F4CA} Dashboard', desc: 'Métricas y analytics' },
-      { k: 'positions', label: '\u{1F4C8} Posiciones', desc: 'Monitor + correlación' },
-      { k: 'history', label: '\u{1F4CB} Historial', desc: 'Trades cerrados' },
-      { k: 'risk', label: '\⚠\️ Riesgo', desc: 'Dashboard de riesgo' },
-      ...(execManualOrdersEnabled ? [{ k: 'orders', label: '\u{1F4DD} Órdenes', desc: 'Crear y gestionar' }] : []),
-      { k: 'audit', label: '\u{1F50D} Auditoría', desc: 'Historial de eventos' }
+      { k: 'dashboard', label: `\u{1F4CA} ${t('exec.dashboard')}`, desc: t('exec.dashboardDesc') },
+      { k: 'positions', label: `\u{1F4C8} ${t('exec.positions')}`, desc: t('exec.positionsDesc') },
+      { k: 'history', label: `\u{1F4CB} ${t('exec.history')}`, desc: t('exec.historyDesc') },
+      { k: 'risk', label: `\⚠️ ${t('exec.risk')}`, desc: t('exec.riskDesc') },
+      ...(execManualOrdersEnabled ? [{ k: 'orders', label: `\u{1F4DD} ${t('exec.orders')}`, desc: t('exec.ordersDesc') }] : []),
+      { k: 'audit', label: `\u{1F50D} ${t('exec.audit')}`, desc: t('exec.auditDesc') }
     ];
 
     return (
@@ -129,7 +131,7 @@ export default function ExecutionTab({
             <span>{execFeedback.type === 'success' ? '\✓' : '\✗'} {execFeedback.message}</span>
             <button onClick={() => setExecFeedback(null)} style={{
               background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 14
-            }}>\×</button>
+            }}>×</button>
           </div>
         )}
         {/* Header with Kill Switch + Mode Toggle */}
@@ -169,7 +171,7 @@ export default function ExecutionTab({
             />
             {/* Manual orders toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: muted, fontSize: 12 }}>Órdenes manuales:</span>
+              <span style={{ color: muted, fontSize: 12 }}>{t('exec.manualOrders')}:</span>
               <button
                 onClick={() => {
                   const next = !execManualOrdersEnabled;
@@ -248,7 +250,7 @@ export default function ExecutionTab({
                 }} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: isEnabled ? green : red }}>
-                    PAPER TRADING {isEnabled ? 'ACTIVO' : 'DESACTIVADO'}
+                    {isEnabled ? t('exec.paperActive') : t('exec.paperDisabled')}
                   </div>
                   <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
                     Capital: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} ·
@@ -264,19 +266,19 @@ export default function ExecutionTab({
                 color: isEnabled ? red : green, fontFamily: "monospace", fontSize: 11,
                 fontWeight: 700, cursor: "pointer"
               }}>
-                {isEnabled ? '\⏸ PAUSAR' : '\▶ ACTIVAR'}
+                {isEnabled ? `\⏸ ${t('exec.pause')}` : `\▶ ${t('exec.activate')}`}
               </button>
             </div>
 
             {/* Performance Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
               {[
-                { label: "P&L TOTAL", value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
-                { label: "WIN RATE", value: `${paperMetrics?.winRate || 0}%`, color: (paperMetrics?.winRate || 0) >= 50 ? green : (paperMetrics?.winRate || 0) > 0 ? amber : muted },
-                { label: "TRADES", value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
-                { label: "CAPITAL", value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
-                { label: "MAX DRAWDOWN", value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
-                { label: "PROFIT FACTOR", value: paperMetrics?.profitFactor === Infinity ? '\∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
+                { label: t('common.pnlTotal'), value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
+                { label: t('common.winRate'), value: `${paperMetrics?.winRate || 0}%`, color: (paperMetrics?.winRate || 0) >= 50 ? green : (paperMetrics?.winRate || 0) > 0 ? amber : muted },
+                { label: t('common.trades'), value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
+                { label: t('common.capital'), value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
+                { label: t('common.maxDrawdown'), value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
+                { label: t('common.profitFactor'), value: paperMetrics?.profitFactor === Infinity ? '\∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
               ].map((stat, i) => (
                 <div key={i} style={{ ...card, padding: "12px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 6 }}>{stat.label}</div>
@@ -290,13 +292,13 @@ export default function ExecutionTab({
             <div style={{ ...card, padding: "16px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                 onClick={() => setShowAdvancedPerf(!showAdvancedPerf)}>
-                <div style={sTitle}>{'\u{1F4CA}'} ANALYTICS AVANZADOS {showAdvancedPerf ? '\▾' : '\▸'}</div>
+                <div style={sTitle}>{'\u{1F4CA}'} {t('exec.advancedAnalytics')} {showAdvancedPerf ? '\▾' : '\▸'}</div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   {[30, 90, 0].map(d => (
                     <button key={d} onClick={(e) => { e.stopPropagation(); setAdvancedPerfDays(d); }} style={{
                       padding: "3px 10px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700,
                       background: advancedPerfDays === d ? green : bg3, color: advancedPerfDays === d ? "#000" : muted
-                    }}>{d === 0 ? 'Todo' : `${d}d`}</button>
+                    }}>{d === 0 ? t('exec.all') : `${d}d`}</button>
                   ))}
                 </div>
               </div>
@@ -304,7 +306,7 @@ export default function ExecutionTab({
               {showAdvancedPerf && (() => {
                 if (!advancedPerf || advancedPerf.total < 5) {
                   return <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
-                    Necesitas al menos 5 trades cerrados para ver analytics avanzados ({advancedPerf?.total || 0} actuales)
+                    {t('exec.needTrades')} ({advancedPerf?.total || 0} {t('exec.current')})
                   </div>;
                 }
                 const hitColor = (rate) => rate >= 55 ? green : rate >= 45 ? amber : red;
@@ -313,7 +315,7 @@ export default function ExecutionTab({
                     {/* P&L Por Asset */}
                     {advancedPerf.byAsset && advancedPerf.byAsset.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L POR ASSET</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.pnlByAsset')}</div>
                         <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                           <ResponsiveContainer width="100%" height={Math.max(120, advancedPerf.byAsset.length * 32)}>
                             <BarChart data={advancedPerf.byAsset} layout="vertical" margin={{ left: 60, right: 20, top: 5, bottom: 5 }}>
@@ -323,7 +325,7 @@ export default function ExecutionTab({
                               <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
                                 formatter={(v, name, props) => {
                                   const d = props.payload;
-                                  return [`$${v} | WR: ${d.winRate}% | ${d.trades} trades | avg: $${d.avgPnl}`, 'P&L'];
+                                  return [`$${v} | WR: ${d.winRate}% | ${d.trades} ${t('exec.trades')} | avg: $${d.avgPnl}`, 'P&L'];
                                 }} />
                               <Bar dataKey="totalPnl" radius={[0, 4, 4, 0]}>
                                 {advancedPerf.byAsset.map((entry, i) => (
@@ -340,7 +342,7 @@ export default function ExecutionTab({
                     <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 12, marginBottom: 16 }}>
                       {advancedPerf.byHour && (
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR HORA (UTC)</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.winRateByHour')}</div>
                           <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                             <ResponsiveContainer width="100%" height={140}>
                               <BarChart data={advancedPerf.byHour}>
@@ -350,7 +352,7 @@ export default function ExecutionTab({
                                 <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
                                   formatter={(v, name, props) => {
                                     const d = props.payload;
-                                    return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                                    return d.trades > 0 ? [`${v}% (${d.trades} ${t('exec.trades')}, $${d.totalPnl})`, 'Win Rate'] : [t('exec.noTrades'), ''];
                                   }} />
                                 <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
                                 <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
@@ -365,7 +367,7 @@ export default function ExecutionTab({
                       )}
                       {advancedPerf.byDayOfWeek && (
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>WIN RATE POR DIA</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.winRateByDay')}</div>
                           <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                             <ResponsiveContainer width="100%" height={140}>
                               <BarChart data={advancedPerf.byDayOfWeek}>
@@ -375,7 +377,7 @@ export default function ExecutionTab({
                                 <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 10 }}
                                   formatter={(v, name, props) => {
                                     const d = props.payload;
-                                    return d.trades > 0 ? [`${v}% (${d.trades} trades, $${d.totalPnl})`, 'Win Rate'] : ['Sin trades', ''];
+                                    return d.trades > 0 ? [`${v}% (${d.trades} ${t('exec.trades')}, $${d.totalPnl})`, 'Win Rate'] : [t('exec.noTrades'), ''];
                                   }} />
                                 <ReferenceLine y={50} stroke={amber} strokeDasharray="3 3" strokeWidth={1} />
                                 <Bar dataKey="winRate" radius={[2, 2, 0, 0]}>
@@ -393,7 +395,7 @@ export default function ExecutionTab({
                     {/* P&L Distribution */}
                     {advancedPerf.pnlDistribution && advancedPerf.pnlDistribution.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>DISTRIBUCION DE P&L (%)</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.pnlDistribution')}</div>
                         <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                           <ResponsiveContainer width="100%" height={140}>
                             <BarChart data={advancedPerf.pnlDistribution}>
@@ -417,7 +419,7 @@ export default function ExecutionTab({
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       {advancedPerf.byExitReason && advancedPerf.byExitReason.length > 0 && (
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR RAZON DE CIERRE</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.byCloseReason')}</div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {advancedPerf.byExitReason.map(r => {
                               const reasonColor = r.reason === 'stop_loss' ? red : r.reason.includes('take_profit') ? green : r.reason === 'trailing_stop' ? amber : muted;
@@ -425,7 +427,7 @@ export default function ExecutionTab({
                                 <div key={r.reason} style={{ background: bg3, borderRadius: 6, padding: "8px 12px", borderLeft: `3px solid ${reasonColor}` }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <span style={{ fontSize: 11, fontWeight: 700, color: reasonColor }}>{r.reason.replace(/_/g, ' ').toUpperCase()}</span>
-                                    <span style={{ fontSize: 10, color: muted }}>{r.count} trades</span>
+                                    <span style={{ fontSize: 10, color: muted }}>{r.count} {t('exec.trades')}</span>
                                   </div>
                                   <div style={{ display: "flex", gap: 14, fontSize: 10, marginTop: 4 }}>
                                     <span style={{ color: hitColor(r.winRate) }}>WR: {r.winRate}%</span>
@@ -440,7 +442,7 @@ export default function ExecutionTab({
                       )}
                       {advancedPerf.byDirection && (
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>POR DIRECCION</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.byDirection')}</div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {["LONG", "SHORT"].map(dir => {
                               const d = advancedPerf.byDirection[dir];
@@ -450,7 +452,7 @@ export default function ExecutionTab({
                                 <div key={dir} style={{ background: bg3, borderRadius: 6, padding: "10px 14px", borderLeft: `3px solid ${dirColor}` }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                     <span style={{ fontSize: 13, fontWeight: 800, color: dirColor }}>{dir === "LONG" ? "\▲ LONG" : "\▼ SHORT"}</span>
-                                    <span style={{ fontSize: 11, color: muted }}>{d.trades} trades</span>
+                                    <span style={{ fontSize: 11, color: muted }}>{d.trades} {t('exec.trades')}</span>
                                   </div>
                                   <div style={{ display: "flex", gap: 16, fontSize: 11 }}>
                                     <div><span style={{ color: muted }}>Win Rate: </span><span style={{ color: hitColor(d.winRate), fontWeight: 700 }}>{d.winRate}%</span></div>
@@ -463,7 +465,7 @@ export default function ExecutionTab({
                           </div>
                           {advancedPerf.tradesByMonth && advancedPerf.tradesByMonth.length > 1 && (
                             <div style={{ marginTop: 12 }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>P&L MENSUAL</div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('exec.monthlyPnl')}</div>
                               <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                                 <ResponsiveContainer width="100%" height={100}>
                                   <BarChart data={advancedPerf.tradesByMonth}>
@@ -492,15 +494,15 @@ export default function ExecutionTab({
             {/* Detailed Statistics */}
             {paperMetrics && paperMetrics.totalTrades > 0 && (
               <div style={{ ...card, padding: "16px 20px" }}>
-                <div style={sTitle}>ESTAD\ÍSTICAS DETALLADAS</div>
+                <div style={sTitle}>{t('exec.detailedStats')}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                   {[
-                    { label: "Promedio Ganancia", value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
-                    { label: "Promedio P\érdida", value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
-                    { label: "Mejor Trade", value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
-                    { label: "Peor Trade", value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
-                    { label: "Tiempo Promedio", value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
-                    { label: "Racha Actual", value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? 'victorias' : paperMetrics.streakType === 'loss' ? 'derrotas' : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
+                    { label: t('exec.avgGain'), value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
+                    { label: t('exec.avgLoss'), value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
+                    { label: t('exec.bestTrade'), value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
+                    { label: t('exec.worstTrade'), value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
+                    { label: t('exec.avgTime'), value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
+                    { label: t('exec.currentStreak'), value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? t('exec.victories') : paperMetrics.streakType === 'loss' ? t('exec.defeats') : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
                   ].map((stat, i) => (
                     <div key={i} style={{ background: bg3, padding: "10px 14px", borderRadius: 6 }}>
                       <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{stat.label}</div>
@@ -525,20 +527,20 @@ export default function ExecutionTab({
             {correlationData && correlationData.pairs && correlationData.pairs.length > 0 && (
               <div style={{ ...card, padding: "16px 20px", marginTop: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={sTitle}>CORRELACI\ÓN DE POSICIONES</div>
+                  <div style={sTitle}>{t('exec.positionCorrelation')}</div>
                   <div style={{
                     fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
                     background: correlationData.riskLevel === 'high' ? `${red}20` : correlationData.riskLevel === 'medium' ? `${amber}20` : `${green}20`,
                     color: correlationData.riskLevel === 'high' ? red : correlationData.riskLevel === 'medium' ? amber : green,
                     textTransform: "uppercase"
                   }}>
-                    Riesgo: {correlationData.riskLevel}
+                    {t('exec.riskLabel')}: {correlationData.riskLevel}
                   </div>
                 </div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11, marginBottom: 10 }}>
                   <thead>
                     <tr>
-                      {["Par", "Correlaci\ón", "Nivel"].map((h, i) => (
+                      {[t('exec.thPair'), t('exec.thCorrelation'), t('exec.thLevel')].map((h, i) => (
                         <th key={i} style={{ textAlign: "left", padding: "4px 8px", color: muted, fontSize: 9, fontWeight: 600, borderBottom: `1px solid ${bg3}`, textTransform: "uppercase" }}>
                           {h}
                         </th>
@@ -565,7 +567,7 @@ export default function ExecutionTab({
                 </table>
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: muted, marginBottom: 4 }}>
-                    <span>Diversificaci\ón Efectiva</span>
+                    <span>{t('exec.effectiveDiversification')}</span>
                     <span style={{ fontWeight: 700, color: text }}>{(correlationData.effectiveDiversification * 100).toFixed(0)}%</span>
                   </div>
                   <div style={{ height: 6, background: bg3, borderRadius: 3, overflow: "hidden" }}>
@@ -595,12 +597,12 @@ export default function ExecutionTab({
           return (
           <div style={{ ...card, padding: "16px 20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={sTitle}>HISTORIAL DE TRADES ({totalTrades})</div>
+              <div style={sTitle}>{t('exec.tradeHistory')} ({totalTrades})</div>
             </div>
 
             {totalTrades === 0 ? (
               <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
-                A\ún no hay trades cerrados.
+                {t('exec.noClosedTrades')}
               </div>
             ) : (
               <>
@@ -608,7 +610,7 @@ export default function ExecutionTab({
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
                     <thead>
                       <tr>
-                        {["Asset", "Dir", "Entrada", "Salida", "P&L", "%", "Duraci\ón", "Raz\ón"].map((h, i) => (
+                        {[t('exec.thAsset'), t('exec.thDir'), t('exec.thEntry'), t('exec.thExit'), t('exec.thPnl'), t('exec.thPct'), t('exec.thDuration'), t('exec.thReason')].map((h, i) => (
                           <th key={i} style={{
                             padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
                             textTransform: "uppercase", letterSpacing: "0.08em",
@@ -655,14 +657,14 @@ export default function ExecutionTab({
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
                     <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
                       style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
-                      \← Prev
+                      \← {t('exec.prev')}
                     </button>
                     <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
                       {historyPage + 1} / {Math.ceil(totalTrades / PAPER_HISTORY_PAGE_SIZE)}
                     </span>
                     <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades}
                       style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? "default" : "pointer" }}>
-                      Next \→
+                      {t('exec.next')} \→
                     </button>
                   </div>
                 )}
@@ -681,7 +683,7 @@ export default function ExecutionTab({
             />
             <div style={{ marginTop: 16 }}>
               <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                Libro de \Órdenes
+                {t('exec.orderBook')}
               </div>
               <OrderBook
                 orders={execOrders}
@@ -705,10 +707,9 @@ export default function ExecutionTab({
             gap: 12
           }}>
             <div style={{ fontSize: 40, opacity: 0.4 }}>{'\u{1F517}'}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>Modo LIVE \— Exchange no conectado</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>{t('exec.liveMode')}</div>
             <div style={{ fontSize: 11, color: muted, maxWidth: 400, lineHeight: 1.6 }}>
-              La integraci\ón con Bybit a\ún no est\á activa. Cuando se conecte, aqu\í ver\ás posiciones reales,
-              \órdenes ejecutadas en el exchange y m\étricas de riesgo en tiempo real.
+              {t('exec.liveDesc')}
             </div>
             <button
               onClick={() => {
@@ -730,7 +731,7 @@ export default function ExecutionTab({
                 cursor: 'pointer'
               }}
             >
-              {'\u{1F4DD}'} Volver a Paper Trading
+              {'\u{1F4DD}'} {t('exec.backToPaper')}
             </button>
           </div>
         )}
@@ -753,7 +754,7 @@ export default function ExecutionTab({
 
         {(execLoading || paperLoading) && (
           <div style={{ textAlign: 'center', padding: 10, fontSize: 10, color: muted, fontFamily: 'monospace' }}>
-            Actualizando datos...
+            {t('exec.updatingData')}
           </div>
         )}
       </div>

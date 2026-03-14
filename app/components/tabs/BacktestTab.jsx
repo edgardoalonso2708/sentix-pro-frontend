@@ -163,7 +163,7 @@ export default function BacktestTab({
                 style={inputStyle}
                 disabled={running}
               >
-                {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} días</option>)}
+                {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} dias</option>)}
               </select>
             </div>
 
@@ -300,7 +300,7 @@ export default function BacktestTab({
                 {config.kellySizing.kelly.enabled && (
                   <div style={{ display: "flex", gap: 8 }}>
                     <div>
-                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Fracci{"\ó"}n</label>
+                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Fracci{"o"}n</label>
                       <input type="number" min={0.1} max={1.0} step={0.1}
                         value={config.kellySizing.kelly.fraction}
                         onChange={e => setConfig(prev => ({
@@ -432,7 +432,7 @@ export default function BacktestTab({
                 {
                   label: "TRADES",
                   value: result.total_trades || 0,
-                  sub: `${result.days} d\ías`,
+                  sub: `${result.days} dias`,
                   color: purple
                 },
                 {
@@ -711,7 +711,7 @@ export default function BacktestTab({
               const sig = result.significance;
               const a = sig.assessment;
               const badgeColor = a.stars >= 3 ? green : a.stars >= 2 ? green : a.stars >= 1 ? amber : red;
-              const badgeIcon = a.stars >= 2 ? "\✅" : a.stars >= 1 ? "\⚠\️" : "\❌";
+              const badgeIcon = a.stars >= 2 ? "\✅" : a.stars >= 1 ? "\⚠️" : "\❌";
               const starsStr = "\★".repeat(a.stars) + "\☆".repeat(3 - a.stars);
 
               const pValueColor = (p) => {
@@ -738,7 +738,7 @@ export default function BacktestTab({
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
-                        {badgeIcon} SIGNIFICANCIA ESTAD\ÍSTICA
+                        {badgeIcon} SIGNIFICANCIA ESTADISTICA
                       </span>
                       <span style={{
                         fontSize: 9, padding: "2px 6px", borderRadius: 4,
@@ -961,7 +961,7 @@ export default function BacktestTab({
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
-                      {"\⚖\️"} KELLY CRITERION & VOL TARGETING
+                      {"⚖️"} KELLY CRITERION & VOL TARGETING
                     </span>
                   </div>
 
@@ -1022,7 +1022,7 @@ export default function BacktestTab({
 
                   {ks.tradesWithoutKelly > 0 && ks.kellyEnabled && (
                     <div style={{ fontSize: 9, color: muted, marginTop: 8, fontStyle: "italic" }}>
-                      {"\ℹ\️"} {ks.tradesWithoutKelly} trades usaron risk fijo (antes de acumular {ks.kellyConfig?.kelly?.minTrades || 20} trades m{"\í"}nimos para Kelly)
+                      {"ℹ️"} {ks.tradesWithoutKelly} trades usaron risk fijo (antes de acumular {ks.kellyConfig?.kelly?.minTrades || 20} trades m{"i"}nimos para Kelly)
                     </div>
                   )}
                 </div>
@@ -1078,7 +1078,7 @@ export default function BacktestTab({
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 10 }}>
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${border}` }}>
-                        {["#", "Direcci\ón", "Entry", "Exit", "P&L", "P&L %", "Raz\ón", "Barras"].map(h => (
+                        {["#", "Direccion", "Entry", "Exit", "P&L", "P&L %", "Razon", "Barras"].map(h => (
                           <th key={h} style={{ padding: "6px 8px", textAlign: "left", color: muted, fontWeight: 600, fontSize: 9 }}>{h}</th>
                         ))}
                       </tr>

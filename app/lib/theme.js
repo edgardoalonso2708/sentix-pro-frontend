@@ -3,11 +3,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const colors = {
-  bg: "#0a0a0a",
-  bg2: "#111111",
-  bg3: "#1a1a1a",
-  border: "rgba(255,255,255,0.08)",
-  text: "#f9fafb",
+  bg: "#0a0a0f",
+  bg2: "rgba(17,17,24,0.8)",
+  bg3: "#1a1a2e",
+  border: "rgba(168,85,247,0.08)",
+  text: "#f0f0f5",
   muted: "#6b7280",
   green: "#00d4aa",
   red: "#ef4444",
@@ -18,17 +18,19 @@ export const colors = {
 
 export const card = {
   background: colors.bg2,
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
   border: `1px solid ${colors.border}`,
-  borderRadius: 10,
+  borderRadius: 12,
   padding: "16px 20px",
   marginBottom: 14,
 };
 
 export const sTitle = {
   fontSize: 10,
-  color: colors.muted,
+  color: colors.purple,
   textTransform: "uppercase",
-  letterSpacing: "0.12em",
+  letterSpacing: "0.14em",
   fontWeight: 700,
   marginBottom: 12,
 };

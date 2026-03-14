@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } fro
 import { useRouter } from 'next/navigation';
 import { useSSE } from './hooks/useSSE';
 import { useAuth } from './contexts/AuthContext';
+import { useLanguage } from './contexts/LanguageContext';
 import { authFetch } from './lib/api';
 // Lazy-loaded tabs (code splitting)
 const DashboardTab = lazy(() => import('./components/tabs/DashboardTab'));
@@ -24,7 +25,7 @@ import { colors } from './lib/theme';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTIX PRO - FRONTEND COMPLETO
-// Dashboard, Señales, Portfolio, Alertas - Versión Full
+// Dashboard, Senales, Portfolio, Alertas - Version Full
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export default function SentixProFrontend() {
@@ -54,6 +55,7 @@ export default function SentixProFrontend() {
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
   const { userId: authUserId, authEnabled, loading: authLoading, user: authUser, isAdmin, signOut } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const router = useRouter();
   const USER_ID = authUserId || 'default-user';
 
@@ -626,7 +628,7 @@ export default function SentixProFrontend() {
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0a0f', color: '#888' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 28, marginBottom: 12 }}>⚡ SENTIX PRO</div>
-          <div>Verificando autenticación...</div>
+          <div>Verificando autenticacion...</div>
         </div>
       </div>
     );
@@ -701,7 +703,7 @@ export default function SentixProFrontend() {
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
         showFeedback('success', activate
-          ? `Kill switch activado — ${d.cancelledOrders || 0} órdenes canceladas, ${d.closedPositions || 0} posiciones cerradas`
+          ? `Kill switch activado — ${d.cancelledOrders || 0} ordenes canceladas, ${d.closedPositions || 0} posiciones cerradas`
           : 'Trading re-habilitado');
       } else {
         const d = await res.json().catch(() => ({}));
@@ -747,13 +749,20 @@ export default function SentixProFrontend() {
       color: text,
       padding: 0
     }}>
-      {/* Grid Background */}
+      {/* Background effects */}
       <div style={{
         position: "fixed",
         inset: 0,
         pointerEvents: "none",
-        backgroundImage: "linear-gradient(rgba(168,85,247,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.015) 1px, transparent 1px)",
-        backgroundSize: "50px 50px",
+        background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(168,85,247,0.08), transparent 70%)",
+        zIndex: 0
+      }} />
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        backgroundImage: "linear-gradient(rgba(168,85,247,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.02) 1px, transparent 1px)",
+        backgroundSize: "60px 60px",
         zIndex: 0
       }} />
 
@@ -765,30 +774,27 @@ export default function SentixProFrontend() {
           justifyContent: "space-between",
           paddingBottom: 18,
           marginBottom: 24,
-          borderBottom: `1px solid ${border}`,
+          borderBottom: `1px solid rgba(168,85,247,0.12)`,
           flexWrap: "wrap",
           gap: 16
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{
-              width: 42,
-              height: 42,
-              border: `2px solid ${purple}`,
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-              color: purple,
-              fontWeight: 700,
-              boxShadow: `0 0 20px rgba(168,85,247,0.3)`
-            }}>◈</div>
+            <img
+              src="/sentix-icon.svg"
+              alt="Sentix Pro"
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                boxShadow: `0 0 20px rgba(168,85,247,0.3)`
+              }}
+            />
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "0.02em" }}>
                 SENTIX <span style={{ fontSize: 12, color: purple, fontWeight: 500 }}>PRO</span>
               </div>
               <div style={{ fontSize: 10, color: muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                Real-time Trading System · Connected
+                {t('main.subtitle')}
               </div>
             </div>
           </div>
@@ -826,6 +832,25 @@ export default function SentixProFrontend() {
                 📡 Monitor
               </button>
             )}
+            {/* Language toggle */}
+            <button
+              onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+              style={{
+                padding: '4px 10px',
+                background: 'rgba(168,85,247,0.1)',
+                border: '1px solid rgba(168,85,247,0.25)',
+                borderRadius: 6,
+                color: '#a855f7',
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: 'pointer',
+                letterSpacing: '0.05em',
+                fontFamily: 'monospace',
+              }}
+              title={lang === 'es' ? 'Switch to English' : 'Cambiar a Espanol'}
+            >
+              {lang === 'es' ? '🌐 EN' : '🌐 ES'}
+            </button>
             {/* Help — always visible */}
             <button
               onClick={() => setTab('guide')}
@@ -840,7 +865,7 @@ export default function SentixProFrontend() {
                 cursor: 'pointer',
               }}
             >
-              📖 Ayuda
+              📖 {t('main.help')}
             </button>
             {authEnabled && isAdmin && (
               <button
@@ -873,22 +898,22 @@ export default function SentixProFrontend() {
                   cursor: 'pointer',
                 }}
               >
-                Salir
+                {t('main.signOut')}
               </button>
             )}
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
           {[
-            { k: "dashboard", label: "📊 DASHBOARD", desc: "Overview" },
-            { k: "signals", label: "🎯 SEÑALES", desc: "Todas las alertas" },
-            { k: "execution", label: "⚡ EJECUCIÓN", desc: "Trading y métricas" },
-            { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config, Backtest y Optimización" },
-            { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
-            { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
-            { k: "reports", label: "📄 REPORTES", desc: "Análisis e impresión" }
+            { k: "dashboard", label: `📊 ${t('tab.dashboard')}`, desc: t('tab.dashboard.desc') },
+            { k: "signals", label: `🎯 ${t('tab.signals')}`, desc: t('tab.signals.desc') },
+            { k: "execution", label: `⚡ ${t('tab.execution')}`, desc: t('tab.execution.desc') },
+            { k: "strategy", label: `⚙ ${t('tab.strategy')}`, desc: t('tab.strategy.desc') },
+            { k: "alerts", label: `🔔 ${t('tab.alerts')}`, desc: t('tab.alerts.desc') },
+            { k: "portfolio", label: `💼 ${t('tab.portfolio')}`, desc: t('tab.portfolio.desc') },
+            { k: "reports", label: `📄 ${t('tab.reports')}`, desc: t('tab.reports.desc') }
           ].map(({ k, label, desc }) => (
             <button
               key={k}
@@ -897,25 +922,27 @@ export default function SentixProFrontend() {
                 flex: "1 1 auto",
                 minWidth: 140,
                 padding: "12px 18px",
-                background: tab === k ? `linear-gradient(135deg, ${purple}, #7c3aed)` : bg2,
-                border: tab === k ? "none" : `1px solid ${border}`,
-                borderRadius: 8,
-                color: tab === k ? "#fff" : text,
+                background: tab === k ? `linear-gradient(135deg, ${purple}, #7c3aed)` : "rgba(17,17,24,0.6)",
+                backdropFilter: "blur(8px)",
+                border: tab === k ? `1px solid rgba(168,85,247,0.4)` : `1px solid rgba(168,85,247,0.08)`,
+                borderRadius: 10,
+                color: tab === k ? "#fff" : muted,
                 fontFamily: "monospace",
                 fontSize: 11,
                 fontWeight: 700,
                 cursor: "pointer",
-                textAlign: "center"
+                textAlign: "center",
+                boxShadow: tab === k ? "0 4px 20px rgba(168,85,247,0.25)" : "none",
               }}
             >
               <div>{label}</div>
-              <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>{desc}</div>
+              <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2 }}>{desc}</div>
             </button>
           ))}
         </div>
 
         {/* Tab Content — lazy-loaded with Suspense for code splitting */}
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>Cargando módulo…</div>}>
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>{t('main.loading')}</div>}>
         {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} />}
         {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
         {tab === "portfolio" && <PortfolioTab
@@ -993,7 +1020,7 @@ export default function SentixProFrontend() {
           lineHeight: 1.8
         }}>
           SENTIX PRO v2.0 · Real-time Trading System · Connected to Live APIs<br />
-          ⚠ Herramienta de análisis. No constituye asesoramiento financiero.
+          ⚠ Herramienta de analisis. No constituye asesoramiento financiero.
         </div>
       </div>
 

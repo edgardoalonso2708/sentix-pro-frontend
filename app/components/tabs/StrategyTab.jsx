@@ -1,5 +1,6 @@
 'use client';
 import { colors, card, sTitle } from '../../lib/theme';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BacktestTab from './BacktestTab';
 import OptimizeTab from './OptimizeTab';
 
@@ -19,13 +20,14 @@ export default function StrategyTab({
   advancedPerf,
   authFetch, apiUrl, userId,
 }) {
+    const { t } = useLanguage();
     const subTab = strategySubTab;
     const setSubTab = setStrategySubTab;
 
     const STRATEGY_SUB_TABS = [
-      { k: 'config', label: '\⚙ Configuraci\ón', desc: 'Par\ámetros de trading' },
-      { k: 'backtest', label: '\u{1F52C} Backtest', desc: 'Validar estrategia' },
-      { k: 'optimize', label: '\⚡ Optimizar', desc: 'Ajustar par\ámetros' }
+      { k: 'config', label: `⚙ ${t('strat.config')}`, desc: t('strat.configDesc') },
+      { k: 'backtest', label: `\u{1F52C} ${t('strat.backtest')}`, desc: t('strat.backtestDesc') },
+      { k: 'optimize', label: `⚡ ${t('strat.optimize')}`, desc: t('strat.optimizeDesc') }
     ];
 
     return (
@@ -97,6 +99,7 @@ function StrategyConfigContent({
   opt,
   authFetch, apiUrl, userId,
 }) {
+    const { t } = useLanguage();
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
     const savingConfig = paperSavingConfig, setSavingConfig = setPaperSavingConfig;
 
@@ -148,7 +151,7 @@ function StrategyConfigContent({
 
     if (!configForm) return (
       <div style={{ ...card, padding: 20, textAlign: "center" }}>
-        <div style={{ color: muted, fontSize: 12 }}>Cargando configuraci\ón...</div>
+        <div style={{ color: muted, fontSize: 12 }}>{t('strat.loadingConfig')}</div>
       </div>
     );
 
@@ -156,139 +159,139 @@ function StrategyConfigContent({
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Header */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\⚙'} ESTRATEGIA DE TRADING</div>
+          <div style={sTitle}>{'⚙'} {t('strat.tradingStrategy')}</div>
           <div style={{ fontSize: 10, color: muted, marginTop: 4 }}>
-            Par\ámetros que definen tu estrategia. Aplican tanto a Paper Trading como a trading real.
+            {t('strat.paramsIntro')}
           </div>
         </div>
 
-        {/* GESTI\ÓN DE RIESGO */}
+        {/* GESTION DE RIESGO */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4B0}'} GESTI\ÓN DE RIESGO</div>
+          <div style={sTitle}>{'\u{1F4B0}'} {t('strat.riskManagement')}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Riesgo por Trade (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.riskPerTrade')}</label>
               <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade || 0.01) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% del capital arriesgado por operaci\ón</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.riskPerTradeDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>P\érdida Diaria M\áx (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxDailyLoss')}</label>
               <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Detiene trading al alcanzar esta p\érdida diaria</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxDailyLossDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Posici\ón (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxPosition')}</label>
               <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent || 0.30) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_position_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx % del capital por posici\ón</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxPositionDesc')}</div>
             </div>
           </div>
         </div>
 
         {/* POSICIONES */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4CA}'} GESTI\ÓN DE POSICIONES</div>
+          <div style={sTitle}>{'\u{1F4CA}'} {t('strat.positionManagement')}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Posiciones Abiertas</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxOpenPositions')}</label>
               <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
                 style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cooldown entre Trades (min)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.cooldown')}</label>
               <input type="number" min="5" max="1440" value={configForm.cooldown_minutes || 30}
                 onChange={e => setConfigForm(prev => ({ ...prev, cooldown_minutes: e.target.value }))}
                 style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Holding (horas)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxHolding')}</label>
               <input type="number" min="0" max="720" value={configForm.max_holding_hours || 168}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_holding_hours: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>0 = sin l\ímite</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxHoldingDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cierre Parcial en TP1 (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.partialClose')}</label>
               <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio || 0.5) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, partial_close_ratio: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% de posici\ón cerrada al TP1</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.partialCloseDesc')}</div>
             </div>
           </div>
           <div style={{ marginTop: 8 }}>
             <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={configForm.move_sl_to_breakeven_after_tp1 !== false}
                 onChange={e => setConfigForm(prev => ({ ...prev, move_sl_to_breakeven_after_tp1: e.target.checked }))} />
-              Mover SL a breakeven despu\és de TP1
+              {t('strat.moveSLBreakeven')}
             </label>
           </div>
         </div>
 
         {/* STOP LOSS & TAKE PROFIT (ATR) */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F3AF}'} STOP LOSS & TAKE PROFIT (ATR)</div>
+          <div style={sTitle}>{'\u{1F3AF}'} {t('strat.slTpAtr')}</div>
           <div style={{ fontSize: 9, color: muted, marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
-            Multiplicadores del ATR (Average True Range). Mayor valor = m\ás espacio para volatilidad. Crypto recomendado: SL \≥ 2.0, Trailing Activation \≥ 2.0
+            {t('strat.slTpAtrDesc')}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Stop Loss (\× ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.stopLossAtr')}</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult || 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_stop_mult: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia SL desde soporte. Recomendado: 2.5</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.stopLossAtrDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Take Profit 2 (\× ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.tp2Atr')}</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult || 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_tp2_mult: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia TP2 desde resistencia</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.tp2AtrDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Stop (\× ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.trailingStopAtr')}</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult || 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_mult: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia del trailing stop</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.trailingStopAtrDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Activaci\ón (\× ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.trailingActivation')}</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation || 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_activation: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Profit m\ínimo para activar trailing. Recomendado: 2.0</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.trailingActivationDesc')}</div>
             </div>
           </div>
         </div>
 
-        {/* FILTROS DE SE\ÑALES */}
+        {/* FILTROS DE SENALES */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4E1}'} FILTROS DE SE\ÑALES</div>
+          <div style={sTitle}>{'\u{1F4E1}'} {t('strat.signalFilters')}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia M\ínima</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.minConfluence')}</label>
               <input type="number" min="1" max="5" value={configForm.min_confluence || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Timeframes alineados requeridos (2-5)</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.minConfluenceDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R M\ínimo</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.minRR')}</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio || 1.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Risk:Reward m\ínimo aceptable</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.minRRDesc')}</div>
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SE\ÑALES ACEPTADAS</label>
+            <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>{t('strat.acceptedSignals')}</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'].map(str => {
                 const isActive = (configForm.allowed_strength || []).includes(str);
@@ -310,35 +313,35 @@ function StrategyConfigContent({
               })}
             </div>
             <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
-              Solo STRONG = conservador \· Incluir BUY/SELL = recomendado \· WEAK = agresivo
+              {t('strat.signalStrengthDesc')}
             </div>
           </div>
         </div>
 
-        {/* L\ÍMITES DE PORTFOLIO */}
+        {/* LIMITES DE PORTFOLIO */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F6E1}'} L\ÍMITES DE PORTFOLIO</div>
+          <div style={sTitle}>{'\u{1F6E1}'} {t('strat.portfolioLimits')}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Correlaci\ón M\áx Portfolio</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxCorrelation')}</label>
               <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation || 0.70}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_portfolio_correlation: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Bloquea trades si correlaci\ón promedio excede</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxCorrelationDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Exposici\ón Sector M\áx (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxSectorExposure')}</label>
               <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct || 0.60) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_sector_exposure_pct: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx % capital en mismo sector</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxSectorExposureDesc')}</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Misma Direcci\ón Crypto</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxSameDirection')}</label>
               <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_same_direction_crypto: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx posiciones LONG o SHORT simult\áneas</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxSameDirectionDesc')}</div>
             </div>
           </div>
         </div>
@@ -352,7 +355,7 @@ function StrategyConfigContent({
               fontFamily: "monospace", fontSize: 13, fontWeight: 700, cursor: "pointer",
               opacity: savingConfig ? 0.6 : 1, width: "100%"
             }}>
-            {savingConfig ? 'Guardando...' : '\u{1F4BE} GUARDAR ESTRATEGIA'}
+            {savingConfig ? t('strat.saving') : `\u{1F4BE} ${t('strat.saveStrategy')}`}
           </button>
         </div>
 
@@ -360,7 +363,7 @@ function StrategyConfigContent({
         <div style={{ ...card, padding: "16px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
             onClick={() => setPaperShowConfig(!paperShowConfig)}>
-            <div style={sTitle}>{'\u{1F4B0}'} CUENTA PAPER</div>
+            <div style={sTitle}>{'\u{1F4B0}'} {t('strat.paperAccount')}</div>
             <span style={{ color: muted, fontSize: 12 }}>{paperShowConfig ? '\▲' : '\▼'}</span>
           </div>
 
@@ -407,17 +410,17 @@ function StrategyConfigContent({
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
                   <div>
-                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Capital Inicial ($)</label>
+                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.initialCapital')}</label>
                     <input type="number" value={paperConfigForm.initial_capital || 10000}
                       onChange={e => setPaperConfigForm(prev => ({ ...prev, initial_capital: e.target.value }))}
                       style={innerInputStyle} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trading Habilitado</label>
+                    <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.tradingEnabled')}</label>
                     <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginTop: 4 }}>
                       <input type="checkbox" checked={paperConfigForm.is_enabled !== false}
                         onChange={e => setPaperConfigForm(prev => ({ ...prev, is_enabled: e.target.checked }))} />
-                      {paperConfigForm.is_enabled !== false ? 'Activo' : 'Pausado'}
+                      {paperConfigForm.is_enabled !== false ? t('strat.active') : t('strat.paused')}
                     </label>
                   </div>
                 </div>
@@ -429,7 +432,7 @@ function StrategyConfigContent({
                       fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
                       opacity: paperSavingConfig ? 0.6 : 1
                     }}>
-                    {paperSavingConfig ? 'Guardando...' : '\u{1F4BE} GUARDAR'}
+                    {paperSavingConfig ? t('strat.saving') : `\u{1F4BE} ${t('strat.save')}`}
                   </button>
                   {!paperConfirmReset ? (
                     <button onClick={() => setPaperConfirmReset(true)}
@@ -438,19 +441,19 @@ function StrategyConfigContent({
                         border: `1px solid ${red}`, borderRadius: 6,
                         color: red, fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer"
                       }}>
-                      {'\u{1F504}'} RESET CUENTA
+                      {'\u{1F504}'} {t('strat.resetAccount')}
                     </button>
                   ) : (
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: red }}>\¿Seguro? Cierra todos los trades y resetea capital.</span>
+                      <span style={{ fontSize: 11, color: red }}>{t('strat.resetConfirm')}</span>
                       <button onClick={handleReset} style={{
                         padding: "6px 14px", background: red, border: "none", borderRadius: 4,
                         color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
-                      }}>S\Í</button>
+                      }}>{t('strat.yes')}</button>
                       <button onClick={() => setPaperConfirmReset(false)} style={{
                         padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
                         color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
-                      }}>NO</button>
+                      }}>{t('strat.no')}</button>
                     </div>
                   )}
                 </div>
@@ -466,9 +469,9 @@ function StrategyConfigContent({
             style={{ ...sTitle, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: opt.showSignalParams ? 12 : 0 }}
           >
             <span>
-              {'\u{1F9E0}'} PARAMETROS DE GENERACION DE SENALES
+              {'\u{1F9E0}'} {t('strat.signalParams')}
               {opt.autoTuneConfig?.source === 'saved' && (
-                <span style={{ color: green, fontSize: 9, marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>AUTO-TUNED</span>
+                <span style={{ color: green, fontSize: 9, marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>{t('strat.autoTuned')}</span>
               )}
             </span>
             <span style={{ fontSize: 12 }}>{opt.showSignalParams ? '\▼' : '\▶'}</span>
@@ -476,7 +479,7 @@ function StrategyConfigContent({
           {opt.showSignalParams && (
             <div>
               <div style={{ fontSize: 10, color: muted, marginBottom: 12 }}>
-                Estos parametros controlan la generacion de senales. Se modifican desde el tab Optimizar o Auto-Tune.
+                {t('strat.signalParamsDesc')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                 {opt.optParams.map(p => {
@@ -500,7 +503,7 @@ function StrategyConfigContent({
               </div>
               {opt.optParams.length === 0 && (
                 <div style={{ fontSize: 11, color: muted, textAlign: 'center', padding: 20 }}>
-                  Cargando parametros...
+                  {t('strat.loadingParams')}
                 </div>
               )}
             </div>

@@ -64,7 +64,7 @@ export default function APMTab({ apmData, systemHealth }) {
               SYSTEM MONITOR
             </div>
             <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", marginTop: 4 }}>
-              Métricas en tiempo real · Auto-refresh 15s
+              Metricas en tiempo real · Auto-refresh 15s
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -77,7 +77,7 @@ export default function APMTab({ apmData, systemHealth }) {
 
         {!m ? (
           <div style={{ ...card, textAlign: "center", padding: 40, color: muted, fontFamily: "monospace", fontSize: 12 }}>
-            Esperando conexión con el backend...
+            Esperando conexion con el backend...
           </div>
         ) : (
           <>
@@ -112,7 +112,7 @@ export default function APMTab({ apmData, systemHealth }) {
 
             {/* Row 3: Application Metrics */}
             <div style={card}>
-              <div style={sTitle}>APLICACIÓN</div>
+              <div style={sTitle}>APLICACION</div>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 {metricCard("SSE Broadcasts", (counters['sse.broadcasts'] || 0).toLocaleString())}
                 {metricCard("Signals", (counters['signals.generated'] || 0).toLocaleString())}

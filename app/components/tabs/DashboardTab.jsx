@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice, formatLargeNumber, computePaperEquityCurve, computeDailyPnl, computeAssetPerformance } from '../../lib/utils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
@@ -15,8 +16,10 @@ export default function DashboardTab({
   systemHealth, sseConnected, lastUpdate,
   setTab, setStrategySubTab, apiUrl,
 }) {
+    const { t } = useLanguage();
+
     if (!marketData || !marketData.crypto) {
-      return <div style={{ padding: 40, textAlign: 'center', color: muted }}>Loading market data...</div>;
+      return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
     }
 
     const topGainers = Object.entries(marketData.crypto)
@@ -52,7 +55,7 @@ export default function DashboardTab({
               animation: "pulse 2s infinite"
             }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: green }}>
-              LIVE - {sseConnected ? 'SSE tiempo real' : 'Polling cada 30s'}
+              {t('dash.live')} - {sseConnected ? t('dash.sseRealtime') : t('dash.polling')}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -107,7 +110,7 @@ export default function DashboardTab({
         {/* Top Movers */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>
           <div style={card}>
-            <div style={sTitle}>TOP GAINERS 24H</div>
+            <div style={sTitle}>{t('dash.topGainers')}</div>
             {topGainers.map(([id, data]) => (
               <div key={id} style={{
                 display: "flex",
@@ -128,7 +131,7 @@ export default function DashboardTab({
           </div>
 
           <div style={card}>
-            <div style={sTitle}>TOP LOSERS 24H</div>
+            <div style={sTitle}>{t('dash.topLosers')}</div>
             {topLosers.map(([id, data]) => (
               <div key={id} style={{
                 display: "flex",
@@ -152,7 +155,7 @@ export default function DashboardTab({
         {/* Signals Preview */}
         {signals.length > 0 && (
           <div style={card}>
-            <div style={sTitle}>SEÑALES ACTIVAS (Top 5)</div>
+            <div style={sTitle}>{t('dash.activeSignals')} (Top 5)</div>
             <div style={{ display: "grid", gap: 10 }}>
               {signals.slice(0, 5).map((signal, i) => {
                 const ac = signal.action === 'BUY' ? green : signal.action === 'SELL' ? red : amber;
@@ -192,7 +195,7 @@ export default function DashboardTab({
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 12, color: amber, fontWeight: 700 }}>
-                        {signal.confidence}% confianza
+                        {signal.confidence}% {t('dash.confidence')}
                       </div>
                       <div style={{ fontSize: 11, color: muted }}>
                         Score: {signal.score}/100
@@ -217,14 +220,14 @@ export default function DashboardTab({
                 cursor: "pointer"
               }}
             >
-              Ver todas las señales →
+              {t('dash.viewAllSignals')} →
             </button>
           </div>
         )}
 
         {/* PAPER TRADING PERFORMANCE */}
         <div style={{ ...card, marginTop: 16 }}>
-          <div style={sTitle}>PAPER TRADING PERFORMANCE</div>
+          <div style={sTitle}>{t('dash.paperPerformance')}</div>
           {(() => {
             const pm = paperMetrics;
             const closedTrades = paperHistory.filter(t => t.exit_price != null);
@@ -239,12 +242,12 @@ export default function DashboardTab({
               <div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
                   {[
-                    { label: "P&L Total", value: `$${totalPnl.toFixed(2)}`, color: totalPnl >= 0 ? green : red },
-                    { label: "Win Rate", value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? green : red },
-                    { label: "Capital Actual", value: `$${currentCapital.toFixed(0)}`, color: text },
-                    { label: "Posiciones Abiertas", value: openCount, color: openCount > 0 ? amber : muted },
-                    { label: "Max Drawdown", value: `${maxDD.toFixed(2)}%`, color: maxDD > 10 ? red : maxDD > 5 ? amber : green },
-                    { label: "Profit Factor", value: profitFactor.toFixed(2), color: profitFactor >= 1.5 ? green : profitFactor >= 1 ? amber : red },
+                    { label: t('common.pnlTotal'), value: `$${totalPnl.toFixed(2)}`, color: totalPnl >= 0 ? green : red },
+                    { label: t('common.winRate'), value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? green : red },
+                    { label: t('common.capital'), value: `$${currentCapital.toFixed(0)}`, color: text },
+                    { label: t('dash.openPositions'), value: openCount, color: openCount > 0 ? amber : muted },
+                    { label: t('common.maxDrawdown'), value: `${maxDD.toFixed(2)}%`, color: maxDD > 10 ? red : maxDD > 5 ? amber : green },
+                    { label: t('common.profitFactor'), value: profitFactor.toFixed(2), color: profitFactor >= 1.5 ? green : profitFactor >= 1 ? amber : red },
                   ].map(({ label, value, color }) => (
                     <div key={label} style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{label}</div>
@@ -266,9 +269,9 @@ export default function DashboardTab({
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{closedTrades.length} trades cerrados</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{closedTrades.length} {t('dash.closedTrades')}</div>
                       <div style={{ fontSize: 11, color: muted }}>
-                        {pm?.winCount || 0} ganados \· {pm?.lossCount || 0} perdidos
+                        {pm?.winCount || 0} {t('dash.won')} \· {pm?.lossCount || 0} {t('dash.lost')}
                       </div>
                     </div>
                   </div>
@@ -277,7 +280,7 @@ export default function DashboardTab({
                 {/* Recent Trades */}
                 {closedTrades.length > 0 ? (
                   <div>
-                    <div style={{ fontSize: 10, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Últimos trades</div>
+                    <div style={{ fontSize: 10, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t('dash.lastTrades')}</div>
                     {closedTrades.slice(-5).reverse().map((t, i) => {
                       const pnl = t.pnl || ((t.exit_price - t.entry_price) * t.size * (t.direction === 'SHORT' ? -1 : 1));
                       const ago = t.closed_at ? (() => {
@@ -317,7 +320,7 @@ export default function DashboardTab({
                   </div>
                 ) : (
                   <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
-                    No hay trades cerrados aún
+                    {t('dash.noClosedTrades')}
                   </div>
                 )}
               </div>
@@ -359,7 +362,7 @@ export default function DashboardTab({
           return (
             <div style={{ ...card, marginTop: 4 }}>
               <div style={{ ...sTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>CURVA DE EQUITY {isRealtime ? '(Real-time)' : '(Paper Trading)'}</span>
+                <span>{t('dash.equityCurve')} {isRealtime ? '(Real-time)' : '(Paper Trading)'}</span>
                 <span style={{ fontSize: 11, color: returnColor, fontWeight: 600 }}>
                   {totalReturn >= 0 ? '+' : ''}{totalReturn}%
                 </span>
@@ -398,7 +401,7 @@ export default function DashboardTab({
           if (dailyData.length < 1) return null;
           return (
             <div style={{ ...card, marginTop: 4 }}>
-              <div style={sTitle}>P&L DIARIO</div>
+              <div style={sTitle}>{t('dash.dailyPnl')}</div>
               <div style={{ width: '100%', height: 180 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -428,7 +431,7 @@ export default function DashboardTab({
           if (assetData.length < 1) return null;
           return (
             <div style={{ ...card, marginTop: 4 }}>
-              <div style={sTitle}>RENDIMIENTO POR ACTIVO</div>
+              <div style={sTitle}>{t('dash.assetPerformance')}</div>
               <div style={{ width: '100%', height: Math.max(150, assetData.length * 36) }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={assetData} layout="vertical" margin={{ top: 5, right: 40, left: 60, bottom: 5 }}>
@@ -458,9 +461,9 @@ export default function DashboardTab({
           );
         })()}
 
-        {/* DISTRIBUCIÓN DE SEÑALES */}
+        {/* DISTRIBUCION DE SENALES */}
         <div style={{ ...card, marginTop: 4 }}>
-          <div style={sTitle}>DISTRIBUCIÓN DE SEÑALES</div>
+          <div style={sTitle}>{t('dash.signalDistribution')}</div>
           {(() => {
             const buySignals = signals.filter(s => s.action === 'BUY');
             const sellSignals = signals.filter(s => s.action === 'SELL');
@@ -502,15 +505,15 @@ export default function DashboardTab({
           })()}
         </div>
 
-        {/* ÚLTIMO BACKTEST */}
+        {/* ULTIMO BACKTEST */}
         <div style={{ ...card, marginTop: 4 }}>
-          <div style={sTitle}>ÚLTIMO BACKTEST</div>
+          <div style={sTitle}>{t('dash.lastBacktest')}</div>
           {(() => {
             const latest = backtestHistory.length > 0 ? backtestHistory[0] : null;
             if (!latest) {
               return (
                 <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
-                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => { setTab('strategy'); setStrategySubTab('backtest'); }}>ESTRATEGIA \→ Backtest</span>
+                  {t('dash.runBacktest')} <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => { setTab('strategy'); setStrategySubTab('backtest'); }}>ESTRATEGIA \→ Backtest</span>
                 </div>
               );
             }
@@ -581,7 +584,7 @@ export default function DashboardTab({
           return (
             <div style={{ ...card, marginTop: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={sTitle}>BACKTEST EQUITY CURVE</div>
+                <div style={sTitle}>{t('dash.backtestEquity')}</div>
                 <div style={{ fontSize: 11, color: lineColor, fontWeight: 700 }}>
                   {parseFloat(returnPct) >= 0 ? '+' : ''}{returnPct}%
                 </div>
@@ -607,7 +610,7 @@ export default function DashboardTab({
 
         {/* ESTADO DEL SISTEMA */}
         <div style={{ ...card, marginTop: 4 }}>
-          <div style={sTitle}>ESTADO DEL SISTEMA</div>
+          <div style={sTitle}>{t('dash.systemStatus')}</div>
           {(() => {
             const checks = systemHealth?.checks || {};
             const services = [

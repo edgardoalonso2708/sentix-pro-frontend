@@ -7,14 +7,15 @@ import {
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice, formatLargeNumber, computePaperEquityCurve, computeDailyPnl, computeAssetPerformance } from '../../lib/utils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
-const REPORT_TYPES = [
-  { k: 'performance', label: '📈 Rendimiento', desc: 'P&L, equity, métricas clave' },
-  { k: 'trades', label: '📋 Trades', desc: 'Análisis por asset, hora, dirección' },
-  { k: 'signals', label: '🎯 Señales', desc: 'Precisión y efectividad' },
-  { k: 'risk', label: '🛡 Riesgo', desc: 'Drawdown, correlación, exposición' },
+const REPORT_TYPE_KEYS = [
+  { k: 'performance', labelKey: 'rep.performance', descKey: 'rep.performanceDesc', icon: '📈' },
+  { k: 'trades', labelKey: 'rep.trades', descKey: 'rep.tradesDesc', icon: '📋' },
+  { k: 'signals', labelKey: 'rep.signals', descKey: 'rep.signalsDesc', icon: '🎯' },
+  { k: 'risk', labelKey: 'rep.risk', descKey: 'rep.riskDesc', icon: '🛡' },
 ];
 
 export default function ReportsTab({
@@ -23,11 +24,18 @@ export default function ReportsTab({
   correlationData, backtestHistory,
   authFetch, apiUrl, userId,
 }) {
+  const { t } = useLanguage();
   const [reportType, setReportType] = useState('performance');
   const [reportDays, setReportDays] = useState(30);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const printRef = useRef(null);
+
+  const reportTypes = REPORT_TYPE_KEYS.map(r => ({
+    k: r.k,
+    label: `${r.icon} ${t(r.labelKey)}`,
+    desc: t(r.descKey),
+  }));
 
   const loadReportData = useCallback(async () => {
     setLoading(true);
@@ -52,7 +60,7 @@ export default function ReportsTab({
     const printContent = printRef.current;
     if (!printContent) return;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>SENTIX PRO - Reporte</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>SENTIX PRO - ${t('rep.reportOf')}</title>
       <style>
         body { font-family: 'Courier New', monospace; background: #fff; color: #111; padding: 24px; font-size: 12px; }
         .card { border: 1px solid #ddd; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
@@ -69,8 +77,8 @@ export default function ReportsTab({
         @media print { body { padding: 0; } }
       </style>
     </head><body>`);
-    win.document.write(`<h1>SENTIX PRO — Reporte de ${REPORT_TYPES.find(r => r.k === reportType)?.label.replace(/^[^ ]+ /, '')}</h1>`);
-    win.document.write(`<h2>Período: ${reportDays} días · Generado: ${new Date().toLocaleString('es')}</h2>`);
+    win.document.write(`<h1>SENTIX PRO — ${t('rep.reportOf')} ${reportTypes.find(r => r.k === reportType)?.label.replace(/^[^ ]+ /, '')}</h1>`);
+    win.document.write(`<h2>${t('rep.period')}: ${reportDays} ${t('rep.days')} · ${t('rep.generated')}: ${new Date().toLocaleString()}</h2>`);
     win.document.write(printContent.innerHTML);
     win.document.write('</body></html>');
     win.document.close();
@@ -83,17 +91,17 @@ export default function ReportsTab({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subject: `SENTIX PRO — Reporte ${REPORT_TYPES.find(r => r.k === reportType)?.label.replace(/^[^ ]+ /, '')}`,
+          subject: `SENTIX PRO — ${t('rep.reportOf')} ${reportTypes.find(r => r.k === reportType)?.label.replace(/^[^ ]+ /, '')}`,
           type: 'report',
           reportType,
           days: reportDays,
           userId,
         }),
       });
-      if (res.ok) alert('Reporte enviado por correo');
-      else alert('Error al enviar reporte');
+      if (res.ok) alert(t('rep.reportSent'));
+      else alert(t('rep.sendError'));
     } catch {
-      alert('Error de conexión');
+      alert(t('rep.connectionError'));
     }
   };
 
@@ -110,21 +118,21 @@ export default function ReportsTab({
       {/* Header */}
       <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div style={sTitle}>📄 REPORTES</div>
-          <div style={{ fontSize: 10, color: muted }}>Análisis detallado con opción de imprimir o enviar por email</div>
+          <div style={sTitle}>📄 {t('rep.title')}</div>
+          <div style={{ fontSize: 10, color: muted }}>{t('rep.detailedAnalysis')}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handlePrint} style={actionBtnStyle(blue)}>🖨 Imprimir</button>
-          <button onClick={handleEmail} style={actionBtnStyle(purple)}>📧 Email</button>
+          <button onClick={handlePrint} style={actionBtnStyle(blue)}>🖨 {t('rep.print')}</button>
+          <button onClick={handleEmail} style={actionBtnStyle(purple)}>📧 {t('rep.email')}</button>
           <button onClick={loadReportData} disabled={loading} style={actionBtnStyle(green)}>
-            {loading ? '⏳...' : '🔄 Actualizar'}
+            {loading ? '⏳...' : `🔄 ${t('rep.refresh')}`}
           </button>
         </div>
       </div>
 
       {/* Report type selector */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {REPORT_TYPES.map(({ k, label, desc }) => (
+        {reportTypes.map(({ k, label, desc }) => (
           <button key={k} onClick={() => setReportType(k)} style={{
             flex: '1 1 auto', padding: '8px 12px', textAlign: 'center',
             background: reportType === k ? `${purple}20` : bg2,
@@ -153,10 +161,10 @@ export default function ReportsTab({
 
       {/* Report content (printable) */}
       <div ref={printRef}>
-        {reportType === 'performance' && <PerformanceReport perf={perf} equityCurve={equityCurve} dailyPnl={dailyPnl} paperConfig={paperConfig} paperPositions={paperPositions} reportDays={reportDays} />}
-        {reportType === 'trades' && <TradesReport adv={adv} assetPerf={assetPerf} paperHistory={paperHistory} reportDays={reportDays} />}
-        {reportType === 'signals' && <SignalsReport signalAccuracy={signalAccuracy} signals={signals} reportDays={reportDays} />}
-        {reportType === 'risk' && <RiskReport perf={perf} corr={corr} equityCurve={equityCurve} paperPositions={paperPositions} reportDays={reportDays} />}
+        {reportType === 'performance' && <PerformanceReport t={t} perf={perf} equityCurve={equityCurve} dailyPnl={dailyPnl} paperConfig={paperConfig} paperPositions={paperPositions} reportDays={reportDays} />}
+        {reportType === 'trades' && <TradesReport t={t} adv={adv} assetPerf={assetPerf} paperHistory={paperHistory} reportDays={reportDays} />}
+        {reportType === 'signals' && <SignalsReport t={t} signalAccuracy={signalAccuracy} signals={signals} reportDays={reportDays} />}
+        {reportType === 'risk' && <RiskReport t={t} perf={perf} corr={corr} equityCurve={equityCurve} paperPositions={paperPositions} reportDays={reportDays} />}
       </div>
     </div>
   );
@@ -185,8 +193,8 @@ function MetricCard({ label, value, color: clr = text, sub }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORT: Performance
 // ═══════════════════════════════════════════════════════════════════════════════
-function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPositions, reportDays }) {
-  if (!perf) return <NoData />;
+function PerformanceReport({ t, perf, equityCurve, dailyPnl, paperConfig, paperPositions, reportDays }) {
+  if (!perf) return <NoData t={t} />;
 
   const totalPnl = perf.totalPnl || 0;
   const initialCap = paperConfig?.initial_capital || 10000;
@@ -197,23 +205,23 @@ function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPosi
     <div>
       {/* KPI Row */}
       <div style={{ ...card }}>
-        <div style={sTitle}>RESUMEN DE RENDIMIENTO — {reportDays} DÍAS</div>
+        <div style={sTitle}>{t('rep.perfSummary')} — {reportDays} {t('rep.days')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-          <MetricCard label="P&L Total" value={`$${totalPnl.toFixed(2)}`} color={totalPnl >= 0 ? green : red} />
-          <MetricCard label="Retorno" value={`${returnPct}%`} color={parseFloat(returnPct) >= 0 ? green : red} />
-          <MetricCard label="Win Rate" value={`${(perf.winRate || 0).toFixed(1)}%`} color={(perf.winRate || 0) >= 50 ? green : red} />
-          <MetricCard label="Trades" value={perf.totalTrades || 0} />
-          <MetricCard label="Profit Factor" value={(perf.profitFactor || 0).toFixed(2)} color={(perf.profitFactor || 0) >= 1 ? green : red} />
-          <MetricCard label="Max Drawdown" value={`$${Math.abs(perf.maxDrawdown || 0).toFixed(2)}`} color={red} />
-          <MetricCard label="P&L Abierto" value={`$${openPnl.toFixed(2)}`} color={openPnl >= 0 ? green : red} />
-          <MetricCard label="Racha Actual" value={`${perf.currentStreak || 0} ${perf.streakType || ''}`} color={perf.streakType === 'win' ? green : red} />
+          <MetricCard label={t('common.pnlTotal')} value={`$${totalPnl.toFixed(2)}`} color={totalPnl >= 0 ? green : red} />
+          <MetricCard label={t('rep.return')} value={`${returnPct}%`} color={parseFloat(returnPct) >= 0 ? green : red} />
+          <MetricCard label={t('common.winRate')} value={`${(perf.winRate || 0).toFixed(1)}%`} color={(perf.winRate || 0) >= 50 ? green : red} />
+          <MetricCard label={t('common.trades')} value={perf.totalTrades || 0} />
+          <MetricCard label={t('rep.profitFactor')} value={(perf.profitFactor || 0).toFixed(2)} color={(perf.profitFactor || 0) >= 1 ? green : red} />
+          <MetricCard label={t('rep.maxDrawdown')} value={`$${Math.abs(perf.maxDrawdown || 0).toFixed(2)}`} color={red} />
+          <MetricCard label={t('rep.openPnl')} value={`$${openPnl.toFixed(2)}`} color={openPnl >= 0 ? green : red} />
+          <MetricCard label={t('rep.currentStreak')} value={`${perf.currentStreak || 0} ${perf.streakType || ''}`} color={perf.streakType === 'win' ? green : red} />
         </div>
       </div>
 
       {/* Equity Curve */}
       {equityCurve.length > 1 && (
         <div style={card}>
-          <div style={sTitle}>CURVA DE EQUITY</div>
+          <div style={sTitle}>{t('rep.equityCurve')}</div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={equityCurve}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -229,7 +237,7 @@ function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPosi
       {/* Daily P&L */}
       {dailyPnl.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>P&L DIARIO</div>
+          <div style={sTitle}>{t('rep.dailyPnl')}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyPnl}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -247,15 +255,15 @@ function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPosi
 
       {/* Best / Worst trades */}
       <div style={{ ...card }}>
-        <div style={sTitle}>MEJORES Y PEORES TRADES</div>
+        <div style={sTitle}>{t('rep.bestWorstTrades')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div style={{ background: `${green}10`, borderRadius: 8, padding: 12, borderLeft: `3px solid ${green}` }}>
-            <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>MEJOR TRADE</div>
+            <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>{t('rep.bestTrade')}</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: green }}>+${(perf.bestTrade?.pnl || 0).toFixed(2)}</div>
             <div style={{ fontSize: 10, color: muted }}>{perf.bestTrade?.asset || '—'}</div>
           </div>
           <div style={{ background: `${red}10`, borderRadius: 8, padding: 12, borderLeft: `3px solid ${red}` }}>
-            <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>PEOR TRADE</div>
+            <div style={{ fontSize: 9, color: muted, marginBottom: 4 }}>{t('rep.worstTrade')}</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: red }}>${(perf.worstTrade?.pnl || 0).toFixed(2)}</div>
             <div style={{ fontSize: 10, color: muted }}>{perf.worstTrade?.asset || '—'}</div>
           </div>
@@ -264,13 +272,13 @@ function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPosi
 
       {/* Win/Loss stats */}
       <div style={card}>
-        <div style={sTitle}>ESTADÍSTICAS DE GANANCIA/PÉRDIDA</div>
+        <div style={sTitle}>{t('rep.gainLossStats')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-          <MetricCard label="Ganados" value={perf.winCount || 0} color={green} />
-          <MetricCard label="Perdidos" value={perf.lossCount || 0} color={red} />
-          <MetricCard label="Avg Ganancia" value={`$${(perf.avgProfit || 0).toFixed(2)}`} color={green} />
-          <MetricCard label="Avg Pérdida" value={`$${(perf.avgLoss || 0).toFixed(2)}`} color={red} />
-          <MetricCard label="Avg Holding" value={`${(perf.avgHoldingTimeHours || 0).toFixed(1)}h`} />
+          <MetricCard label={t('common.won')} value={perf.winCount || 0} color={green} />
+          <MetricCard label={t('common.lost')} value={perf.lossCount || 0} color={red} />
+          <MetricCard label={t('rep.avgGain')} value={`$${(perf.avgProfit || 0).toFixed(2)}`} color={green} />
+          <MetricCard label={t('rep.avgLoss')} value={`$${(perf.avgLoss || 0).toFixed(2)}`} color={red} />
+          <MetricCard label={t('rep.avgHolding')} value={`${(perf.avgHoldingTimeHours || 0).toFixed(1)}h`} />
         </div>
       </div>
     </div>
@@ -280,19 +288,19 @@ function PerformanceReport({ perf, equityCurve, dailyPnl, paperConfig, paperPosi
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORT: Trades Analysis
 // ═══════════════════════════════════════════════════════════════════════════════
-function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
-  if (!paperHistory || paperHistory.length === 0) return <NoData />;
+function TradesReport({ t, adv, assetPerf, paperHistory, reportDays }) {
+  if (!paperHistory || paperHistory.length === 0) return <NoData t={t} />;
 
   return (
     <div>
       {/* By Asset */}
       {assetPerf.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>RENDIMIENTO POR ASSET — {reportDays} DÍAS</div>
+          <div style={sTitle}>{t('rep.assetPerformance')} — {reportDays} {t('rep.days')}</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                {['Asset', 'Trades', 'Wins', 'Losses', 'Win Rate', 'P&L Total'].map(h => (
+                {[t('rep.thAsset'), t('rep.thTrades'), t('rep.thWins'), t('rep.thLosses'), t('rep.thWinRate'), t('rep.thPnlTotal')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -319,16 +327,16 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
       {/* By Direction */}
       {adv?.byDirection && (
         <div style={card}>
-          <div style={sTitle}>POR DIRECCIÓN</div>
+          <div style={sTitle}>{t('rep.byDirection')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             {['LONG', 'SHORT'].map(dir => {
               const d = adv.byDirection[dir];
-              if (!d || d.trades === 0) return <div key={dir} style={{ background: bg3, borderRadius: 8, padding: 14, textAlign: 'center', color: muted, fontSize: 11 }}>{dir}: Sin trades</div>;
+              if (!d || d.trades === 0) return <div key={dir} style={{ background: bg3, borderRadius: 8, padding: 14, textAlign: 'center', color: muted, fontSize: 11 }}>{dir}: {t('rep.noTrades')}</div>;
               return (
                 <div key={dir} style={{ background: bg3, borderRadius: 8, padding: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: dir === 'LONG' ? green : red, marginBottom: 8 }}>{dir}</div>
                   <div style={{ fontSize: 11, lineHeight: 2 }}>
-                    Trades: <span style={{ fontWeight: 700 }}>{d.trades}</span> · Win Rate: <span style={{ color: d.winRate >= 50 ? green : red, fontWeight: 700 }}>{d.winRate?.toFixed(1)}%</span>
+                    {t('common.trades')}: <span style={{ fontWeight: 700 }}>{d.trades}</span> · {t('common.winRate')}: <span style={{ color: d.winRate >= 50 ? green : red, fontWeight: 700 }}>{d.winRate?.toFixed(1)}%</span>
                     <br />P&L: <span style={{ color: d.totalPnl >= 0 ? green : red, fontWeight: 700 }}>${d.totalPnl?.toFixed(2)}</span>
                   </div>
                 </div>
@@ -341,11 +349,11 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
       {/* By Exit Reason */}
       {adv?.byExitReason && adv.byExitReason.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>POR RAZÓN DE SALIDA</div>
+          <div style={sTitle}>{t('rep.byExitReason')}</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                {['Razón', 'Trades', 'Win Rate', 'Avg P&L', 'Avg P&L %'].map(h => (
+                {[t('rep.thReason'), t('rep.thTrades'), t('rep.thWinRate'), t('rep.thAvgPnl'), t('rep.thAvgPnlPct')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -368,7 +376,7 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
       {/* By Hour */}
       {adv?.byHour && adv.byHour.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>RENDIMIENTO POR HORA (UTC)</div>
+          <div style={sTitle}>{t('rep.hourlyPerformance')}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={adv.byHour}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -387,7 +395,7 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
       {/* By Day of Week */}
       {adv?.byDayOfWeek && adv.byDayOfWeek.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>RENDIMIENTO POR DÍA DE SEMANA</div>
+          <div style={sTitle}>{t('rep.weekdayPerformance')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8 }}>
             {adv.byDayOfWeek.map(d => (
               <div key={d.label} style={{ background: bg3, borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
@@ -403,11 +411,11 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
       {/* By Month */}
       {adv?.tradesByMonth && adv.tradesByMonth.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>RENDIMIENTO MENSUAL</div>
+          <div style={sTitle}>{t('rep.monthlyPerformance')}</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                {['Mes', 'Trades', 'Win Rate', 'P&L'].map(h => (
+                {[t('rep.thMonth'), t('rep.thTrades'), t('rep.thWinRate'), t('rep.thPnl')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -428,12 +436,12 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
 
       {/* Recent Trades Table */}
       <div style={card}>
-        <div style={sTitle}>ÚLTIMOS 20 TRADES</div>
+        <div style={sTitle}>{t('rep.last20Trades')}</div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, minWidth: 600 }}>
             <thead>
               <tr>
-                {['Asset', 'Dir', 'Entrada', 'Salida', 'P&L', 'P&L %', 'Duración', 'Razón'].map(h => (
+                {[t('rep.thAsset'), t('rep.thDir'), t('rep.thEntry'), t('rep.thExit'), t('rep.thPnl'), t('rep.thPnlPct'), t('rep.thDuration'), t('rep.thReason')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -470,24 +478,24 @@ function TradesReport({ adv, assetPerf, paperHistory, reportDays }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORT: Signals
 // ═══════════════════════════════════════════════════════════════════════════════
-function SignalsReport({ signalAccuracy, signals, reportDays }) {
+function SignalsReport({ t, signalAccuracy, signals, reportDays }) {
   const overall = signalAccuracy?.overall;
 
   return (
     <div>
       {/* Overall Signal Accuracy */}
       <div style={card}>
-        <div style={sTitle}>PRECISIÓN DE SEÑALES — {reportDays} DÍAS</div>
+        <div style={sTitle}>{t('rep.signalAccuracy')} — {reportDays} {t('rep.days')}</div>
         {!overall || overall.total === 0 ? (
           <div style={{ padding: 20, textAlign: 'center', color: muted, fontSize: 12 }}>
-            Sin datos de precisión suficientes. Se requiere al menos 1 hora de operación.
+            {t('rep.noAccuracyData')}
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
             <MetricCard label="1h Accuracy" value={overall.hitRate1h != null ? `${overall.hitRate1h}%` : '—'} color={hitColor(overall.hitRate1h)} sub={overall.avgChange1h != null ? `avg: ${overall.avgChange1h}%` : undefined} />
             <MetricCard label="4h Accuracy" value={overall.hitRate4h != null ? `${overall.hitRate4h}%` : '—'} color={hitColor(overall.hitRate4h)} sub={overall.avgChange4h != null ? `avg: ${overall.avgChange4h}%` : undefined} />
             <MetricCard label="24h Accuracy" value={overall.hitRate24h != null ? `${overall.hitRate24h}%` : '—'} color={hitColor(overall.hitRate24h)} sub={overall.avgChange24h != null ? `avg: ${overall.avgChange24h}%` : undefined} />
-            <MetricCard label="Total Señales" value={overall.total} />
+            <MetricCard label={t('rep.totalSignals')} value={overall.total} />
           </div>
         )}
       </div>
@@ -495,11 +503,11 @@ function SignalsReport({ signalAccuracy, signals, reportDays }) {
       {/* Per-asset accuracy */}
       {signalAccuracy?.byAsset && Object.keys(signalAccuracy.byAsset).length > 0 && (
         <div style={card}>
-          <div style={sTitle}>PRECISIÓN POR ASSET</div>
+          <div style={sTitle}>{t('rep.accuracyByAsset')}</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                {['Asset', 'Señales', '1h Hit', '4h Hit', '24h Hit'].map(h => (
+                {[t('rep.thAsset'), t('rep.thSignals'), t('rep.th1hHit'), t('rep.th4hHit'), t('rep.th24hHit')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -522,7 +530,7 @@ function SignalsReport({ signalAccuracy, signals, reportDays }) {
       {/* Active signals summary */}
       {signals && signals.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>SEÑALES ACTIVAS ACTUALES ({signals.length})</div>
+          <div style={sTitle}>{t('rep.activeSignals')} ({signals.length})</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
             {signals.slice(0, 12).map((s, i) => (
               <div key={i} style={{ background: bg3, borderRadius: 6, padding: '8px 12px', borderLeft: `3px solid ${s.action === 'BUY' ? green : s.action === 'SELL' ? red : amber}` }}>
@@ -531,7 +539,7 @@ function SignalsReport({ signalAccuracy, signals, reportDays }) {
                   <span style={{ fontSize: 10, color: s.action === 'BUY' ? green : s.action === 'SELL' ? red : amber, fontWeight: 700 }}>{s.action}</span>
                 </div>
                 <div style={{ fontSize: 9, color: muted, marginTop: 2 }}>
-                  Conf: {s.confidence}% · R:R {s.rr_ratio?.toFixed(1) || '—'}
+                  {t('rep.conf')}: {s.confidence}% · R:R {s.rr_ratio?.toFixed(1) || '—'}
                 </div>
               </div>
             ))}
@@ -545,18 +553,18 @@ function SignalsReport({ signalAccuracy, signals, reportDays }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORT: Risk
 // ═══════════════════════════════════════════════════════════════════════════════
-function RiskReport({ perf, corr, equityCurve, paperPositions, reportDays }) {
+function RiskReport({ t, perf, corr, equityCurve, paperPositions, reportDays }) {
   return (
     <div>
       {/* Drawdown */}
       <div style={card}>
-        <div style={sTitle}>ANÁLISIS DE DRAWDOWN — {reportDays} DÍAS</div>
+        <div style={sTitle}>{t('rep.drawdownAnalysis')} — {reportDays} {t('rep.days')}</div>
         {equityCurve.length > 1 ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 14 }}>
-              <MetricCard label="Max Drawdown" value={`${Math.max(...equityCurve.map(d => d.drawdown)).toFixed(2)}%`} color={red} />
-              <MetricCard label="Drawdown Actual" value={`${(equityCurve[equityCurve.length - 1]?.drawdown || 0).toFixed(2)}%`} color={amber} />
-              <MetricCard label="Equity Actual" value={`$${(equityCurve[equityCurve.length - 1]?.equity || 0).toFixed(0)}`} />
+              <MetricCard label={t('rep.maxDrawdown')} value={`${Math.max(...equityCurve.map(d => d.drawdown)).toFixed(2)}%`} color={red} />
+              <MetricCard label={t('rep.drawdownCurrent')} value={`${(equityCurve[equityCurve.length - 1]?.drawdown || 0).toFixed(2)}%`} color={amber} />
+              <MetricCard label={t('rep.equityCurrent')} value={`$${(equityCurve[equityCurve.length - 1]?.equity || 0).toFixed(0)}`} />
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={equityCurve}>
@@ -568,22 +576,22 @@ function RiskReport({ perf, corr, equityCurve, paperPositions, reportDays }) {
               </AreaChart>
             </ResponsiveContainer>
           </>
-        ) : <div style={{ padding: 20, textAlign: 'center', color: muted, fontSize: 12 }}>Sin datos de equity suficientes</div>}
+        ) : <div style={{ padding: 20, textAlign: 'center', color: muted, fontSize: 12 }}>{t('rep.noEquityData')}</div>}
       </div>
 
       {/* Correlation */}
       <div style={card}>
-        <div style={sTitle}>CORRELACIÓN DE POSICIONES</div>
+        <div style={sTitle}>{t('rep.posCorrelation')}</div>
         {corr && corr.pairs && corr.pairs.length > 0 ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
-              <MetricCard label="Nivel de Riesgo" value={corr.riskLevel || '—'} color={corr.riskLevel === 'LOW' ? green : corr.riskLevel === 'MEDIUM' ? amber : red} />
-              <MetricCard label="Diversificación" value={`${((corr.effectiveDiversification || 0) * 100).toFixed(0)}%`} color={(corr.effectiveDiversification || 0) >= 0.5 ? green : red} />
+              <MetricCard label={t('rep.riskLevel')} value={corr.riskLevel || '—'} color={corr.riskLevel === 'LOW' ? green : corr.riskLevel === 'MEDIUM' ? amber : red} />
+              <MetricCard label={t('rep.diversification')} value={`${((corr.effectiveDiversification || 0) * 100).toFixed(0)}%`} color={(corr.effectiveDiversification || 0) >= 0.5 ? green : red} />
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
               <thead>
                 <tr>
-                  {['Par', 'Correlación', 'Nivel'].map(h => (
+                  {[t('rep.thPair'), t('rep.thCorrelation'), t('rep.thLevel')].map(h => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -608,7 +616,7 @@ function RiskReport({ perf, corr, equityCurve, paperPositions, reportDays }) {
           </>
         ) : (
           <div style={{ padding: 20, textAlign: 'center', color: muted, fontSize: 12 }}>
-            Sin datos de correlación. Se requieren 2+ posiciones abiertas.
+            {t('rep.noCorrelationData')}
           </div>
         )}
       </div>
@@ -616,11 +624,11 @@ function RiskReport({ perf, corr, equityCurve, paperPositions, reportDays }) {
       {/* Open Positions Exposure */}
       {paperPositions && paperPositions.length > 0 && (
         <div style={card}>
-          <div style={sTitle}>EXPOSICIÓN ACTUAL ({paperPositions.length} POSICIONES)</div>
+          <div style={sTitle}>{t('rep.currentExposure')} ({paperPositions.length} {t('rep.positions')})</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                {['Asset', 'Dirección', 'Entrada', 'Actual', 'P&L', 'P&L %'].map(h => (
+                {[t('rep.thAsset'), t('rep.thDirection'), t('rep.thEntry'), t('rep.thCurrent'), t('rep.thPnl'), t('rep.thPnlPct')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -648,11 +656,11 @@ function RiskReport({ perf, corr, equityCurve, paperPositions, reportDays }) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function NoData() {
+function NoData({ t }) {
   return (
     <div style={{ ...card, padding: 40, textAlign: 'center' }}>
-      <div style={{ fontSize: 13, color: muted }}>Sin datos suficientes para generar este reporte.</div>
-      <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>Ejecuta trades en Paper Trading para comenzar a acumular datos.</div>
+      <div style={{ fontSize: 13, color: muted }}>{t('rep.noData')}</div>
+      <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>{t('rep.runPaper')}</div>
     </div>
   );
 }

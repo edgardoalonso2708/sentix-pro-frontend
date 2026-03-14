@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice, getSignalFreshness } from '../../lib/utils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
@@ -12,8 +13,9 @@ export default function SignalsTab({
   signals, signalAccuracy, accuracyDays,
   setAccuracyDays, fetchAccuracy,
 }) {
+    const { t } = useLanguage();
     const confluenceColor = (c) => c === 'strong' ? green : c === 'moderate' ? amber : c === 'conflicting' ? red : muted;
-    const confluenceLabel = (c) => c === 'strong' ? 'CONFLUENCIA FUERTE' : c === 'moderate' ? 'CONFLUENCIA MODERADA' : c === 'conflicting' ? 'CONFLICTO' : 'DEBIL';
+    const confluenceLabel = (c) => c === 'strong' ? t('sig.strongConfluence') : c === 'moderate' ? t('sig.moderateConfluence') : c === 'conflicting' ? t('sig.conflict') : t('sig.weak');
     const actionColor = (a) => a === 'BUY' ? green : a === 'SELL' ? red : amber;
     const tfLabel = { '4h': '4H', '1h': '1H', '15m': '15M' };
 
@@ -24,7 +26,7 @@ export default function SignalsTab({
         {/* SIGNAL ACCURACY PANEL */}
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={sTitle}>SIGNAL ACCURACY</div>
+            <div style={sTitle}>{t('sig.accuracy')}</div>
             <div style={{ display: "flex", gap: 6 }}>
               {[7, 30].map(d => (
                 <button key={d} onClick={() => { setAccuracyDays(d); fetchAccuracy(d); }} style={{
@@ -37,7 +39,7 @@ export default function SignalsTab({
 
           {!signalAccuracy || !signalAccuracy.overall || signalAccuracy.overall.total === 0 ? (
             <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 13 }}>
-              Recopilando datos — metricas disponibles despues de 1 hora de operacion
+              {t('sig.gathering')}
             </div>
           ) : (
             <>
@@ -55,7 +57,7 @@ export default function SignalsTab({
                       {item.value === null ? "—" : item.isCount ? item.value : `${item.value}%`}
                     </div>
                     {!item.isCount && item.avg !== null && (
-                      <div style={{ fontSize: 10, color: muted, marginTop: 3 }}>avg move: {item.avg}%</div>
+                      <div style={{ fontSize: 10, color: muted, marginTop: 3 }}>{t('sig.avgMove')}: {item.avg}%</div>
                     )}
                   </div>
                 ))}
@@ -64,10 +66,10 @@ export default function SignalsTab({
               {/* Row 2: By Strength table */}
               {signalAccuracy.byStrength && Object.keys(signalAccuracy.byStrength).length > 0 && (
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>POR STRENGTH</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('sig.byStrength')}</div>
                   <div style={{ background: bg3, borderRadius: 8, overflow: "hidden" }}>
                     <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", padding: "8px 12px", fontSize: 10, fontWeight: 700, color: muted, borderBottom: "1px solid #2a2a2a" }}>
-                      <div>Tipo</div><div style={{ textAlign: "center" }}>Count</div><div style={{ textAlign: "center" }}>Hit 1h</div><div style={{ textAlign: "center" }}>Hit 4h</div><div style={{ textAlign: "center" }}>Hit 24h</div>
+                      <div>{t('sig.type')}</div><div style={{ textAlign: "center" }}>{t('sig.count')}</div><div style={{ textAlign: "center" }}>Hit 1h</div><div style={{ textAlign: "center" }}>Hit 4h</div><div style={{ textAlign: "center" }}>Hit 24h</div>
                     </div>
                     {["STRONG BUY", "BUY", "SELL", "STRONG SELL"].filter(k => signalAccuracy.byStrength[k]).map(k => {
                       const s = signalAccuracy.byStrength[k];
@@ -90,7 +92,7 @@ export default function SignalsTab({
                 {/* Confluence cards */}
                 {signalAccuracy.byConfluence && Object.keys(signalAccuracy.byConfluence).length > 0 && (
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>POR CONFLUENCIA</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('sig.byConfluence')}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {["strong", "moderate", "conflicting", "weak"].filter(k => signalAccuracy.byConfluence[k]).map(k => {
                         const c = signalAccuracy.byConfluence[k];
@@ -112,7 +114,7 @@ export default function SignalsTab({
                 {/* Trend chart */}
                 {signalAccuracy.trend && signalAccuracy.trend.length > 1 && (
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>TENDENCIA DIARIA (1h hit rate)</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 8 }}>{t('sig.dailyTrend')}</div>
                     <div style={{ background: bg3, borderRadius: 8, padding: 10 }}>
                       <ResponsiveContainer width="100%" height={140}>
                         <LineChart data={signalAccuracy.trend}>
@@ -134,11 +136,11 @@ export default function SignalsTab({
 
         {/* SIGNAL CARDS */}
         <div style={card}>
-          <div style={sTitle}>TODAS LAS SEÑALES ACTIVAS</div>
+          <div style={sTitle}>{t('sig.allActive')}</div>
 
           {signals.length === 0 ? (
             <div style={{ padding: 30, textAlign: "center", color: muted }}>
-              No hay señales en este momento
+              No hay senales en este momento
             </div>
           ) : (
             <div style={{ display: "grid", gap: 14 }}>
@@ -286,15 +288,15 @@ export default function SignalsTab({
                       marginBottom: 10
                     }}>
                       <div style={{ fontSize: 10, color: muted, fontWeight: 700, marginBottom: 6, letterSpacing: 0.5 }}>
-                        NIVELES DE OPERACION
+                        {t('sig.operationLevels')}
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
                         <div>
-                          <div style={{ fontSize: 9, color: muted }}>ENTRADA</div>
+                          <div style={{ fontSize: 9, color: muted }}>{t('sig.entry')}</div>
                           <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{formatPrice(signal.tradeLevels.entry)}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, color: red }}>STOP LOSS</div>
+                          <div style={{ fontSize: 9, color: red }}>{t('sig.stopLoss')}</div>
                           <div style={{ fontSize: 12, fontWeight: 700, color: red }}>{formatPrice(signal.tradeLevels.stopLoss)}</div>
                           <div style={{ fontSize: 9, color: muted }}>{signal.tradeLevels.stopLossPercent?.toFixed(1)}%</div>
                         </div>
@@ -313,12 +315,12 @@ export default function SignalsTab({
                       {signal.tradeLevels.trailingStop && (
                         <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                           <div>
-                            <div style={{ fontSize: 9, color: amber }}>TRAILING STOP</div>
+                            <div style={{ fontSize: 9, color: amber }}>{t('sig.trailingStop')}</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: amber }}>{formatPrice(signal.tradeLevels.trailingStop)}</div>
                             <div style={{ fontSize: 9, color: muted }}>{signal.tradeLevels.trailingStopPercent?.toFixed(1)}%</div>
                           </div>
                           <div>
-                            <div style={{ fontSize: 9, color: muted }}>ACTIVA EN</div>
+                            <div style={{ fontSize: 9, color: muted }}>{t('sig.activateAt')}</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{formatPrice(signal.tradeLevels.trailingActivation)}</div>
                             <div style={{ fontSize: 9, color: muted }}>+{Math.abs(signal.tradeLevels.trailingActivationPercent || 0).toFixed(1)}% profit</div>
                           </div>
@@ -346,7 +348,7 @@ export default function SignalsTab({
                       marginBottom: 10
                     }}>
                       <div style={{ fontSize: 10, color: muted, fontWeight: 700, marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                        Soporte / Resistencia
+                        {t('sig.support')} / {t('sig.resistance')}
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         <div>

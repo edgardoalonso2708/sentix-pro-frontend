@@ -8,8 +8,8 @@ const HEAT_COLORS = {
 
 const HEAT_LABELS = {
   cool: 'Normal',
-  warm: 'Atención',
-  hot: 'Crítico'
+  warm: 'Atencion',
+  hot: 'Critico'
 };
 
 function formatPnl(value) {
@@ -107,7 +107,7 @@ function PositionCard({ position, colors }) {
           </div>
         </div>
         <div>
-          <div style={{ color: muted, fontSize: 10 }}>Tamaño</div>
+          <div style={{ color: muted, fontSize: 10 }}>Tamano</div>
           <div style={{ color: text, fontSize: 12, fontWeight: 600 }}>
             ${parseFloat(position.position_size || 0).toFixed(2)}
           </div>
@@ -119,7 +119,7 @@ function PositionCard({ position, colors }) {
           </div>
         </div>
         <div>
-          <div style={{ color: muted, fontSize: 10 }}>Duración</div>
+          <div style={{ color: muted, fontSize: 10 }}>Duracion</div>
           <div style={{ color: text, fontSize: 12, fontWeight: 600 }}>
             {position.duration || '-'}
           </div>

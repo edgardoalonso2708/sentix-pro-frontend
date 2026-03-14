@@ -2,6 +2,7 @@
 import { authFetch } from '../../lib/api';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice } from '../../lib/utils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
@@ -15,6 +16,7 @@ export default function AlertsTab({
   alertFilterSaveMsg, setAlertFilterSaveMsg,
   apiUrl,
 }) {
+    const { t } = useLanguage();
     const testResult = alertTestResult, setTestResult = setAlertTestResult;
     const testing = alertTesting, setTesting = setAlertTesting;
     const showFilters = alertShowFilters, setShowFilters = setAlertShowFilters;
@@ -33,9 +35,9 @@ export default function AlertsTab({
           body: JSON.stringify(filterForm)
         });
         if (res.ok) {
-          setFilterSaveMsg({ ok: true, text: 'Filtros guardados' });
+          setFilterSaveMsg({ ok: true, text: t('alert.filtersSaved') });
         } else {
-          setFilterSaveMsg({ ok: false, text: 'Error al guardar' });
+          setFilterSaveMsg({ ok: false, text: t('alert.errorSaving') });
         }
       } catch (e) {
         setFilterSaveMsg({ ok: false, text: e.message });
@@ -80,24 +82,24 @@ export default function AlertsTab({
           marginBottom: 16
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: blue, marginBottom: 8 }}>
-            ALERTAS POR TELEGRAM (ACTIVO)
+            {t('alert.telegram')} ({t('alert.telegramActive')})
           </div>
           <div style={{ fontSize: 12, color: text, lineHeight: 1.8 }}>
-            1. Busca el bot de SENTIX Pro en Telegram<br />
-            2. Envia <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/start</code> para suscribirte a alertas automaticas<br />
-            3. Recibiras alertas BUY/SELL cuando la confianza sea alta<br />
-            4. Usa <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/señales</code> para ver señales activas<br />
-            5. Usa <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/stop</code> para desactivar alertas
+            {t('alert.step1')}<br />
+            {t('alert.step2')} <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/start</code><br />
+            {t('alert.step3')}<br />
+            {t('alert.step4')} <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/senales</code><br />
+            {t('alert.step5')} <code style={{ background: bg3, padding: "2px 6px", borderRadius: 4 }}>/stop</code>
           </div>
         </div>
 
         {/* Config */}
         <div style={card}>
-          <div style={sTitle}>CONFIGURACION DE ALERTAS</div>
+          <div style={sTitle}>{t('alert.config')}</div>
 
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, color: muted, display: "block", marginBottom: 6 }}>
-              EMAILS PARA ALERTAS (separar con coma)
+              {t('alert.emailLabel')}
             </label>
             <textarea
               value={alertConfig.email}
@@ -117,7 +119,7 @@ export default function AlertsTab({
               }}
             />
             <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
-              Estos emails se usan para la alerta de prueba. Configura los emails de notificacion automatica en los filtros avanzados.
+              {t('alert.emailDescription')}
             </div>
           </div>
 
@@ -136,7 +138,7 @@ export default function AlertsTab({
               cursor: testing ? "not-allowed" : "pointer"
             }}
           >
-            {testing ? 'Enviando...' : 'ENVIAR ALERTA DE PRUEBA'}
+            {testing ? t('alert.sending') : t('alert.sendTest')}
           </button>
 
           {testResult && (
@@ -149,15 +151,15 @@ export default function AlertsTab({
               lineHeight: 1.8
             }}>
               <div style={{ color: testResult.success ? green : red, fontWeight: 700, marginBottom: 6 }}>
-                {testResult.success ? 'Test procesado' : 'Error'}
+                {testResult.success ? t('alert.testProcessed') : t('alert.error')}
               </div>
               {testResult.delivery && (
                 <div style={{ color: text, fontSize: 11 }}>
                   Email: <span style={{ color: testResult.delivery.email === 'sent' ? green : amber }}>
-                    {testResult.delivery.email === 'sent' ? 'Enviado' : testResult.delivery.email}
+                    {testResult.delivery.email === 'sent' ? t('alert.sent') : testResult.delivery.email}
                   </span><br />
                   Telegram: <span style={{ color: testResult.delivery.telegram === 'sent' ? green : amber }}>
-                    {testResult.delivery.telegram === 'sent' ? 'Enviado' : testResult.delivery.telegram}
+                    {testResult.delivery.telegram === 'sent' ? t('alert.sent') : testResult.delivery.telegram}
                   </span>
                 </div>
               )}
@@ -168,7 +170,7 @@ export default function AlertsTab({
         {/* Custom Alert Filters */}
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setShowFilters(!showFilters)}>
-            <div style={sTitle}>FILTROS PERSONALIZADOS</div>
+            <div style={sTitle}>{t('alert.customFilters')}</div>
             <div style={{ fontSize: 18, color: muted, transform: showFilters ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>{'\u25BC'}</div>
           </div>
 
@@ -188,13 +190,13 @@ export default function AlertsTab({
                   }} />
                 </button>
                 <span style={{ fontSize: 12, color: filterForm.enabled ? text : muted, fontWeight: 700 }}>
-                  {filterForm.enabled ? 'Filtros activos' : 'Filtros desactivados (usa defaults)'}
+                  {filterForm.enabled ? t('alert.filtersActive') : t('alert.filtersDisabled')}
                 </span>
               </div>
 
               {/* Signal types */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>TIPOS DE SEÑAL</label>
+                <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>{t('alert.signalTypes')}</label>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {ALL_ACTIONS.map(act => {
                     const active = filterForm.actions.includes(act);
@@ -222,7 +224,7 @@ export default function AlertsTab({
               {/* Assets filter */}
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>
-                  ACTIVOS ({filterForm.assets.length === 0 ? 'todos' : filterForm.assets.length + ' seleccionados'})
+                  {t('alert.assets')} ({filterForm.assets.length === 0 ? t('alert.all') : filterForm.assets.length + ' ' + t('alert.selected')})
                 </label>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {AVAILABLE_ASSETS.map(asset => {
@@ -244,13 +246,13 @@ export default function AlertsTab({
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>Sin seleccion = alertas para todos los activos</div>
+                <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>{t('alert.noSelectionAll')}</div>
               </div>
 
               {/* Min confidence slider */}
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 4, fontWeight: 700 }}>
-                  CONFIANZA MINIMA: <span style={{ color: text }}>{filterForm.min_confidence}%</span>
+                  {t('alert.minConfidence')}: <span style={{ color: text }}>{filterForm.min_confidence}%</span>
                 </label>
                 <input type="range" min="20" max="90" step="5"
                   value={filterForm.min_confidence}
@@ -262,7 +264,7 @@ export default function AlertsTab({
               {/* Min score slider */}
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 4, fontWeight: 700 }}>
-                  SCORE MINIMO: <span style={{ color: text }}>{filterForm.min_score}</span>
+                  {t('alert.minScore')}: <span style={{ color: text }}>{filterForm.min_score}</span>
                 </label>
                 <input type="range" min="10" max="60" step="5"
                   value={filterForm.min_score}
@@ -301,7 +303,7 @@ export default function AlertsTab({
               {filterForm.email_enabled && (
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 10, color: muted, display: "block", marginBottom: 6, fontWeight: 700 }}>
-                    EMAILS DE NOTIFICACION (separar con coma)
+                    {t('alert.notificationEmails')}
                   </label>
                   <textarea
                     value={filterForm.alert_emails || ''}
@@ -321,7 +323,7 @@ export default function AlertsTab({
                     }}
                   />
                   <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
-                    Deja vacio para usar el email por defecto. Soporta multiples emails separados por coma.
+                    {t('alert.notificationEmailsDescription')}
                   </div>
                 </div>
               )}
@@ -332,7 +334,7 @@ export default function AlertsTab({
                 background: savingFilters ? bg3 : `linear-gradient(135deg, ${blue}, #3b82f6)`,
                 color: "#fff", fontSize: 12, fontWeight: 700
               }}>
-                {savingFilters ? 'Guardando...' : 'GUARDAR FILTROS'}
+                {savingFilters ? t('alert.saving') : t('alert.saveFilters')}
               </button>
 
               {filterSaveMsg && (
@@ -346,10 +348,10 @@ export default function AlertsTab({
 
         {/* Alert History */}
         <div style={card}>
-          <div style={sTitle}>HISTORIAL DE ALERTAS</div>
+          <div style={sTitle}>{t('alert.history')}</div>
           {alerts.length === 0 ? (
             <div style={{ padding: 30, textAlign: "center", color: muted }}>
-              No hay alertas aun. Las alertas se generan automaticamente cuando hay señales de alta confianza.
+              {t('alert.noAlerts')}
             </div>
           ) : (
             <div style={{ maxHeight: 500, overflowY: "auto" }}>
@@ -377,7 +379,7 @@ export default function AlertsTab({
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: muted, marginBottom: 4 }}>
-                    Score: {alert.score}/100 | Confianza: {alert.confidence}% | Precio: {formatPrice(alert.price)}
+                    Score: {alert.score}/100 | {t('alert.confidence')}: {alert.confidence}% | {t('alert.price')}: {formatPrice(alert.price)}
                   </div>
                   <div style={{ fontSize: 11, color: text }}>
                     {alert.reasons}

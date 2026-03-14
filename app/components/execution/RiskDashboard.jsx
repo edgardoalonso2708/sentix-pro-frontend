@@ -85,7 +85,7 @@ export default function RiskDashboard({ dashboard, colors }) {
         <StatCard
           label="P&L Diario"
           value={`$${(dailyPnl.amount || 0).toFixed(2)}`}
-          subValue={`Límite: $${(dailyPnl.limit || 0).toFixed(2)}`}
+          subValue={`Limite: $${(dailyPnl.limit || 0).toFixed(2)}`}
           color={dailyPnl.amount >= 0 ? green : red}
           bg={bg} border={border} muted={muted}
         />
@@ -97,7 +97,7 @@ export default function RiskDashboard({ dashboard, colors }) {
           bg={bg} border={border} muted={muted}
         />
         <StatCard
-          label="Órdenes Pendientes"
+          label="Ordenes Pendientes"
           value={dashboard.pendingOrders || 0}
           subValue={`Max pos: ${dashboard.maxOpenPositions || '-'}`}
           color={accent}
@@ -118,7 +118,7 @@ export default function RiskDashboard({ dashboard, colors }) {
         </div>
 
         <GaugeBar
-          label="Drawdown vs Límite"
+          label="Drawdown vs Limite"
           value={(drawdown.current || 0) * 100}
           max={(drawdown.threshold || 0.15) * 100}
           color={green}
@@ -128,7 +128,7 @@ export default function RiskDashboard({ dashboard, colors }) {
         />
 
         <GaugeBar
-          label="Pérdida Diaria vs Límite"
+          label="Perdida Diaria vs Limite"
           value={dailyPnl.usagePct || 0}
           max={100}
           color="#3b82f6"
@@ -156,15 +156,15 @@ export default function RiskDashboard({ dashboard, colors }) {
         padding: 16
       }}>
         <div style={{ color: text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
-          Configuración Activa
+          Configuracion Activa
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
           {[
             ['Modo', dashboard.executionMode === 'paper' ? '📄 Paper' : '🔴 Live'],
-            ['Auto-ejecutar', dashboard.autoExecute ? '✅ Sí' : '❌ No'],
+            ['Auto-ejecutar', dashboard.autoExecute ? '✅ Si' : '❌ No'],
             ['Max Drawdown', `${((drawdown.threshold || 0.15) * 100).toFixed(0)}%`],
-            ['Max Pérdida Diaria', `${(dailyPnl.limitPct || 5).toFixed(0)}%`],
-            ['Max Posición', `${((dashboard.maxPositionPercent || 0.30) * 100).toFixed(0)}%`],
+            ['Max Perdida Diaria', `${(dailyPnl.limitPct || 5).toFixed(0)}%`],
+            ['Max Posicion', `${((dashboard.maxPositionPercent || 0.30) * 100).toFixed(0)}%`],
             ['Max Posiciones', dashboard.maxOpenPositions || 3],
             ['Riesgo/Trade', `${((dashboard.riskPerTrade || 0.01) * 100).toFixed(1)}%`],
             ['Kill Switch', dashboard.killSwitch?.active ? '🔴 Activo' : '🟢 Inactivo']

@@ -59,7 +59,7 @@ function formatDetail(details) {
   if (details.asset) parts.push(details.asset);
   if (details.side) parts.push(details.side);
   if (details.reason) parts.push(details.reason);
-  if (details.cancelledOrders != null) parts.push(`${details.cancelledOrders} órdenes canceladas`);
+  if (details.cancelledOrders != null) parts.push(`${details.cancelledOrders} ordenes canceladas`);
   if (details.closedPositions != null) parts.push(`${details.closedPositions} posiciones cerradas`);
   if (details.fillPrice) parts.push(`@ $${parseFloat(details.fillPrice).toLocaleString()}`);
   if (details.quantity) parts.push(`qty: ${parseFloat(details.quantity).toFixed(6)}`);
@@ -84,7 +84,7 @@ export default function ExecutionAuditLog({ logs, colors }) {
   if (!logs || logs.length === 0) {
     return (
       <div style={{ color: muted, fontSize: 13, textAlign: 'center', padding: 24 }}>
-        No hay eventos de ejecución
+        No hay eventos de ejecucion
       </div>
     );
   }

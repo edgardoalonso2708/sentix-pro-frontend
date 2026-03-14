@@ -25,9 +25,9 @@ export default function OptimizeTab({
 
     // Phase definitions for guided optimization
     const PHASES = [
-      { id: 0, label: 'TODOS', icon: '📋', desc: 'Todos los parámetros', color: muted,
+      { id: 0, label: 'TODOS', icon: '📋', desc: 'Todos los parametros', color: muted,
         keys: null }, // null = show all
-      { id: 1, label: 'FASE 1: RIESGO', icon: '🛡️', desc: 'Stop loss, trailing, thresholds — los más impactantes', color: '#ef4444',
+      { id: 1, label: 'FASE 1: RIESGO', icon: '🛡️', desc: 'Stop loss, trailing, thresholds — los mas impactantes', color: '#ef4444',
         keys: ['riskPerTrade', 'atrStopMult', 'atrTrailingMult', 'buyThreshold', 'sellThreshold', 'confidenceCap'] },
       { id: 2, label: 'FASE 2: PESOS', icon: '⚖️', desc: 'Peso de cada indicador en el score final', color: '#f59e0b',
         keys: ['trendScoreStrong', 'derivativesScore', 'ichimokuScore', 'vwapScore', 'fibScore', 'marketStructureScore', 'orderBookScore'] },
@@ -47,10 +47,10 @@ export default function OptimizeTab({
       <div>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>⚡ Optimizador de Estrategia</h2>
         <p style={{ color: muted, fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
-          Optimiza un parámetro a la vez contra datos históricos.
+          Optimiza un parametro a la vez contra datos historicos.
           {optConfig.days >= 30
             ? ' Walk-forward 70/30 detecta sobreajuste.'
-            : ' ⚠️ Usa 90+ días para validación walk-forward.'}
+            : ' ⚠️ Usa 90+ dias para validacion walk-forward.'}
         </p>
 
         {/* Phase Selector */}
@@ -74,13 +74,13 @@ export default function OptimizeTab({
             borderRadius: 8, marginBottom: 16, fontSize: 12, color: activePhase.color }}>
             <strong>{activePhase.icon} {activePhase.label}:</strong> {activePhase.desc}
             {optPhase === 1 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
-              💡 Empieza aquí. Estos parámetros definen cuánto arriesgas y cuándo entras/sales. Optimiza cada uno con 90 días de datos.
+              💡 Empieza aqui. Estos parametros definen cuanto arriesgas y cuando entras/sales. Optimiza cada uno con 90 dias de datos.
             </span>}
             {optPhase === 2 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
-              💡 Una vez tengas buenos parámetros de riesgo, ajusta qué indicadores pesan más en la decisión de compra/venta.
+              💡 Una vez tengas buenos parametros de riesgo, ajusta que indicadores pesan mas en la decision de compra/venta.
             </span>}
             {optPhase === 3 && <span style={{ display: 'block', marginTop: 4, color: muted, fontSize: 11 }}>
-              💡 Último paso. Ajusta el governor del 4H, confluence multipliers y pesos de timeframe. Cambios sutiles.
+              💡 Ultimo paso. Ajusta el governor del 4H, confluence multipliers y pesos de timeframe. Cambios sutiles.
             </span>}
           </div>
         )}
@@ -102,21 +102,21 @@ export default function OptimizeTab({
 
           {/* Days */}
           <div>
-            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>DÍAS HISTÓRICOS</label>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>DIAS HISTORICOS</label>
             <select
               value={optConfig.days}
               onChange={e => setOptConfig({ ...optConfig, days: Number(e.target.value) })}
               disabled={optRunning}
               style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             >
-              {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} días{d >= 90 ? ' ✓' : ''}</option>)}
+              {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} dias{d >= 90 ? ' ✓' : ''}</option>)}
             </select>
           </div>
 
           {/* Parameter to optimize */}
           <div style={{ gridColumn: 'span 2' }}>
             <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>
-              PARÁMETRO A OPTIMIZAR {optPhase > 0 && <span style={{ color: activePhase.color }}>({filteredParams.length} disponibles)</span>}
+              PARAMETRO A OPTIMIZAR {optPhase > 0 && <span style={{ color: activePhase.color }}>({filteredParams.length} disponibles)</span>}
             </label>
             <select
               value={optConfig.paramName}
@@ -124,7 +124,7 @@ export default function OptimizeTab({
               disabled={optRunning}
               style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             >
-              <option value="">— Selecciona un parámetro —</option>
+              <option value="">— Selecciona un parametro —</option>
               {filteredParams.map(p => (
                 <option key={p.key} value={p.key}>{p.label} (default: {p.defaultValue})</option>
               ))}
@@ -148,7 +148,7 @@ export default function OptimizeTab({
             cursor: optRunning ? 'wait' : 'pointer', marginBottom: 16
           }}
         >
-          {optRunning ? `⏳ ${optProgress.message || 'Optimizando...'}` : '⚡ EJECUTAR OPTIMIZACIÓN'}
+          {optRunning ? `⏳ ${optProgress.message || 'Optimizando...'}` : '⚡ EJECUTAR OPTIMIZACION'}
         </button>
 
         {/* Progress Bar */}
@@ -323,7 +323,7 @@ export default function OptimizeTab({
               {optResult.validation?.enabled
                 ? `🔬 Walk-forward ${optResult.validation.trainDays}d/${optResult.validation.testDays}d · Rankeado por ${optResult.validation.rankedBy} · `
                 : ''}
-              ⏱ {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} días
+              ⏱ {optResult.duration?.toFixed(1)}s · {optResult.asset?.toUpperCase()} · {optResult.days} dias
             </div>
 
             {/* Action Buttons: Apply + Verify */}
@@ -424,9 +424,9 @@ export default function OptimizeTab({
           {autoTuneExpanded && (
             <div>
               <p style={{ color: muted, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
-                Re-optimiza los 10 parámetros más impactantes cada 24h usando walk-forward validation + safety guards.
+                Re-optimiza los 10 parametros mas impactantes cada 24h usando walk-forward validation + safety guards.
                 {autoTuneConfig?.config && Object.keys(autoTuneConfig.config).length > 0 && ' Config activa auto-tuneada.'}
-                {autoTuneConfig?.approvalMode === 'telegram' ? ' 📱 Aprobación por Telegram.' : ' 🧠 AI review habilitado.'}
+                {autoTuneConfig?.approvalMode === 'telegram' ? ' 📱 Aprobacion por Telegram.' : ' 🧠 AI review habilitado.'}
               </p>
 
               {/* ─── PENDING APPROVAL BANNER ────────────────────────── */}
@@ -444,7 +444,7 @@ export default function OptimizeTab({
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: amber }}>
-                        ⏳ PROPUESTA PENDIENTE DE APROBACIÓN
+                        ⏳ PROPUESTA PENDIENTE DE APROBACION
                       </span>
                       <span style={{ fontSize: 10, color: muted }}>
                         Expira en {hoursLeft}h {minsLeft}m
@@ -452,7 +452,7 @@ export default function OptimizeTab({
                     </div>
 
                     <div style={{ fontSize: 11, color: text, marginBottom: 8 }}>
-                      <span style={{ color: muted }}>Régimen:</span> {proposal.context?.marketRegime || 'unknown'}
+                      <span style={{ color: muted }}>Regimen:</span> {proposal.context?.marketRegime || 'unknown'}
                       {aiDecision && <> | <span style={{ color: muted }}>AI:</span> <span style={{
                         color: aiDecision === 'APPLY' ? green : aiDecision === 'BLEND' ? amber : red
                       }}>{aiDecision}</span></>}
@@ -537,7 +537,7 @@ export default function OptimizeTab({
 
                 {/* Last Run */}
                 <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>ÚLTIMO RUN</div>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>ULTIMO RUN</div>
                   <div style={{ fontSize: 11, fontWeight: 700 }}>
                     {autoTuneHistory.length > 0
                       ? new Date(autoTuneHistory[0].started_at).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -580,7 +580,7 @@ export default function OptimizeTab({
 
                 {/* Approval Mode */}
                 <div style={{ background: bg, padding: 12, borderRadius: 6, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>APROBACIÓN</div>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>APROBACION</div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: autoTuneConfig?.approvalMode === 'telegram' ? purple : green }}>
                     {autoTuneConfig?.approvalMode === 'telegram' ? '📱 Telegram' : '⚡ Auto'}
                   </div>
@@ -620,7 +620,7 @@ export default function OptimizeTab({
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('¿Resetear a parámetros por defecto?')) return;
+                    if (!confirm('¿Resetear a parametros por defecto?')) return;
                     await authFetch(`${apiUrl}/api/autotune/reset`, { method: 'POST' });
                     loadAutoTuneData();
                   }}
@@ -692,7 +692,7 @@ export default function OptimizeTab({
 
               {autoTuneHistory.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 16, color: muted, fontSize: 11 }}>
-                  🤖 Auto-tune se ejecuta diariamente a las 3:00 AM o manualmente. Primer run generará historial.
+                  🤖 Auto-tune se ejecuta diariamente a las 3:00 AM o manualmente. Primer run generara historial.
                 </div>
               )}
             </div>

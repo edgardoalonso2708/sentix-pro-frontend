@@ -92,7 +92,7 @@ export function useBacktest(apiUrl, userId) {
       } catch (e) {
         errorCount++;
         if (errorCount >= MAX_ERRORS) {
-          stopPolling('Conexi\u00f3n perdida con el backend');
+          stopPolling('Conexion perdida con el backend');
           loadHistory();
         }
       }
