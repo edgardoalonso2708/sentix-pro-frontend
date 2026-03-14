@@ -1,19 +1,19 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useRouter } from 'next/navigation';
 import { useSSE } from './hooks/useSSE';
 import { useAuth } from './contexts/AuthContext';
 import { authFetch } from './lib/api';
-// Extracted tabs
-import GuideTab from './components/tabs/GuideTab';
-import SignalsTab from './components/tabs/SignalsTab';
-import AlertsTab from './components/tabs/AlertsTab';
-import APMTab from './components/tabs/APMTab';
-import DashboardTab from './components/tabs/DashboardTab';
-import PortfolioTab from './components/tabs/PortfolioTab';
-import ExecutionTab from './components/tabs/ExecutionTab';
-import StrategyTab from './components/tabs/StrategyTab';
+// Lazy-loaded tabs (code splitting)
+const DashboardTab = lazy(() => import('./components/tabs/DashboardTab'));
+const SignalsTab = lazy(() => import('./components/tabs/SignalsTab'));
+const AlertsTab = lazy(() => import('./components/tabs/AlertsTab'));
+const APMTab = lazy(() => import('./components/tabs/APMTab'));
+const PortfolioTab = lazy(() => import('./components/tabs/PortfolioTab'));
+const ExecutionTab = lazy(() => import('./components/tabs/ExecutionTab'));
+const StrategyTab = lazy(() => import('./components/tabs/StrategyTab'));
+const GuideTab = lazy(() => import('./components/tabs/GuideTab'));
 
 // Custom hooks
 import { useBacktest } from './hooks/useBacktest';
@@ -912,8 +912,8 @@ export default function SentixProFrontend() {
           ))}
         </div>
 
-        {/* Tab Content — ALL tabs use direct function calls to prevent remount on 30s re-render.
-            All hooks lifted to parent level. */}
+        {/* Tab Content — lazy-loaded with Suspense for code splitting */}
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>Cargando módulo…</div>}>
         {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} />}
         {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
         {tab === "portfolio" && <PortfolioTab
@@ -971,6 +971,7 @@ export default function SentixProFrontend() {
         {/* Paper tab removed — content consolidated into Execution tab */}
         {tab === "apm" && <APMTab apmData={apmData} systemHealth={systemHealth} />}
         {tab === "guide" && <GuideTab />}
+        </Suspense>
 
         {/* Footer */}
         <div style={{
