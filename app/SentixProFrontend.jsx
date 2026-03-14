@@ -14,6 +14,7 @@ const PortfolioTab = lazy(() => import('./components/tabs/PortfolioTab'));
 const ExecutionTab = lazy(() => import('./components/tabs/ExecutionTab'));
 const StrategyTab = lazy(() => import('./components/tabs/StrategyTab'));
 const GuideTab = lazy(() => import('./components/tabs/GuideTab'));
+const ReportsTab = lazy(() => import('./components/tabs/ReportsTab'));
 
 // Custom hooks
 import { useBacktest } from './hooks/useBacktest';
@@ -886,7 +887,8 @@ export default function SentixProFrontend() {
             { k: "execution", label: "⚡ EJECUCIÓN", desc: "Trading y métricas" },
             { k: "strategy", label: "⚙ ESTRATEGIA", desc: "Config, Backtest y Optimización" },
             { k: "alerts", label: "🔔 ALERTAS", desc: "Configuración" },
-            { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" }
+            { k: "portfolio", label: "💼 PORTFOLIO", desc: "Tus posiciones" },
+            { k: "reports", label: "📄 REPORTES", desc: "Análisis e impresión" }
           ].map(({ k, label, desc }) => (
             <button
               key={k}
@@ -969,6 +971,12 @@ export default function SentixProFrontend() {
           authFetch={authFetch} apiUrl={API_URL} userId={USER_ID}
         />}
         {/* Paper tab removed — content consolidated into Execution tab */}
+        {tab === "reports" && <ReportsTab
+          paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig}
+          signalAccuracy={signalAccuracy} signals={signals} advancedPerf={advancedPerf}
+          correlationData={correlationData} backtestHistory={backtestHistory}
+          authFetch={authFetch} apiUrl={API_URL} userId={USER_ID}
+        />}
         {tab === "apm" && <APMTab apmData={apmData} systemHealth={systemHealth} />}
         {tab === "guide" && <GuideTab />}
         </Suspense>
