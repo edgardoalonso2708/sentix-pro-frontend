@@ -23,9 +23,9 @@ export default function StrategyTab({
     const setSubTab = setStrategySubTab;
 
     const STRATEGY_SUB_TABS = [
-      { k: 'config', label: '\u2699 Configuraci\u00F3n', desc: 'Par\u00E1metros de trading' },
+      { k: 'config', label: '\⚙ Configuraci\ón', desc: 'Par\ámetros de trading' },
       { k: 'backtest', label: '\u{1F52C} Backtest', desc: 'Validar estrategia' },
-      { k: 'optimize', label: '\u26A1 Optimizar', desc: 'Ajustar par\u00E1metros' }
+      { k: 'optimize', label: '\⚡ Optimizar', desc: 'Ajustar par\ámetros' }
     ];
 
     return (
@@ -148,7 +148,7 @@ function StrategyConfigContent({
 
     if (!configForm) return (
       <div style={{ ...card, padding: 20, textAlign: "center" }}>
-        <div style={{ color: muted, fontSize: 12 }}>Cargando configuraci\u00F3n...</div>
+        <div style={{ color: muted, fontSize: 12 }}>Cargando configuraci\ón...</div>
       </div>
     );
 
@@ -156,46 +156,46 @@ function StrategyConfigContent({
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Header */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u2699'} ESTRATEGIA DE TRADING</div>
+          <div style={sTitle}>{'\⚙'} ESTRATEGIA DE TRADING</div>
           <div style={{ fontSize: 10, color: muted, marginTop: 4 }}>
-            Par\u00E1metros que definen tu estrategia. Aplican tanto a Paper Trading como a trading real.
+            Par\ámetros que definen tu estrategia. Aplican tanto a Paper Trading como a trading real.
           </div>
         </div>
 
-        {/* GESTI\u00D3N DE RIESGO */}
+        {/* GESTI\ÓN DE RIESGO */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4B0}'} GESTI\u00D3N DE RIESGO</div>
+          <div style={sTitle}>{'\u{1F4B0}'} GESTI\ÓN DE RIESGO</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Riesgo por Trade (%)</label>
               <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade || 0.01) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% del capital arriesgado por operaci\u00F3n</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% del capital arriesgado por operaci\ón</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>P\u00E9rdida Diaria M\u00E1x (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>P\érdida Diaria M\áx (%)</label>
               <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Detiene trading al alcanzar esta p\u00E9rdida diaria</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Detiene trading al alcanzar esta p\érdida diaria</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\u00E1x Posici\u00F3n (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Posici\ón (%)</label>
               <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent || 0.30) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_position_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\u00E1x % del capital por posici\u00F3n</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx % del capital por posici\ón</div>
             </div>
           </div>
         </div>
 
         {/* POSICIONES */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4CA}'} GESTI\u00D3N DE POSICIONES</div>
+          <div style={sTitle}>{'\u{1F4CA}'} GESTI\ÓN DE POSICIONES</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\u00E1x Posiciones Abiertas</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Posiciones Abiertas</label>
               <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
                 style={inputStyle} />
@@ -207,25 +207,25 @@ function StrategyConfigContent({
                 style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\u00E1x Holding (horas)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Holding (horas)</label>
               <input type="number" min="0" max="720" value={configForm.max_holding_hours || 168}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_holding_hours: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>0 = sin l\u00EDmite</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>0 = sin l\ímite</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Cierre Parcial en TP1 (%)</label>
               <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio || 0.5) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, partial_close_ratio: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% de posici\u00F3n cerrada al TP1</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>% de posici\ón cerrada al TP1</div>
             </div>
           </div>
           <div style={{ marginTop: 8 }}>
             <label style={{ fontSize: 10, color: muted, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={configForm.move_sl_to_breakeven_after_tp1 !== false}
                 onChange={e => setConfigForm(prev => ({ ...prev, move_sl_to_breakeven_after_tp1: e.target.checked }))} />
-              Mover SL a breakeven despu\u00E9s de TP1
+              Mover SL a breakeven despu\és de TP1
             </label>
           </div>
         </div>
@@ -234,61 +234,61 @@ function StrategyConfigContent({
         <div style={{ ...card, padding: "16px 20px" }}>
           <div style={sTitle}>{'\u{1F3AF}'} STOP LOSS & TAKE PROFIT (ATR)</div>
           <div style={{ fontSize: 9, color: muted, marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
-            Multiplicadores del ATR (Average True Range). Mayor valor = m\u00E1s espacio para volatilidad. Crypto recomendado: SL \u2265 2.0, Trailing Activation \u2265 2.0
+            Multiplicadores del ATR (Average True Range). Mayor valor = m\ás espacio para volatilidad. Crypto recomendado: SL \≥ 2.0, Trailing Activation \≥ 2.0
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Stop Loss (\u00D7 ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Stop Loss (\× ATR)</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult || 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_stop_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia SL desde soporte. Recomendado: 2.5</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Take Profit 2 (\u00D7 ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Take Profit 2 (\× ATR)</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult || 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_tp2_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia TP2 desde resistencia</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Stop (\u00D7 ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Stop (\× ATR)</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult || 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Distancia del trailing stop</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Activaci\u00F3n (\u00D7 ATR)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Trailing Activaci\ón (\× ATR)</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation || 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_activation: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Profit m\u00EDnimo para activar trailing. Recomendado: 2.0</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Profit m\ínimo para activar trailing. Recomendado: 2.0</div>
             </div>
           </div>
         </div>
 
-        {/* FILTROS DE SE\u00D1ALES */}
+        {/* FILTROS DE SE\ÑALES */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F4E1}'} FILTROS DE SE\u00D1ALES</div>
+          <div style={sTitle}>{'\u{1F4E1}'} FILTROS DE SE\ÑALES</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia M\u00EDnima</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Confluencia M\ínima</label>
               <input type="number" min="1" max="5" value={configForm.min_confluence || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Timeframes alineados requeridos (2-5)</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R M\u00EDnimo</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>R:R M\ínimo</label>
               <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio || 1.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Risk:Reward m\u00EDnimo aceptable</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Risk:Reward m\ínimo aceptable</div>
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SE\u00D1ALES ACEPTADAS</label>
+            <label style={{ fontSize: 10, color: muted, marginBottom: 6, display: "block", fontWeight: 700 }}>SE\ÑALES ACEPTADAS</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {['STRONG BUY', 'BUY', 'WEAK BUY', 'STRONG SELL', 'SELL', 'WEAK SELL'].map(str => {
                 const isActive = (configForm.allowed_strength || []).includes(str);
@@ -310,35 +310,35 @@ function StrategyConfigContent({
               })}
             </div>
             <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>
-              Solo STRONG = conservador \u00B7 Incluir BUY/SELL = recomendado \u00B7 WEAK = agresivo
+              Solo STRONG = conservador \· Incluir BUY/SELL = recomendado \· WEAK = agresivo
             </div>
           </div>
         </div>
 
-        {/* L\u00CDMITES DE PORTFOLIO */}
+        {/* L\ÍMITES DE PORTFOLIO */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <div style={sTitle}>{'\u{1F6E1}'} L\u00CDMITES DE PORTFOLIO</div>
+          <div style={sTitle}>{'\u{1F6E1}'} L\ÍMITES DE PORTFOLIO</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Correlaci\u00F3n M\u00E1x Portfolio</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Correlaci\ón M\áx Portfolio</label>
               <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation || 0.70}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_portfolio_correlation: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Bloquea trades si correlaci\u00F3n promedio excede</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>Bloquea trades si correlaci\ón promedio excede</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Exposici\u00F3n Sector M\u00E1x (%)</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>Exposici\ón Sector M\áx (%)</label>
               <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct || 0.60) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_sector_exposure_pct: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\u00E1x % capital en mismo sector</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx % capital en mismo sector</div>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\u00E1x Misma Direcci\u00F3n Crypto</label>
+              <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>M\áx Misma Direcci\ón Crypto</label>
               <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto || 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_same_direction_crypto: e.target.value }))}
                 style={inputStyle} />
-              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\u00E1x posiciones LONG o SHORT simult\u00E1neas</div>
+              <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>M\áx posiciones LONG o SHORT simult\áneas</div>
             </div>
           </div>
         </div>
@@ -361,7 +361,7 @@ function StrategyConfigContent({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
             onClick={() => setPaperShowConfig(!paperShowConfig)}>
             <div style={sTitle}>{'\u{1F4B0}'} CUENTA PAPER</div>
-            <span style={{ color: muted, fontSize: 12 }}>{paperShowConfig ? '\u25B2' : '\u25BC'}</span>
+            <span style={{ color: muted, fontSize: 12 }}>{paperShowConfig ? '\▲' : '\▼'}</span>
           </div>
 
           {paperShowConfig && paperConfigForm && (() => {
@@ -442,11 +442,11 @@ function StrategyConfigContent({
                     </button>
                   ) : (
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: red }}>\u00BFSeguro? Cierra todos los trades y resetea capital.</span>
+                      <span style={{ fontSize: 11, color: red }}>\¿Seguro? Cierra todos los trades y resetea capital.</span>
                       <button onClick={handleReset} style={{
                         padding: "6px 14px", background: red, border: "none", borderRadius: 4,
                         color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
-                      }}>S\u00CD</button>
+                      }}>S\Í</button>
                       <button onClick={() => setPaperConfirmReset(false)} style={{
                         padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
                         color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
@@ -471,7 +471,7 @@ function StrategyConfigContent({
                 <span style={{ color: green, fontSize: 9, marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>AUTO-TUNED</span>
               )}
             </span>
-            <span style={{ fontSize: 12 }}>{opt.showSignalParams ? '\u25BC' : '\u25B6'}</span>
+            <span style={{ fontSize: 12 }}>{opt.showSignalParams ? '\▼' : '\▶'}</span>
           </div>
           {opt.showSignalParams && (
             <div>

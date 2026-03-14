@@ -300,7 +300,7 @@ export default function BacktestTab({
                 {config.kellySizing.kelly.enabled && (
                   <div style={{ display: "flex", gap: 8 }}>
                     <div>
-                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Fracci{"\u00f3"}n</label>
+                      <label style={{ fontSize: 8, color: muted, display: "block" }}>Fracci{"\ó"}n</label>
                       <input type="number" min={0.1} max={1.0} step={0.1}
                         value={config.kellySizing.kelly.fraction}
                         onChange={e => setConfig(prev => ({
@@ -432,7 +432,7 @@ export default function BacktestTab({
                 {
                   label: "TRADES",
                   value: result.total_trades || 0,
-                  sub: `${result.days} d\u00edas`,
+                  sub: `${result.days} d\ías`,
                   color: purple
                 },
                 {
@@ -711,8 +711,8 @@ export default function BacktestTab({
               const sig = result.significance;
               const a = sig.assessment;
               const badgeColor = a.stars >= 3 ? green : a.stars >= 2 ? green : a.stars >= 1 ? amber : red;
-              const badgeIcon = a.stars >= 2 ? "\u2705" : a.stars >= 1 ? "\u26a0\ufe0f" : "\u274c";
-              const starsStr = "\u2605".repeat(a.stars) + "\u2606".repeat(3 - a.stars);
+              const badgeIcon = a.stars >= 2 ? "\✅" : a.stars >= 1 ? "\⚠\️" : "\❌";
+              const starsStr = "\★".repeat(a.stars) + "\☆".repeat(3 - a.stars);
 
               const pValueColor = (p) => {
                 if (p == null) return muted;
@@ -723,9 +723,9 @@ export default function BacktestTab({
               };
               const pValueStars = (p) => {
                 if (p == null) return "";
-                if (p < 0.001) return " \u2605\u2605\u2605";
-                if (p < 0.01) return " \u2605\u2605";
-                if (p < 0.05) return " \u2605";
+                if (p < 0.001) return " \★\★\★";
+                if (p < 0.01) return " \★\★";
+                if (p < 0.05) return " \★";
                 return "";
               };
 
@@ -738,7 +738,7 @@ export default function BacktestTab({
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
-                        {badgeIcon} SIGNIFICANCIA ESTAD\u00cdSTICA
+                        {badgeIcon} SIGNIFICANCIA ESTAD\ÍSTICA
                       </span>
                       <span style={{
                         fontSize: 9, padding: "2px 6px", borderRadius: 4,
@@ -845,7 +845,7 @@ export default function BacktestTab({
                   {/* Warnings */}
                   {a.warnings && a.warnings.length > 0 && (
                     <div style={{ fontSize: 9, color: amber, fontStyle: "italic" }}>
-                      {a.warnings.map((w, i) => <div key={i}>\u26a0 {w}</div>)}
+                      {a.warnings.map((w, i) => <div key={i}>\⚠ {w}</div>)}
                     </div>
                   )}
                 </div>
@@ -961,7 +961,7 @@ export default function BacktestTab({
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: purple, fontFamily: "monospace" }}>
-                      {"\u2696\ufe0f"} KELLY CRITERION & VOL TARGETING
+                      {"\⚖\️"} KELLY CRITERION & VOL TARGETING
                     </span>
                   </div>
 
@@ -1022,7 +1022,7 @@ export default function BacktestTab({
 
                   {ks.tradesWithoutKelly > 0 && ks.kellyEnabled && (
                     <div style={{ fontSize: 9, color: muted, marginTop: 8, fontStyle: "italic" }}>
-                      {"\u2139\ufe0f"} {ks.tradesWithoutKelly} trades usaron risk fijo (antes de acumular {ks.kellyConfig?.kelly?.minTrades || 20} trades m{"\u00ed"}nimos para Kelly)
+                      {"\ℹ\️"} {ks.tradesWithoutKelly} trades usaron risk fijo (antes de acumular {ks.kellyConfig?.kelly?.minTrades || 20} trades m{"\í"}nimos para Kelly)
                     </div>
                   )}
                 </div>
@@ -1078,7 +1078,7 @@ export default function BacktestTab({
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 10 }}>
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${border}` }}>
-                        {["#", "Direcci\u00f3n", "Entry", "Exit", "P&L", "P&L %", "Raz\u00f3n", "Barras"].map(h => (
+                        {["#", "Direcci\ón", "Entry", "Exit", "P&L", "P&L %", "Raz\ón", "Barras"].map(h => (
                           <th key={h} style={{ padding: "6px 8px", textAlign: "left", color: muted, fontWeight: 600, fontSize: 9 }}>{h}</th>
                         ))}
                       </tr>
@@ -1106,7 +1106,7 @@ export default function BacktestTab({
                                 padding: "6px 8px", fontWeight: 700,
                                 color: trade.direction === 'LONG' ? green : red
                               }}>
-                                {trade.direction === 'LONG' ? "\u25B2 LONG" : "\u25BC SHORT"}
+                                {trade.direction === 'LONG' ? "\▲ LONG" : "\▼ SHORT"}
                               </td>
                               <td style={{ padding: "6px 8px", color: text }}>
                                 ${Number(trade.entryPrice || 0).toFixed(2)}

@@ -103,7 +103,7 @@ export default function ExecutionTab({
       { k: 'dashboard', label: '\u{1F4CA} Dashboard', desc: 'Métricas y analytics' },
       { k: 'positions', label: '\u{1F4C8} Posiciones', desc: 'Monitor + correlación' },
       { k: 'history', label: '\u{1F4CB} Historial', desc: 'Trades cerrados' },
-      { k: 'risk', label: '\u26A0\uFE0F Riesgo', desc: 'Dashboard de riesgo' },
+      { k: 'risk', label: '\⚠\️ Riesgo', desc: 'Dashboard de riesgo' },
       ...(execManualOrdersEnabled ? [{ k: 'orders', label: '\u{1F4DD} Órdenes', desc: 'Crear y gestionar' }] : []),
       { k: 'audit', label: '\u{1F50D} Auditoría', desc: 'Historial de eventos' }
     ];
@@ -126,10 +126,10 @@ export default function ExecutionTab({
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <span>{execFeedback.type === 'success' ? '\u2713' : '\u2717'} {execFeedback.message}</span>
+            <span>{execFeedback.type === 'success' ? '\✓' : '\✗'} {execFeedback.message}</span>
             <button onClick={() => setExecFeedback(null)} style={{
               background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 14
-            }}>\u00D7</button>
+            }}>\×</button>
           </div>
         )}
         {/* Header with Kill Switch + Mode Toggle */}
@@ -264,7 +264,7 @@ export default function ExecutionTab({
                 color: isEnabled ? red : green, fontFamily: "monospace", fontSize: 11,
                 fontWeight: 700, cursor: "pointer"
               }}>
-                {isEnabled ? '\u23F8 PAUSAR' : '\u25B6 ACTIVAR'}
+                {isEnabled ? '\⏸ PAUSAR' : '\▶ ACTIVAR'}
               </button>
             </div>
 
@@ -276,7 +276,7 @@ export default function ExecutionTab({
                 { label: "TRADES", value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
                 { label: "CAPITAL", value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
                 { label: "MAX DRAWDOWN", value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
-                { label: "PROFIT FACTOR", value: paperMetrics?.profitFactor === Infinity ? '\u221E' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
+                { label: "PROFIT FACTOR", value: paperMetrics?.profitFactor === Infinity ? '\∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
               ].map((stat, i) => (
                 <div key={i} style={{ ...card, padding: "12px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 6 }}>{stat.label}</div>
@@ -290,7 +290,7 @@ export default function ExecutionTab({
             <div style={{ ...card, padding: "16px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                 onClick={() => setShowAdvancedPerf(!showAdvancedPerf)}>
-                <div style={sTitle}>{'\u{1F4CA}'} ANALYTICS AVANZADOS {showAdvancedPerf ? '\u25BE' : '\u25B8'}</div>
+                <div style={sTitle}>{'\u{1F4CA}'} ANALYTICS AVANZADOS {showAdvancedPerf ? '\▾' : '\▸'}</div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   {[30, 90, 0].map(d => (
                     <button key={d} onClick={(e) => { e.stopPropagation(); setAdvancedPerfDays(d); }} style={{
@@ -449,7 +449,7 @@ export default function ExecutionTab({
                               return (
                                 <div key={dir} style={{ background: bg3, borderRadius: 6, padding: "10px 14px", borderLeft: `3px solid ${dirColor}` }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 800, color: dirColor }}>{dir === "LONG" ? "\u25B2 LONG" : "\u25BC SHORT"}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 800, color: dirColor }}>{dir === "LONG" ? "\▲ LONG" : "\▼ SHORT"}</span>
                                     <span style={{ fontSize: 11, color: muted }}>{d.trades} trades</span>
                                   </div>
                                   <div style={{ display: "flex", gap: 16, fontSize: 11 }}>
@@ -492,11 +492,11 @@ export default function ExecutionTab({
             {/* Detailed Statistics */}
             {paperMetrics && paperMetrics.totalTrades > 0 && (
               <div style={{ ...card, padding: "16px 20px" }}>
-                <div style={sTitle}>ESTAD\u00CDSTICAS DETALLADAS</div>
+                <div style={sTitle}>ESTAD\ÍSTICAS DETALLADAS</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                   {[
                     { label: "Promedio Ganancia", value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
-                    { label: "Promedio P\u00E9rdida", value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
+                    { label: "Promedio P\érdida", value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
                     { label: "Mejor Trade", value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
                     { label: "Peor Trade", value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
                     { label: "Tiempo Promedio", value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
@@ -525,7 +525,7 @@ export default function ExecutionTab({
             {correlationData && correlationData.pairs && correlationData.pairs.length > 0 && (
               <div style={{ ...card, padding: "16px 20px", marginTop: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={sTitle}>CORRELACI\u00D3N DE POSICIONES</div>
+                  <div style={sTitle}>CORRELACI\ÓN DE POSICIONES</div>
                   <div style={{
                     fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
                     background: correlationData.riskLevel === 'high' ? `${red}20` : correlationData.riskLevel === 'medium' ? `${amber}20` : `${green}20`,
@@ -538,7 +538,7 @@ export default function ExecutionTab({
                 <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11, marginBottom: 10 }}>
                   <thead>
                     <tr>
-                      {["Par", "Correlaci\u00F3n", "Nivel"].map((h, i) => (
+                      {["Par", "Correlaci\ón", "Nivel"].map((h, i) => (
                         <th key={i} style={{ textAlign: "left", padding: "4px 8px", color: muted, fontSize: 9, fontWeight: 600, borderBottom: `1px solid ${bg3}`, textTransform: "uppercase" }}>
                           {h}
                         </th>
@@ -551,7 +551,7 @@ export default function ExecutionTab({
                       const corrColor = absCorr >= 0.75 ? red : absCorr >= 0.5 ? amber : absCorr >= 0.3 ? "#eab308" : green;
                       return (
                         <tr key={i}>
-                          <td style={{ padding: "4px 8px", fontSize: 11 }}>{pair.assetA} \u2194 {pair.assetB}</td>
+                          <td style={{ padding: "4px 8px", fontSize: 11 }}>{pair.assetA} \↔ {pair.assetB}</td>
                           <td style={{ padding: "4px 8px", fontWeight: 700, color: corrColor }}>{pair.correlation > 0 ? '+' : ''}{pair.correlation}</td>
                           <td style={{ padding: "4px 8px" }}>
                             <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 3, background: `${corrColor}20`, color: corrColor, fontWeight: 600 }}>
@@ -565,7 +565,7 @@ export default function ExecutionTab({
                 </table>
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: muted, marginBottom: 4 }}>
-                    <span>Diversificaci\u00F3n Efectiva</span>
+                    <span>Diversificaci\ón Efectiva</span>
                     <span style={{ fontWeight: 700, color: text }}>{(correlationData.effectiveDiversification * 100).toFixed(0)}%</span>
                   </div>
                   <div style={{ height: 6, background: bg3, borderRadius: 3, overflow: "hidden" }}>
@@ -579,7 +579,7 @@ export default function ExecutionTab({
                 {correlationData.warnings && correlationData.warnings.length > 0 && (
                   <div style={{ fontSize: 10, color: amber, marginTop: 6 }}>
                     {correlationData.warnings.map((w, i) => (
-                      <div key={i} style={{ marginBottom: 2 }}>{'\u26A0'} {w}</div>
+                      <div key={i} style={{ marginBottom: 2 }}>{'\⚠'} {w}</div>
                     ))}
                   </div>
                 )}
@@ -600,7 +600,7 @@ export default function ExecutionTab({
 
             {totalTrades === 0 ? (
               <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
-                A\u00FAn no hay trades cerrados.
+                A\ún no hay trades cerrados.
               </div>
             ) : (
               <>
@@ -608,7 +608,7 @@ export default function ExecutionTab({
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
                     <thead>
                       <tr>
-                        {["Asset", "Dir", "Entrada", "Salida", "P&L", "%", "Duraci\u00F3n", "Raz\u00F3n"].map((h, i) => (
+                        {["Asset", "Dir", "Entrada", "Salida", "P&L", "%", "Duraci\ón", "Raz\ón"].map((h, i) => (
                           <th key={i} style={{
                             padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
                             textTransform: "uppercase", letterSpacing: "0.08em",
@@ -625,7 +625,7 @@ export default function ExecutionTab({
                         return (
                           <tr key={trade.id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
                             <td style={{ padding: "6px 8px", fontWeight: 600 }}>{trade.asset}</td>
-                            <td style={{ padding: "6px 8px", color: trade.direction === 'LONG' ? green : red }}>{trade.direction === 'LONG' ? '\u25B2 L' : '\u25BC S'}</td>
+                            <td style={{ padding: "6px 8px", color: trade.direction === 'LONG' ? green : red }}>{trade.direction === 'LONG' ? '\▲ L' : '\▼ S'}</td>
                             <td style={{ padding: "6px 8px" }}>${Number(trade.entry_price).toLocaleString()}</td>
                             <td style={{ padding: "6px 8px" }}>${Number(trade.exit_price).toLocaleString()}</td>
                             <td style={{ padding: "6px 8px", color: isWin ? green : red, fontWeight: 700 }}>{isWin ? '+' : ''}${pnl.toFixed(2)}</td>
@@ -655,14 +655,14 @@ export default function ExecutionTab({
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
                     <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0}
                       style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: historyPage === 0 ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: historyPage === 0 ? "default" : "pointer" }}>
-                      \u2190 Prev
+                      \← Prev
                     </button>
                     <span style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
                       {historyPage + 1} / {Math.ceil(totalTrades / PAPER_HISTORY_PAGE_SIZE)}
                     </span>
                     <button onClick={() => setHistoryPage(p => p + 1)} disabled={(historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades}
                       style={{ padding: "4px 12px", background: bg3, border: `1px solid ${border}`, borderRadius: 4, color: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? muted : text, fontFamily: "monospace", fontSize: 10, cursor: (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE >= totalTrades ? "default" : "pointer" }}>
-                      Next \u2192
+                      Next \→
                     </button>
                   </div>
                 )}
@@ -681,7 +681,7 @@ export default function ExecutionTab({
             />
             <div style={{ marginTop: 16 }}>
               <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                Libro de \u00D3rdenes
+                Libro de \Órdenes
               </div>
               <OrderBook
                 orders={execOrders}
@@ -705,10 +705,10 @@ export default function ExecutionTab({
             gap: 12
           }}>
             <div style={{ fontSize: 40, opacity: 0.4 }}>{'\u{1F517}'}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>Modo LIVE \u2014 Exchange no conectado</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>Modo LIVE \— Exchange no conectado</div>
             <div style={{ fontSize: 11, color: muted, maxWidth: 400, lineHeight: 1.6 }}>
-              La integraci\u00F3n con Bybit a\u00FAn no est\u00E1 activa. Cuando se conecte, aqu\u00ED ver\u00E1s posiciones reales,
-              \u00F3rdenes ejecutadas en el exchange y m\u00E9tricas de riesgo en tiempo real.
+              La integraci\ón con Bybit a\ún no est\á activa. Cuando se conecte, aqu\í ver\ás posiciones reales,
+              \órdenes ejecutadas en el exchange y m\étricas de riesgo en tiempo real.
             </div>
             <button
               onClick={() => {

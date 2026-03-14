@@ -63,7 +63,7 @@ export default function DashboardTab({
             }} />
             <span style={{ fontSize: 11, color: muted, fontFamily: 'monospace' }}>
               {sseConnected ? 'SSE' : 'Polling'}
-              {lastUpdate && ` \u00B7 ${lastUpdate.toLocaleTimeString()}`}
+              {lastUpdate && ` \· ${lastUpdate.toLocaleTimeString()}`}
             </span>
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function DashboardTab({
             },
             {
               label: "DXY (Dollar)",
-              value: marketData.macro?.dxy || '\u2014',
+              value: marketData.macro?.dxy || '\—',
               sublabel: marketData.macro?.dxyTrend === 'rising' ? 'Rising (bearish crypto)' : marketData.macro?.dxyTrend === 'falling' ? 'Falling (bullish crypto)' : 'Stable',
               color: marketData.macro?.dxyTrend === 'rising' ? red : marketData.macro?.dxyTrend === 'falling' ? green : muted
             },
@@ -171,7 +171,7 @@ export default function DashboardTab({
                   }}>
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                        {signal.action === 'BUY' ? '\u{1F7E2}' : signal.action === 'SELL' ? '\u{1F534}' : '\u26AA'} {signal.asset}
+                        {signal.action === 'BUY' ? '\u{1F7E2}' : signal.action === 'SELL' ? '\u{1F534}' : '\⚪'} {signal.asset}
                         {signal.timeframes?.confluence && (
                           <span style={{
                             fontSize: 8,
@@ -187,7 +187,7 @@ export default function DashboardTab({
                         )}
                       </div>
                       <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>
-                        {signal.tradeLevels ? `R:R ${signal.tradeLevels.riskRewardRatio?.toFixed(1)} \u00B7 ` : ''}{signal.reasons?.substring(0, 80)}{signal.reasons?.length > 80 ? '...' : ''}
+                        {signal.tradeLevels ? `R:R ${signal.tradeLevels.riskRewardRatio?.toFixed(1)} \· ` : ''}{signal.reasons?.substring(0, 80)}{signal.reasons?.length > 80 ? '...' : ''}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -268,7 +268,7 @@ export default function DashboardTab({
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{closedTrades.length} trades cerrados</div>
                       <div style={{ fontSize: 11, color: muted }}>
-                        {pm?.winCount || 0} ganados \u00B7 {pm?.lossCount || 0} perdidos
+                        {pm?.winCount || 0} ganados \· {pm?.lossCount || 0} perdidos
                       </div>
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function DashboardTab({
                         }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontSize: 10, color: t.direction === 'LONG' ? green : red, fontWeight: 700 }}>
-                              {t.direction === 'LONG' ? '\u25B2' : '\u25BC'}
+                              {t.direction === 'LONG' ? '\▲' : '\▼'}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 600 }}>{t.asset}</span>
                             {t.exit_reason && (
@@ -466,7 +466,7 @@ export default function DashboardTab({
             const sellSignals = signals.filter(s => s.action === 'SELL');
             const holdSignals = signals.filter(s => s.action === 'HOLD');
             const total = signals.length;
-            const avgConf = (arr) => arr.length > 0 ? (arr.reduce((s, x) => s + (x.confidence || 0), 0) / arr.length).toFixed(0) : '\u2014';
+            const avgConf = (arr) => arr.length > 0 ? (arr.reduce((s, x) => s + (x.confidence || 0), 0) / arr.length).toFixed(0) : '\—';
 
             const buyPct = total > 0 ? (buySignals.length / total * 100) : 0;
             const sellPct = total > 0 ? (sellSignals.length / total * 100) : 0;
@@ -510,7 +510,7 @@ export default function DashboardTab({
             if (!latest) {
               return (
                 <div style={{ padding: 20, textAlign: "center", color: muted, fontSize: 12 }}>
-                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => { setTab('strategy'); setStrategySubTab('backtest'); }}>ESTRATEGIA \u2192 Backtest</span>
+                  Ejecuta un backtest desde la pestaña <span style={{ color: purple, cursor: "pointer", fontWeight: 700 }} onClick={() => { setTab('strategy'); setStrategySubTab('backtest'); }}>ESTRATEGIA \→ Backtest</span>
                 </div>
               );
             }
@@ -528,7 +528,7 @@ export default function DashboardTab({
               <div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 12, fontSize: 11 }}>
                   <span style={{ fontWeight: 700, color: text }}>{latest.asset}</span>
-                  <span style={{ color: muted }}>{latest.days}d \u00B7 {latest.step_interval || '4h'}</span>
+                  <span style={{ color: muted }}>{latest.days}d \· {latest.step_interval || '4h'}</span>
                   <span style={{
                     fontSize: 9, padding: "2px 6px", borderRadius: 3,
                     background: `${statusColor}22`, color: statusColor, fontWeight: 700, textTransform: "uppercase"
