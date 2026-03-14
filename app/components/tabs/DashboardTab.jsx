@@ -609,27 +609,29 @@ export default function DashboardTab({
         <div style={{ ...card, marginTop: 4 }}>
           <div style={sTitle}>ESTADO DEL SISTEMA</div>
           {(() => {
+            const checks = systemHealth?.checks || {};
             const services = [
-              { key: 'binance', label: 'Binance' },
+              { key: 'marketData', label: 'Binance' },
               { key: 'database', label: 'Supabase' },
               { key: 'sse', label: 'SSE' },
               { key: 'telegram', label: 'Telegram' },
               { key: 'email', label: 'Email' },
-              { key: 'featureStore', label: 'Features' },
+              { key: 'caches', label: 'Caches' },
             ];
 
             const dotColor = (status) => {
               if (!status || status === 'unknown') return muted;
               const s = String(status).toLowerCase();
-              if (s.includes('active') || s.includes('connected') || status === true) return green;
-              if (s.includes('partial') || s.includes('degraded') || s.includes('not configured')) return amber;
+              if (s.includes('ok') || s.includes('active') || s.includes('connected') || status === true) return green;
+              if (s.includes('partial') || s.includes('degraded') || s.includes('stale') || s.includes('not configured')) return amber;
               return red;
             };
 
             return (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
                 {services.map(({ key, label }) => {
-                  const status = systemHealth ? (typeof systemHealth[key] === 'object' ? systemHealth[key]?.status : systemHealth[key]) : null;
+                  const raw = checks[key];
+                  const status = systemHealth ? (typeof raw === 'object' ? raw?.status : raw) : null;
                   const dc = dotColor(status);
                   const statusText = status ? (typeof status === 'boolean' ? (status ? 'active' : 'inactive') : String(status)) : 'checking...';
                   return (
