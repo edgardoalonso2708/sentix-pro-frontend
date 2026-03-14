@@ -1,5 +1,4 @@
 'use client';
-import { useState } from 'react';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -7,9 +6,7 @@ import {
 } from 'recharts';
 import { colors, card, sTitle } from '../../lib/theme';
 import { formatPrice, formatLargeNumber, computePaperEquityCurve, computeDailyPnl, computeAssetPerformance } from '../../lib/utils';
-import { SHARED_ASSETS } from '../../lib/constants';
 import { useLanguage } from '../../contexts/LanguageContext';
-import CandlestickChart from '../charts/CandlestickChart';
 
 const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = colors;
 
@@ -20,8 +17,6 @@ export default function DashboardTab({
   setTab, setStrategySubTab, apiUrl,
 }) {
     const { t } = useLanguage();
-    const [chartAsset, setChartAsset] = useState('bitcoin');
-    const [chartInterval, setChartInterval] = useState('1h');
 
     if (!marketData || !marketData.crypto) {
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
@@ -229,37 +224,6 @@ export default function DashboardTab({
             </button>
           </div>
         )}
-
-        {/* PRICE ACTION CHART */}
-        <div style={{ ...card, marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={sTitle}>{t('dash.priceAction')}</div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <select
-                value={chartAsset}
-                onChange={e => setChartAsset(e.target.value)}
-                style={{
-                  background: bg3, border: `1px solid ${border}`, borderRadius: 6,
-                  color: text, fontSize: 11, fontFamily: 'monospace', padding: '4px 8px',
-                  cursor: 'pointer',
-                }}
-              >
-                {SHARED_ASSETS.map(a => (
-                  <option key={a.value} value={a.value}>{a.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <CandlestickChart
-            apiUrl={apiUrl}
-            asset={chartAsset}
-            interval={chartInterval}
-            limit={200}
-            height={360}
-            showControls={true}
-            onIntervalChange={setChartInterval}
-          />
-        </div>
 
         {/* PAPER TRADING PERFORMANCE */}
         <div style={{ ...card, marginTop: 16 }}>

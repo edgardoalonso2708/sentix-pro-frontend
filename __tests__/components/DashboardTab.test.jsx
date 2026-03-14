@@ -1,11 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-// Mock CandlestickChart — lightweight-charts needs canvas
-vi.mock('../../app/components/charts/CandlestickChart', () => ({
-  default: (props) => <div data-testid="candlestick-chart" data-asset={props.asset} />,
-}));
-
 // Mock recharts
 vi.mock('recharts', () => ({
   LineChart: ({ children }) => <div data-testid="line-chart">{children}</div>,

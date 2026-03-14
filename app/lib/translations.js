@@ -57,7 +57,6 @@ const es = {
   'dash.noClosedTrades': 'No hay trades cerrados aun',
   'dash.operationPeriod': 'Periodo de operacion',
   'dash.openPositions': 'Posiciones Abiertas',
-  'dash.priceAction': 'PRICE ACTION',
 
   // ─── Signals ───────────────────────────────────────────────────────────────
   'sig.accuracy': 'PRECISION DE SENALES',
@@ -503,7 +502,6 @@ const en = {
   'dash.noClosedTrades': 'No closed trades yet',
   'dash.operationPeriod': 'Operation period',
   'dash.openPositions': 'Open Positions',
-  'dash.priceAction': 'PRICE ACTION',
 
   // ─── Signals ───────────────────────────────────────────────────────────────
   'sig.accuracy': 'SIGNAL ACCURACY',
