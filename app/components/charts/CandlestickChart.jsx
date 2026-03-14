@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, ColorType, CrosshairMode } from 'lightweight-charts';
+import { createChart, ColorType, CrosshairMode, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
 import { authFetch } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
@@ -79,7 +79,7 @@ export default function CandlestickChart({
       },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: colors.green,
       downColor: colors.red,
       borderUpColor: colors.green,
@@ -88,7 +88,7 @@ export default function CandlestickChart({
       wickDownColor: colors.red,
     });
 
-    const volumeSeries = chart.addHistogramSeries({
+    const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
     });
@@ -202,7 +202,7 @@ export default function CandlestickChart({
       )}
 
       <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: `1px solid ${colors.border}` }}>
-        <div ref={chartContainerRef} />
+        <div ref={chartContainerRef} style={{ width: '100%', minHeight: height }} />
         {loading && (
           <div style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
