@@ -26,10 +26,10 @@ const baseProps = {
 describe('SignalsTab', () => {
   it('renders SIGNAL ACCURACY heading', () => {
     render(<SignalsTab {...baseProps} />);
-    expect(screen.getByText('SIGNAL ACCURACY')).toBeTruthy();
+    expect(screen.getByText('PRECISION DE SENALES')).toBeTruthy();
   });
 
-  it('shows "Recopilando datos" when no accuracy data', () => {
+  it('shows gathering-data message when no accuracy data', () => {
     render(<SignalsTab {...baseProps} signalAccuracy={null} />);
     expect(screen.getByText(/Recopilando datos/)).toBeTruthy();
   });
