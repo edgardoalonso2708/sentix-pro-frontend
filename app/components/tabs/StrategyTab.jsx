@@ -415,9 +415,15 @@ function StrategyConfigContent({
                 if (res.ok) {
                   setPaperConfirmFullReset(false);
                   await fetchDashboardPaper();
+                  alert('✅ Full reset complete — all statistics cleared.');
+                } else {
+                  const errData = await res.json().catch(() => ({}));
+                  console.error('Full reset failed:', errData);
+                  alert(`❌ Full reset failed: ${errData.error || res.statusText}`);
                 }
               } catch (err) {
                 console.error('Full reset error:', err);
+                alert(`❌ Full reset error: ${err.message}`);
               }
             };
             return (
