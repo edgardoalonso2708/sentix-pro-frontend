@@ -61,6 +61,11 @@ export default function GuideTab() {
     { icon: "🧪", title: "Backtesting" },
     { icon: "🔬", title: "Optimizacion" },
     { icon: "🔔", title: "Filtros de Alertas" },
+    { icon: "🛡", title: "Risk Engine" },
+    { icon: "💼", title: "Portfolio (APM)" },
+    { icon: "⚡", title: "Ejecucion" },
+    { icon: "🎯", title: "Guia de Uso" },
+    { icon: "📐", title: "Parametros" },
     { icon: "📖", title: "Glosario" },
   ];
 
@@ -499,7 +504,191 @@ El sistema:
       </div>);
 
       case 17: return (<div>
-        <div style={sectionHeaderStyle}>📖 18. Glosario Rapido</div>
+        <div style={sectionHeaderStyle}>🛡 18. Risk Engine y Seguridad</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>El Risk Engine valida cada trade antes de ejecutarlo con 7 capas de seguridad:</p>
+        <GuideTable headers={["#", "Validacion", "Que verifica"]} rows={[
+          ["1", "Trading habilitado", "Que no este pausado o con kill switch activo"],
+          ["2", "Limites de seguridad", "Perdida diaria, cantidad de posiciones, cooldown"],
+          ["3", "Trade duplicado", "Solo una posicion abierta por activo"],
+          ["4", "Limites de portafolio", "Correlacion, exposicion por sector, misma direccion"],
+          ["5", "Tamano de posicion", "No excede el max % del capital"],
+          ["6", "Drawdown Circuit Breaker", "Rolling 90 dias no excede 15%"],
+          ["7", "Kill Switch", "Verificacion final de emergencia"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Drawdown Circuit Breaker</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "Monitorea drawdown en ventana rolling de 90 dias",
+            "Umbral: 15% - si se excede, bloquea nuevos trades",
+            "Se recupera automaticamente cuando equity sube",
+            "Usa equity snapshots diarios para calculo preciso"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>• {item}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Kill Switch (Emergencia)</div>
+        <GuideTable headers={["Accion", "Efecto"]} rows={[
+          ["Activar", "Congela nuevas ordenes + cierra todas las posiciones abiertas"],
+          ["Desactivar", "Restaura trading normal (manual)"],
+          ["Audit", "Toda activacion queda registrada en el log"],
+        ]} />
+        <div style={alertBox}>⚠ <strong>Kill Switch:</strong> Usalo solo en emergencias: flash crashes, hackeos de exchanges, o comportamiento anomalo del sistema.</div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Limites de Portafolio</div>
+        <GuideTable headers={["Limite", "Valor", "Proposito"]} rows={[
+          ["Max correlacion", "0.70", "Bloquea entradas correlacionadas (ej: BTC+ETH juntos)"],
+          ["Max exposicion sector", "60%", "Evita concentracion excesiva"],
+          ["Max misma direccion", "3 posiciones", "Limita riesgo direccional"],
+        ]} />
+      </div>);
+
+      case 18: return (<div>
+        <div style={sectionHeaderStyle}>💼 19. Portfolio Management (APM)</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Gestion avanzada de portafolio multi-wallet con vista consolidada.</p>
+        <div style={{ ...sTitle }}>Wallets Soportados (17 proveedores)</div>
+        <GuideTable headers={["Tipo", "Proveedores"]} rows={[
+          [<strong>Exchanges</strong>, "Binance, Bybit, Coinbase, Kraken, OKX, Kucoin"],
+          [<strong>LATAM</strong>, "Mercadopago, Skipo, Lemon, Ripio"],
+          [<strong>Hot Wallets</strong>, "Metamask, Trust Wallet, Phantom, Exodus"],
+          [<strong>Cold Storage</strong>, "Ledger, Trezor"],
+          [<strong>Otro</strong>, "Custom (cualquier wallet)"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Funcionalidades</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "Crear multiples wallets con nombre, color y notas",
+            "Cargar holdings via CSV batch upload",
+            "Vista consolidada con precios en tiempo real",
+            "P&L por activo y por wallet",
+            "Total portfolio value actualizado en tiempo real"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>• {item}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Formato CSV para Upload</div>
+        <GuideTable headers={["Columna", "Obligatoria", "Ejemplo"]} rows={[
+          ["asset", "Si", "bitcoin, ethereum, solana"],
+          ["amount", "Si", "0.5, 10.25"],
+          ["buy_price", "Si", "65000, 3200"],
+          ["date", "No", "2024-01-15"],
+          ["wallet", "No", "binance, ledger"],
+        ]} />
+      </div>);
+
+      case 19: return (<div>
+        <div style={sectionHeaderStyle}>⚡ 20. Sistema de Ejecucion</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Ciclo de vida completo de ordenes con validacion y audit trail.</p>
+        <div style={{ ...sTitle }}>Ciclo de Vida de una Orden</div>
+        <GuideTable headers={["Estado", "Significado"]} rows={[
+          [<span style={{color: amber}}>PENDING</span>, "Orden creada, esperando validacion del Risk Engine"],
+          [<span style={{color: green}}>VALIDATED</span>, "Paso todas las validaciones, lista para enviar"],
+          [<span style={{color: purple}}>SUBMITTED</span>, "Enviada al exchange/paper para ejecucion"],
+          [<span style={{color: amber}}>PARTIAL_FILL</span>, "Parcialmente ejecutada en el mercado"],
+          [<span style={{color: green}}>FILLED</span>, "Completamente ejecutada"],
+          [<span style={{color: muted}}>CANCELLED</span>, "Cancelada por el usuario"],
+          [<span style={{color: red}}>REJECTED</span>, "Rechazada por el Risk Engine"],
+          [<span style={{color: muted}}>EXPIRED</span>, "Tiempo de validez expirado"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Costos de Ejecucion (Modelo Realista)</div>
+        <GuideTable headers={["Activo", "Slippage", "Comision"]} rows={[
+          ["Bitcoin (BTC)", "0.05%", "0.10%"],
+          ["Ethereum (ETH)", "0.08%", "0.10%"],
+          ["Altcoins mayores", "0.15%", "0.10%"],
+          ["Altcoins menores", "0.25%", "0.15%"],
+        ]} />
+        <div style={tipBox}>💡 El backtester y paper trading incluyen estos costos automaticamente para resultados realistas. Ademas hay 2% de probabilidad de gap risk por trade.</div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Adaptadores</div>
+        <GuideTable headers={["Adaptador", "Uso"]} rows={[
+          [<strong>Paper</strong>, "Simulacion sin riesgo (paper trading, backtesting)"],
+          [<strong>Bybit</strong>, "Trading real Spot (testnet por defecto para seguridad)"],
+        ]} />
+      </div>);
+
+      case 20: return (<div>
+        <div style={sectionHeaderStyle}>🎯 21. Guia de Uso: Mejores Resultados</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sigue estos pasos para sacar el maximo provecho de Sentix Pro:</p>
+        <div style={{ ...sTitle }}>Fase 1: Configuracion (Dia 1)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "1. Familiarizate con el Dashboard: macro, senales, salud del sistema",
+            "2. Configura alertas conservadoras: confianza >= 60%, solo STRONG, cooldown 30min",
+            "3. Configura Paper Trading: capital real, riesgo 2%, confluencia 3, solo STRONG"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle }}>Fase 2: Paper Trading (Semanas 1-4)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "4. Activa paper trading automatico por 2-4 semanas",
+            "5. NO cambies parametros las primeras 2 semanas",
+            "6. Revisa diariamente: Win Rate, P&L, Max Drawdown",
+            "7. Objetivo: Win Rate > 50%, Profit Factor > 1.2"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle }}>Fase 3: Optimizacion (Semanas 3-4)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "8. Backtest con 90+ dias, empieza con BTC",
+            "9. Optimiza en orden: buyThreshold > atrTrailing > rsiOversold > confluence > riskPerTrade",
+            "10. Valida con Monte Carlo (5to percentil positivo = robusto)",
+            "11. Fija mejores valores y re-backtest para confirmar"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle }}>Fase 4: Trading Real (Mes 2+)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "12. Configura wallets en APM, carga holdings via CSV",
+            "13. Empieza con riesgo 1% (menor que paper)",
+            "14. Sigue SIEMPRE el Flujo de Decision (seccion 10)",
+            "15. Cada mes: re-backtest 90 dias, re-optimiza si Sharpe < 1.0"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={alertBox}>⚠ <strong>Reglas de oro:</strong> Nunca sin stop-loss. Siempre 50% en TP1. No operes alts en BTC SEASON. Si pierdes 3 seguidos, para y analiza. Usa Kill Switch si algo esta mal.</div>
+      </div>);
+
+      case 21: return (<div>
+        <div style={sectionHeaderStyle}>📐 22. Parametros Recomendados por Perfil</div>
+        <div style={{ ...sTitle }}>Conservador (principiante)</div>
+        <GuideTable headers={["Parametro", "Valor", "Razon"]} rows={[
+          ["Riesgo por trade", "1%", "Minimiza perdidas mientras aprendes"],
+          ["Max posiciones", "2", "Menos riesgo total"],
+          ["Confluencia", "3", "Solo con todos los TFs alineados"],
+          ["Senales", "Solo STRONG", "Maxima calidad"],
+          ["Cooldown", "60 min", "Evita sobre-operar"],
+          ["Confianza min", "60%", "Alta conviccion"],
+          ["Kelly", "Desactivado", "Riesgo fijo"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Moderado (intermedio)</div>
+        <GuideTable headers={["Parametro", "Valor", "Razon"]} rows={[
+          ["Riesgo por trade", "2%", "Balance crecimiento/seguridad"],
+          ["Max posiciones", "3-4", "Diversificacion moderada"],
+          ["Confluencia", "2", "Mas oportunidades"],
+          ["Senales", "STRONG + BUY/SELL", "Mayor frecuencia"],
+          ["Cooldown", "30 min", "Equilibrio"],
+          ["Confianza min", "50%", "Conviccion decente"],
+          ["Kelly", "Quarter (0.25)", "Sizing adaptativo"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Agresivo (avanzado)</div>
+        <GuideTable headers={["Parametro", "Valor", "Razon"]} rows={[
+          ["Riesgo por trade", "3-5%", "Mayor rendimiento potencial"],
+          ["Max posiciones", "5", "Maximo diversificacion"],
+          ["Confluencia", "2", "Mas oportunidades"],
+          ["Senales", "Todas incl. WEAK", "Maxima frecuencia"],
+          ["Cooldown", "15 min", "Mas trades"],
+          ["Confianza min", "40%", "Conviccion moderada"],
+          ["Kelly", "Half (0.50)", "Sizing agresivo controlado"],
+        ]} />
+        <div style={alertBox}>⚠ El perfil agresivo requiere experiencia y capital que puedas perder. No uses si eres nuevo.</div>
+      </div>);
+
+      case 22: return (<div>
+        <div style={sectionHeaderStyle}>📖 23. Glosario Rapido</div>
         <GuideTable headers={["Termino", "Significado"]} rows={[
           [<strong>ATR</strong>, "Average True Range. Mide la volatilidad tipica del activo."],
           [<strong>RSI</strong>, "Relative Strength Index. Sobrecompra (>70) y sobreventa (<30)."],
@@ -522,9 +711,18 @@ El sistema:
           [<strong>Drawdown</strong>, "Caida desde el punto mas alto del capital."],
           [<strong>Profit Factor</strong>, "Total de ganancias dividido entre total de perdidas."],
           [<strong>Overfitting</strong>, "Cuando los parametros se ajustan demasiado a datos pasados."],
+          [<strong>Walk-Forward</strong>, "Validacion que divide datos en periodos de entrenamiento y prueba."],
+          [<strong>Monte Carlo</strong>, "Analisis que reordena trades 1000x para medir robustez estadistica."],
+          [<strong>Kelly Criterion</strong>, "Formula matematica para calcular tamano optimo de posicion."],
+          [<strong>Kill Switch</strong>, "Interruptor de emergencia que detiene todo el trading."],
+          [<strong>Circuit Breaker</strong>, "Bloquea trading cuando drawdown excede umbral (15%, 90 dias)."],
+          [<strong>TTL</strong>, "Time-to-Live. Senal expira en 15 min, decae -5% confianza/min."],
+          [<strong>Market Regime</strong>, "Estado del mercado: trending, ranging o volatile."],
+          [<strong>Auto-Tuner</strong>, "Optimizacion automatica de parametros con aprobacion Telegram."],
+          [<strong>APM</strong>, "Advanced Portfolio Management. Multi-wallet con 17 proveedores."],
         ]} />
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 10, color: muted, fontFamily: "monospace" }}>
-          Sentix Pro v5.0 · Motor de 14 factores · Multi-timeframe · Order Book · Paper Trading · Backtesting
+          Sentix Pro v6.0 · Motor de 14 factores · Multi-timeframe · Order Book · Risk Engine · Kelly · Monte Carlo
         </div>
       </div>);
 
@@ -553,7 +751,7 @@ El sistema:
           background: "rgba(168,85,247,0.2)", borderRadius: 20,
           fontSize: 10, color: purple, fontWeight: 700
         }}>
-          v5.0 · 14 Factores · Multi-Timeframe
+          v6.0 · 14 Factores · Risk Engine · Kelly · Monte Carlo
         </div>
       </div>
 

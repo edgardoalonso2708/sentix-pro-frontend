@@ -435,6 +435,11 @@ const es = {
   'guide.backtesting': 'Backtesting',
   'guide.optimization': 'Optimizacion de Estrategia',
   'guide.alertFilters': 'Filtros de Alertas Personalizados',
+  'guide.riskEngine': 'Risk Engine y Seguridad',
+  'guide.portfolio': 'Portfolio Management (APM)',
+  'guide.execution': 'Sistema de Ejecucion',
+  'guide.userGuide': 'Guia de Uso: Mejores Resultados',
+  'guide.parameterProfiles': 'Parametros Recomendados por Perfil',
   'guide.glossary': 'Glosario Rapido',
 
   // ─── Backtest ──────────────────────────────────────────────────────────────
@@ -880,6 +885,11 @@ const en = {
   'guide.backtesting': 'Backtesting',
   'guide.optimization': 'Strategy Optimization',
   'guide.alertFilters': 'Custom Alert Filters',
+  'guide.riskEngine': 'Risk Engine & Safety',
+  'guide.portfolio': 'Portfolio Management (APM)',
+  'guide.execution': 'Execution System',
+  'guide.userGuide': 'User Guide: Best Results',
+  'guide.parameterProfiles': 'Recommended Parameters by Profile',
   'guide.glossary': 'Quick Glossary',
 
   // ─── Backtest ──────────────────────────────────────────────────────────────
