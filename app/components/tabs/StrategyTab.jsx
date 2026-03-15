@@ -14,6 +14,7 @@ export default function StrategyTab({
   paperSavingConfig, setPaperSavingConfig,
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
+  paperConfirmFullReset, setPaperConfirmFullReset,
   fetchDashboardPaper,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
@@ -65,6 +66,7 @@ export default function StrategyTab({
           paperSavingConfig={paperSavingConfig} setPaperSavingConfig={setPaperSavingConfig}
           paperShowConfig={paperShowConfig} setPaperShowConfig={setPaperShowConfig}
           paperConfirmReset={paperConfirmReset} setPaperConfirmReset={setPaperConfirmReset}
+          paperConfirmFullReset={paperConfirmFullReset} setPaperConfirmFullReset={setPaperConfirmFullReset}
           fetchDashboardPaper={fetchDashboardPaper}
           showAdvancedPerf={showAdvancedPerf} setShowAdvancedPerf={setShowAdvancedPerf}
           advancedPerfDays={advancedPerfDays} setAdvancedPerfDays={setAdvancedPerfDays}
@@ -92,6 +94,7 @@ function StrategyConfigContent({
   paperSavingConfig, setPaperSavingConfig,
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
+  paperConfirmFullReset, setPaperConfirmFullReset,
   fetchDashboardPaper,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
@@ -406,6 +409,17 @@ function StrategyConfigContent({
                 console.error('Reset error:', err);
               }
             };
+            const handleFullReset = async () => {
+              try {
+                const res = await authFetch(`${apiUrl}/api/paper/full-reset/${userId}`, { method: 'POST' });
+                if (res.ok) {
+                  setPaperConfirmFullReset(false);
+                  await fetchDashboardPaper();
+                }
+              } catch (err) {
+                console.error('Full reset error:', err);
+              }
+            };
             return (
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
@@ -451,6 +465,28 @@ function StrategyConfigContent({
                         color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
                       }}>{t('strat.yes')}</button>
                       <button onClick={() => setPaperConfirmReset(false)} style={{
+                        padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
+                        color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
+                      }}>{t('strat.no')}</button>
+                    </div>
+                  )}
+                  {!paperConfirmFullReset ? (
+                    <button onClick={() => setPaperConfirmFullReset(true)}
+                      style={{
+                        padding: "8px 20px", background: "rgba(239,68,68,0.15)",
+                        border: `1px solid ${red}`, borderRadius: 6,
+                        color: red, fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer"
+                      }}>
+                      {'\u{1F5D1}\u{FE0F}'} {t('strat.fullReset')}
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: red }}>{t('strat.fullResetConfirm')}</span>
+                      <button onClick={handleFullReset} style={{
+                        padding: "6px 14px", background: red, border: "none", borderRadius: 4,
+                        color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer"
+                      }}>{t('strat.yes')}</button>
+                      <button onClick={() => setPaperConfirmFullReset(false)} style={{
                         padding: "6px 14px", background: bg3, border: `1px solid ${border}`, borderRadius: 4,
                         color: muted, fontFamily: "monospace", fontSize: 11, cursor: "pointer"
                       }}>{t('strat.no')}</button>

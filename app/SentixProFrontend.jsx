@@ -82,6 +82,7 @@ export default function SentixProFrontend() {
   const [paperHistoryPage, setPaperHistoryPage] = useState(0);
   const [paperHistoryTotal, setPaperHistoryTotal] = useState(0);
   const [paperConfirmReset, setPaperConfirmReset] = useState(false);
+  const [paperConfirmFullReset, setPaperConfirmFullReset] = useState(false);
 
   // Execution system
   const [execOrders, setExecOrders] = useState([]);
@@ -991,6 +992,7 @@ export default function SentixProFrontend() {
           paperSavingConfig={paperSavingConfig} setPaperSavingConfig={setPaperSavingConfig}
           paperShowConfig={paperShowConfig} setPaperShowConfig={setPaperShowConfig}
           paperConfirmReset={paperConfirmReset} setPaperConfirmReset={setPaperConfirmReset}
+          paperConfirmFullReset={paperConfirmFullReset} setPaperConfirmFullReset={setPaperConfirmFullReset}
           fetchDashboardPaper={fetchDashboardPaper}
           showAdvancedPerf={showAdvancedPerf} setShowAdvancedPerf={setShowAdvancedPerf}
           advancedPerfDays={advancedPerfDays} setAdvancedPerfDays={setAdvancedPerfDays}

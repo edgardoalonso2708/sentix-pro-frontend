@@ -44,6 +44,8 @@ function buildProps(overrides = {}) {
     setPaperShowConfig: vi.fn(),
     paperConfirmReset: false,
     setPaperConfirmReset: vi.fn(),
+    paperConfirmFullReset: false,
+    setPaperConfirmFullReset: vi.fn(),
     fetchDashboardPaper: vi.fn(),
     showAdvancedPerf: false,
     setShowAdvancedPerf: vi.fn(),
