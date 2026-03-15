@@ -222,7 +222,7 @@ export default function SentixProFrontend() {
         const d = await cfgRes.value.json();
         const cfg = d.config || d;
         setPaperConfig(cfg);
-        if (!paperConfigForm) setPaperConfigForm(cfg);
+        setPaperConfigForm(prev => prev ? { ...prev, current_capital: cfg.current_capital, daily_pnl: cfg.daily_pnl } : cfg);
       }
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const d = await posRes.value.json();
@@ -243,7 +243,7 @@ export default function SentixProFrontend() {
       }
       if (advRes.status === 'fulfilled' && advRes.value.ok) {
         const d = await advRes.value.json();
-        if (d.total !== undefined) setAdvancedPerf(d);
+        setAdvancedPerf(d.total !== undefined ? d : null);
       }
     } catch (error) {
       console.error('Error fetching dashboard paper data:', error);

@@ -413,7 +413,14 @@ function StrategyConfigContent({
               try {
                 const res = await authFetch(`${apiUrl}/api/paper/full-reset/${userId}`, { method: 'POST' });
                 if (res.ok) {
+                  const data = await res.json();
                   setPaperConfirmFullReset(false);
+                  // Force-update local config form with reset values
+                  if (data.config) {
+                    setPaperConfig(data.config);
+                    setPaperConfigForm(data.config);
+                  }
+                  // Refresh all dashboard data from server
                   await fetchDashboardPaper();
                   alert('✅ Full reset complete — all statistics cleared.');
                 } else {
