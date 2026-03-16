@@ -413,21 +413,13 @@ function StrategyConfigContent({
               try {
                 const res = await authFetch(`${apiUrl}/api/paper/full-reset/${userId}`, { method: 'POST' });
                 const data = await res.json().catch(() => ({}));
-                console.log('Full reset response:', res.status, data);
                 if (res.ok || data.config) {
-                  setPaperConfirmFullReset(false);
-                  // Clear ALL paper states immediately via parent callback
-                  if (onFullResetDone) onFullResetDone(data.config);
-                  const details = data.results
-                    ? '\n' + Object.entries(data.results).map(([t, r]) => `${t}: ${r.ok ? '✓' : '✗ ' + r.error}`).join('\n')
-                    : '';
-                  alert(`✅ Full reset complete.${details}`);
+                  // Hard reload guarantees all React states refresh from the now-empty DB
+                  window.location.reload();
                 } else {
-                  console.error('Full reset failed:', data);
                   alert(`❌ Full reset failed: ${data.error || res.statusText}`);
                 }
               } catch (err) {
-                console.error('Full reset error:', err);
                 alert(`❌ Full reset error: ${err.message}`);
               }
             };
