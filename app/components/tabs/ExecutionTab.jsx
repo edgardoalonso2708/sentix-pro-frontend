@@ -695,8 +695,8 @@ export default function ExecutionTab({
           </div>
         )}
 
-        {/* Live mode: exchange not connected yet */}
-        {execMode === 'live' && (subTab === 'positions' || subTab === 'risk' || subTab === 'audit' || subTab === 'orders') && (
+        {/* Live/Perp mode: exchange not connected yet */}
+        {(execMode === 'live' || execMode === 'perp') && (subTab === 'positions' || subTab === 'risk' || subTab === 'audit' || subTab === 'orders') && (
           <div style={{
             ...card,
             textAlign: 'center',
@@ -706,10 +706,12 @@ export default function ExecutionTab({
             alignItems: 'center',
             gap: 12
           }}>
-            <div style={{ fontSize: 40, opacity: 0.4 }}>{'\u{1F517}'}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>{t('exec.liveMode')}</div>
+            <div style={{ fontSize: 40, opacity: 0.4 }}>{execMode === 'perp' ? '\u{26A1}' : '\u{1F517}'}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: text }}>
+              {execMode === 'perp' ? t('exec.perpMode') : t('exec.liveMode')}
+            </div>
             <div style={{ fontSize: 11, color: muted, maxWidth: 400, lineHeight: 1.6 }}>
-              {t('exec.liveDesc')}
+              {execMode === 'perp' ? t('exec.perpDesc') : t('exec.liveDesc')}
             </div>
             <button
               onClick={() => {
@@ -736,16 +738,16 @@ export default function ExecutionTab({
           </div>
         )}
 
-        {/* Risk sub-tab (paper mode) */}
-        {subTab === 'risk' && execMode !== 'live' && (
+        {/* Risk sub-tab (paper mode only) */}
+        {subTab === 'risk' && execMode === 'paper' && (
           <RiskDashboard
             dashboard={execRiskDashboard}
             colors={executionColors}
           />
         )}
 
-        {/* Audit sub-tab (paper mode) */}
-        {subTab === 'audit' && execMode !== 'live' && (
+        {/* Audit sub-tab (paper mode only) */}
+        {subTab === 'audit' && execMode === 'paper' && (
           <ExecutionAuditLog
             logs={execAuditLog}
             colors={executionColors}
