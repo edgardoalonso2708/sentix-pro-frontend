@@ -15,7 +15,7 @@ export default function StrategyTab({
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
   paperConfirmFullReset, setPaperConfirmFullReset,
-  fetchDashboardPaper,
+  fetchDashboardPaper, onFullResetDone,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
   advancedPerf,
@@ -67,7 +67,7 @@ export default function StrategyTab({
           paperShowConfig={paperShowConfig} setPaperShowConfig={setPaperShowConfig}
           paperConfirmReset={paperConfirmReset} setPaperConfirmReset={setPaperConfirmReset}
           paperConfirmFullReset={paperConfirmFullReset} setPaperConfirmFullReset={setPaperConfirmFullReset}
-          fetchDashboardPaper={fetchDashboardPaper}
+          fetchDashboardPaper={fetchDashboardPaper} onFullResetDone={onFullResetDone}
           showAdvancedPerf={showAdvancedPerf} setShowAdvancedPerf={setShowAdvancedPerf}
           advancedPerfDays={advancedPerfDays} setAdvancedPerfDays={setAdvancedPerfDays}
           advancedPerf={advancedPerf}
@@ -95,7 +95,7 @@ function StrategyConfigContent({
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
   paperConfirmFullReset, setPaperConfirmFullReset,
-  fetchDashboardPaper,
+  fetchDashboardPaper, onFullResetDone,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
   advancedPerf,
@@ -415,13 +415,8 @@ function StrategyConfigContent({
                 if (res.ok) {
                   const data = await res.json();
                   setPaperConfirmFullReset(false);
-                  // Force-update local config form with reset values
-                  if (data.config) {
-                    setPaperConfig(data.config);
-                    setPaperConfigForm(data.config);
-                  }
-                  // Refresh all dashboard data from server
-                  await fetchDashboardPaper();
+                  // Clear ALL paper states immediately via parent callback
+                  if (onFullResetDone) onFullResetDone(data.config);
                   alert('✅ Full reset complete — all statistics cleared.');
                 } else {
                   const errData = await res.json().catch(() => ({}));
