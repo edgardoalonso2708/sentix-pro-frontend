@@ -280,7 +280,7 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.minConfluence')}</label>
-              <input type="number" min="1" max="5" value={configForm.min_confluence || 3}
+              <input type="number" min="2" max="3" value={configForm.min_confluence || 2}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.minConfluenceDesc')}</div>
