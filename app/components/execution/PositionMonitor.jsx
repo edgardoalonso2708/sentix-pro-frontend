@@ -183,22 +183,30 @@ function PositionCard({ position, colors }) {
               </span>
             </div>
           )}
-          {position.time_decay_active && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: '2px 8px',
-              borderRadius: 4,
-              background: '#8b5cf615',
-              fontSize: 10
-            }}>
-              <span style={{ color: '#8b5cf6', fontWeight: 600 }}>TD</span>
-              <span style={{ color: muted }} title="SL ajustado por tiempo de espera">
-                SL {position.time_decay_sl ? `$${parseFloat(position.time_decay_sl).toLocaleString()}` : 'activo'}
-              </span>
-            </div>
-          )}
+          {position.time_decay_active && (() => {
+            const tdMode = position.time_decay_mode;
+            const isLocking = tdMode === 'locking_profit';
+            const isReducing = tdMode === 'reducing_loss';
+            const tdColor = isLocking ? (colors?.green || '#00d4aa') : isReducing ? '#f59e0b' : '#8b5cf6';
+            const tdLabel = isLocking ? 'Asegurando ganancia' : isReducing ? 'Reduciendo perdida' : 'SL ajustado por tiempo';
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: `${tdColor}15`,
+                fontSize: 10
+              }}>
+                <span style={{ color: tdColor, fontWeight: 600 }}>TD</span>
+                <span style={{ color: muted }} title={tdLabel}>
+                  {isLocking ? '🔒' : isReducing ? '📉' : ''}{' '}
+                  {position.time_decay_sl ? `SL $${parseFloat(position.time_decay_sl).toLocaleString()}` : tdLabel}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

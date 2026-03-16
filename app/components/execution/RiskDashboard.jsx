@@ -75,13 +75,45 @@ export default function RiskDashboard({ dashboard, colors }) {
     <div>
       {/* Capital summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
-        <StatCard
-          label="Capital Actual"
-          value={`$${(dashboard.currentCapital || 0).toLocaleString()}`}
-          subValue={`${capitalPct >= 0 ? '+' : ''}${capitalPct.toFixed(2)}%`}
-          color={capitalColor}
-          bg={bg} border={border} muted={muted}
-        />
+        <div style={{
+          background: bg,
+          border: `1px solid ${border}`,
+          borderRadius: 8,
+          padding: 12,
+          textAlign: 'center'
+        }}>
+          <div style={{ color: muted, fontSize: 10, marginBottom: 4 }}>Capital Actual</div>
+          <div style={{ color: capitalColor, fontSize: 18, fontWeight: 700 }}>
+            ${(dashboard.currentCapital || 0).toLocaleString()}
+          </div>
+          <div style={{ color: muted, fontSize: 10, marginTop: 2 }}>
+            {capitalPct >= 0 ? '+' : ''}{capitalPct.toFixed(2)}%
+          </div>
+          {dashboard.allocatedCapital != null && (
+            <div style={{ marginTop: 6, borderTop: `1px solid ${border}`, paddingTop: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 2 }}>
+                <span style={{ color: muted }}>Asignado</span>
+                <span style={{ color: amber, fontWeight: 600 }}>${(dashboard.allocatedCapital || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+                <span style={{ color: muted }}>Disponible</span>
+                <span style={{ color: (dashboard.availableCapital || 0) > 0 ? green : red, fontWeight: 600 }}>
+                  ${(dashboard.availableCapital || 0).toLocaleString()}
+                </span>
+              </div>
+              {/* Mini bar: allocated portion */}
+              <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginTop: 4, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${dashboard.currentCapital > 0 ? Math.min(100, (dashboard.allocatedCapital / dashboard.currentCapital) * 100) : 0}%`,
+                  borderRadius: 2,
+                  background: amber,
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            </div>
+          )}
+        </div>
         <StatCard
           label="P&L Diario"
           value={`$${(dailyPnl.amount || 0).toFixed(2)}`}
@@ -231,6 +263,72 @@ export default function RiskDashboard({ dashboard, colors }) {
                     PELIGRO: Posicion cerca de liquidacion
                   </div>
                 )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Funding Rate & Carry Cost (perpetuals) */}
+      {dashboard.positions && dashboard.positions.some(p => p.fundingRate != null) && (
+        <div style={{
+          background: bg,
+          border: `1px solid ${border}`,
+          borderRadius: 8,
+          padding: 16,
+          marginTop: 16
+        }}>
+          <div style={{ color: text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+            Funding Rate & Carry Cost
+          </div>
+          {dashboard.positions.filter(p => p.fundingRate != null).map((pos, i) => {
+            const rate = parseFloat(pos.fundingRate || 0);
+            const annualized = parseFloat(pos.annualizedCost || rate * 3 * 365 * 100);
+            const dailyCost = parseFloat(pos.carryCost?.dailyCost || 0);
+            const isExpensive = Math.abs(rate) > 0.001;
+            const rateColor = isExpensive ? red : Math.abs(rate) > 0.0005 ? '#f59e0b' : green;
+
+            return (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: i < dashboard.positions.filter(p => p.fundingRate != null).length - 1 ? `1px solid ${border}` : 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: text, fontSize: 12, fontWeight: 600 }}>
+                    {pos.asset || pos.symbol}
+                  </span>
+                  {isExpensive && (
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                      background: `${red}20`, color: red
+                    }}>
+                      ALTO
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 11 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: muted, fontSize: 9 }}>Rate/8h</div>
+                    <div style={{ color: rateColor, fontWeight: 700 }}>
+                      {(rate * 100).toFixed(4)}%
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: muted, fontSize: 9 }}>Anualizado</div>
+                    <div style={{ color: rateColor, fontWeight: 600 }}>
+                      {annualized.toFixed(1)}%
+                    </div>
+                  </div>
+                  {dailyCost !== 0 && (
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: muted, fontSize: 9 }}>Costo/dia</div>
+                      <div style={{ color: dailyCost > 0 ? red : green, fontWeight: 600 }}>
+                        ${Math.abs(dailyCost).toFixed(2)}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -535,14 +535,26 @@ export default function SignalsTab({
                   {signal.action !== 'HOLD' && signal.indicators && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                       {signal.indicators.ichimoku && (
-                        <div style={{
-                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
-                          background: signal.indicators.ichimoku.signal === 'bullish' ? `${green}20` : signal.indicators.ichimoku.signal === 'bearish' ? `${red}20` : `${amber}20`,
-                          color: signal.indicators.ichimoku.signal === 'bullish' ? green : signal.indicators.ichimoku.signal === 'bearish' ? red : amber,
-                          fontWeight: 600
-                        }}>
-                          ICHIMOKU: {signal.indicators.ichimoku.priceVsCloud}
-                          {signal.indicators.ichimoku.tkCross !== 'none' && ` · TK ${signal.indicators.ichimoku.tkCross}`}
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <div style={{
+                            fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                            background: signal.indicators.ichimoku.signal === 'bullish' ? `${green}20` : signal.indicators.ichimoku.signal === 'bearish' ? `${red}20` : `${amber}20`,
+                            color: signal.indicators.ichimoku.signal === 'bullish' ? green : signal.indicators.ichimoku.signal === 'bearish' ? red : amber,
+                            fontWeight: 600
+                          }}>
+                            ICHIMOKU: {signal.indicators.ichimoku.priceVsCloud}
+                            {signal.indicators.ichimoku.tkCross !== 'none' && ` · TK ${signal.indicators.ichimoku.tkCross}`}
+                          </div>
+                          {signal.indicators.ichimoku.cloudMomentum && signal.indicators.ichimoku.cloudMomentum !== 'stale' && (
+                            <div style={{
+                              fontSize: 9, padding: "2px 6px", borderRadius: 3, fontWeight: 700,
+                              background: signal.indicators.ichimoku.cloudMomentum === 'confirming' ? `${green}20` : `${red}20`,
+                              color: signal.indicators.ichimoku.cloudMomentum === 'confirming' ? green : red,
+                              letterSpacing: 0.3
+                            }}>
+                              {signal.indicators.ichimoku.cloudMomentum === 'confirming' ? 'CLOUD ✓' : 'CLOUD ✗'}
+                            </div>
+                          )}
                         </div>
                       )}
                       {signal.indicators.vwap && (

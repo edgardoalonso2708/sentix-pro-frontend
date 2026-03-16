@@ -300,15 +300,49 @@ export default function OptimizeTab({
               </div>
             )}
 
-            {/* Overfit Warning */}
-            {optResult.validation?.overfitWarning && (
+            {/* Overfit Warning with severity */}
+            {optResult.validation?.overfitWarning && (() => {
+              const severity = optResult.validation.severity || 'moderate';
+              const sevColors = { critical: red, high: '#f59e0b', moderate: amber, low: muted };
+              const sevColor = sevColors[severity] || amber;
+              return (
+                <div style={{
+                  padding: 12, background: `${sevColor}20`, border: `1px solid ${sevColor}`,
+                  borderRadius: 8, fontSize: 12, marginBottom: 16, color: sevColor
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                      background: `${sevColor}30`, textTransform: 'uppercase', letterSpacing: 0.5
+                    }}>
+                      {severity === 'critical' ? 'CRITICO' : severity === 'high' ? 'ALTO' : severity === 'moderate' ? 'MODERADO' : 'BAJO'}
+                    </span>
+                    <strong>Alerta de Sobreajuste</strong>
+                  </div>
+                  {optResult.validation.details}
+                  {' '}(degradacion: {(optResult.validation.avgDegradation * 100).toFixed(0)}%,
+                  rank corr: {optResult.validation.rankCorrelation?.toFixed(2)})
+                </div>
+              );
+            })()}
+
+            {/* Bonferroni Correction Warning */}
+            {optResult.validation?.bonferroni?.warning && (
               <div style={{
-                padding: 12, background: '#f59e0b20', border: '1px solid #f59e0b',
-                borderRadius: 8, fontSize: 12, marginBottom: 16, color: '#f59e0b'
+                padding: 10, background: `${purple}15`, border: `1px solid ${purple}40`,
+                borderRadius: 8, fontSize: 11, marginBottom: 16, color: purple,
+                display: 'flex', alignItems: 'center', gap: 8
               }}>
-                <strong>Alerta de Sobreajuste:</strong> {optResult.validation.details}
-                {' '}(degradacion: {(optResult.validation.avgDegradation * 100).toFixed(0)}%,
-                rank corr: {optResult.validation.rankCorrelation?.toFixed(2)})
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                  background: `${purple}25`, letterSpacing: 0.5, whiteSpace: 'nowrap'
+                }}>
+                  BONFERRONI
+                </span>
+                <span>
+                  Mejora no significativa tras correccion por {optResult.validation.bonferroni.numComparisons} comparaciones.
+                  {optResult.validation.bonferroni.detail && ` ${optResult.validation.bonferroni.detail}`}
+                </span>
               </div>
             )}
 
