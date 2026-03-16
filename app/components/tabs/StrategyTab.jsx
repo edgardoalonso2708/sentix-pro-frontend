@@ -412,16 +412,19 @@ function StrategyConfigContent({
             const handleFullReset = async () => {
               try {
                 const res = await authFetch(`${apiUrl}/api/paper/full-reset/${userId}`, { method: 'POST' });
-                if (res.ok) {
-                  const data = await res.json();
+                const data = await res.json().catch(() => ({}));
+                console.log('Full reset response:', res.status, data);
+                if (res.ok || data.config) {
                   setPaperConfirmFullReset(false);
                   // Clear ALL paper states immediately via parent callback
                   if (onFullResetDone) onFullResetDone(data.config);
-                  alert('✅ Full reset complete — all statistics cleared.');
+                  const details = data.results
+                    ? '\n' + Object.entries(data.results).map(([t, r]) => `${t}: ${r.ok ? '✓' : '✗ ' + r.error}`).join('\n')
+                    : '';
+                  alert(`✅ Full reset complete.${details}`);
                 } else {
-                  const errData = await res.json().catch(() => ({}));
-                  console.error('Full reset failed:', errData);
-                  alert(`❌ Full reset failed: ${errData.error || res.statusText}`);
+                  console.error('Full reset failed:', data);
+                  alert(`❌ Full reset failed: ${data.error || res.statusText}`);
                 }
               } catch (err) {
                 console.error('Full reset error:', err);
