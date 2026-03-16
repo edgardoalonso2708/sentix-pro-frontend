@@ -252,32 +252,6 @@ export default function SentixProFrontend() {
     }
   }, [API_URL, advancedPerfDays]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── FULL RESET CALLBACK ────────────────────────────────────────────────
-  const onFullResetDone = useCallback((resetConfig) => {
-    // Immediately clear all paper-related states (don't wait for fetch)
-    if (resetConfig) {
-      setPaperConfig(resetConfig);
-      setPaperConfigForm(resetConfig);
-    }
-    setPaperPositions([]);
-    setPaperHistory([]);
-    setPaperHistoryTotal(0);
-    setPaperMetrics({
-      totalTrades: 0, winCount: 0, lossCount: 0, winRate: 0,
-      totalPnl: 0, avgProfit: 0, avgLoss: 0,
-      bestTrade: null, worstTrade: null,
-      maxDrawdown: 0, profitFactor: 0,
-      avgHoldingTimeHours: 0, currentStreak: 0, streakType: 'none'
-    });
-    setAdvancedPerf(null);
-    setRealtimeEquityCurve([]);
-    setCorrelationData(null);
-    setSignalAccuracy(null);
-    // Force a fresh fetch after clearing (reset the guard flag)
-    dashboardPaperFetching.current = false;
-    fetchDashboardPaper();
-  }, [fetchDashboardPaper]);
-
   const fetchBacktestHistory = useCallback(async () => {
     try {
       const response = await authFetch(`${API_URL}/api/backtest/history/${USER_ID}`);
@@ -382,6 +356,9 @@ export default function SentixProFrontend() {
 
   // ─── INITIAL LOAD & AUTO-REFRESH ───────────────────────────────────────────
   useEffect(() => {
+    // Wait for auth to resolve before fetching user-scoped data
+    if (authEnabled && authLoading) return;
+
     const loadData = async () => {
       setLoading(true);
       await Promise.allSettled([
@@ -420,7 +397,7 @@ export default function SentixProFrontend() {
       clearInterval(interval);
       clearInterval(slowInterval);
     };
-  }, [fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy, sseConnected]);
+  }, [authEnabled, authLoading, fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy, sseConnected]);
 
   // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
   useEffect(() => {
@@ -1019,7 +996,7 @@ export default function SentixProFrontend() {
           paperShowConfig={paperShowConfig} setPaperShowConfig={setPaperShowConfig}
           paperConfirmReset={paperConfirmReset} setPaperConfirmReset={setPaperConfirmReset}
           paperConfirmFullReset={paperConfirmFullReset} setPaperConfirmFullReset={setPaperConfirmFullReset}
-          fetchDashboardPaper={fetchDashboardPaper} onFullResetDone={onFullResetDone}
+          fetchDashboardPaper={fetchDashboardPaper}
           showAdvancedPerf={showAdvancedPerf} setShowAdvancedPerf={setShowAdvancedPerf}
           advancedPerfDays={advancedPerfDays} setAdvancedPerfDays={setAdvancedPerfDays}
           advancedPerf={advancedPerf}

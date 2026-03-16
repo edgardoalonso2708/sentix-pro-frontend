@@ -15,7 +15,7 @@ export default function StrategyTab({
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
   paperConfirmFullReset, setPaperConfirmFullReset,
-  fetchDashboardPaper, onFullResetDone,
+  fetchDashboardPaper,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
   advancedPerf,
@@ -67,7 +67,7 @@ export default function StrategyTab({
           paperShowConfig={paperShowConfig} setPaperShowConfig={setPaperShowConfig}
           paperConfirmReset={paperConfirmReset} setPaperConfirmReset={setPaperConfirmReset}
           paperConfirmFullReset={paperConfirmFullReset} setPaperConfirmFullReset={setPaperConfirmFullReset}
-          fetchDashboardPaper={fetchDashboardPaper} onFullResetDone={onFullResetDone}
+          fetchDashboardPaper={fetchDashboardPaper}
           showAdvancedPerf={showAdvancedPerf} setShowAdvancedPerf={setShowAdvancedPerf}
           advancedPerfDays={advancedPerfDays} setAdvancedPerfDays={setAdvancedPerfDays}
           advancedPerf={advancedPerf}
@@ -95,7 +95,7 @@ function StrategyConfigContent({
   paperShowConfig, setPaperShowConfig,
   paperConfirmReset, setPaperConfirmReset,
   paperConfirmFullReset, setPaperConfirmFullReset,
-  fetchDashboardPaper, onFullResetDone,
+  fetchDashboardPaper,
   showAdvancedPerf, setShowAdvancedPerf,
   advancedPerfDays, setAdvancedPerfDays,
   advancedPerf,
@@ -412,11 +412,10 @@ function StrategyConfigContent({
             const handleFullReset = async () => {
               try {
                 const res = await authFetch(`${apiUrl}/api/paper/full-reset/${userId}`, { method: 'POST' });
-                const data = await res.json().catch(() => ({}));
-                if (res.ok || data.config) {
-                  // Hard reload guarantees all React states refresh from the now-empty DB
+                if (res.ok) {
                   window.location.reload();
                 } else {
+                  const data = await res.json().catch(() => ({}));
                   alert(`❌ Full reset failed: ${data.error || res.statusText}`);
                 }
               } catch (err) {
