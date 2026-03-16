@@ -4,7 +4,7 @@ import { authFetch } from '../lib/api';
 
 export function useOptimization(apiUrl) {
   const [optParams, setOptParams] = useState([]);
-  const [optConfig, setOptConfig] = useState({ asset: 'bitcoin', days: 90, paramName: '' });
+  const [optConfig, setOptConfig] = useState({ asset: 'bitcoin', days: 90, paramName: '', validationMode: 'auto' });
   const [optPhase, setOptPhase] = useState(0);
   const [optRunning, setOptRunning] = useState(false);
   const [optResult, setOptResult] = useState(null);

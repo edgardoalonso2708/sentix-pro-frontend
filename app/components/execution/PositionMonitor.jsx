@@ -183,6 +183,22 @@ function PositionCard({ position, colors }) {
               </span>
             </div>
           )}
+          {position.time_decay_active && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 8px',
+              borderRadius: 4,
+              background: '#8b5cf615',
+              fontSize: 10
+            }}>
+              <span style={{ color: '#8b5cf6', fontWeight: 600 }}>TD</span>
+              <span style={{ color: muted }} title="SL ajustado por tiempo de espera">
+                SL {position.time_decay_sl ? `$${parseFloat(position.time_decay_sl).toLocaleString()}` : 'activo'}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

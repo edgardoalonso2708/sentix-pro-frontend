@@ -279,6 +279,58 @@ export default function SignalsTab({
                     </div>
                   )}
 
+                  {/* BTC Correlation Badge */}
+                  {signal.btcCorrelation && signal.asset !== 'BITCOIN' && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
+                      padding: '4px 8px', borderRadius: 4,
+                      background: signal.btcCorrelation.tier === 'high' ? `${red}10` : signal.btcCorrelation.tier === 'medium' ? `${amber}10` : `${muted}08`,
+                      borderLeft: `2px solid ${signal.btcCorrelation.tier === 'high' ? red : signal.btcCorrelation.tier === 'medium' ? amber : muted}`
+                    }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: signal.btcCorrelation.tier === 'high' ? red : signal.btcCorrelation.tier === 'medium' ? amber : muted }}>
+                        BTC CORR
+                      </span>
+                      <span style={{ fontSize: 10, color: text, fontWeight: 600, fontFamily: 'monospace' }}>
+                        {signal.btcCorrelation.coefficient != null
+                          ? signal.btcCorrelation.coefficient.toFixed(2)
+                          : signal.btcCorrelation.tier}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted }}>
+                        {signal.btcCorrelation.tier === 'high' ? 'alta' : signal.btcCorrelation.tier === 'medium' ? 'media' : 'baja'}
+                        {signal.btcCorrelation.source === 'dynamic' ? ' (live)' : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Phase 2 Gates */}
+                  {(signal.timeframes?.btcHardGate || signal.timeframes?.volumeGate) && (
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                      {signal.timeframes?.btcHardGate && (
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3, background: `${red}20`, color: red }}>
+                          BTC GATE ACTIVO
+                        </span>
+                      )}
+                      {signal.timeframes?.volumeGate && signal.timeframes.volumeGate !== 'none' && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                          background: signal.timeframes.volumeGate === 'hold' ? `${red}20` : signal.timeframes.volumeGate === 'boost' ? `${green}20` : `${amber}20`,
+                          color: signal.timeframes.volumeGate === 'hold' ? red : signal.timeframes.volumeGate === 'boost' ? green : amber
+                        }}>
+                          VOL {signal.timeframes.volumeGate.toUpperCase()}
+                        </span>
+                      )}
+                      {signal.timeframes?.interactionBonus !== 0 && signal.timeframes?.interactionBonus && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                          background: signal.timeframes.interactionBonus > 0 ? `${green}20` : `${red}20`,
+                          color: signal.timeframes.interactionBonus > 0 ? green : red
+                        }}>
+                          INTERACT {signal.timeframes.interactionBonus > 0 ? '+' : ''}{signal.timeframes.interactionBonus}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Trade Levels Panel */}
                   {signal.tradeLevels && signal.action !== 'HOLD' && (
                     <div style={{

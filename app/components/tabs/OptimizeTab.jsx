@@ -113,6 +113,22 @@ export default function OptimizeTab({
             </select>
           </div>
 
+          {/* Validation Mode */}
+          <div>
+            <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>VALIDACION</label>
+            <select
+              value={optConfig.validationMode || 'auto'}
+              onChange={e => setOptConfig({ ...optConfig, validationMode: e.target.value })}
+              disabled={optRunning}
+              style={{ width: '100%', padding: '8px 10px', background: bg2, color: text, border: `1px solid ${border}`, borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
+            >
+              <option value="auto">Auto (Rolling WF)</option>
+              <option value="anchored">Anchored Expanding</option>
+              <option value="rolling">Rolling WF</option>
+              <option value="single">Single Split 70/30</option>
+            </select>
+          </div>
+
           {/* Parameter to optimize */}
           <div style={{ gridColumn: 'span 2' }}>
             <label style={{ fontSize: 10, color: muted, fontWeight: 700, display: 'block', marginBottom: 4 }}>
@@ -207,32 +223,80 @@ export default function OptimizeTab({
 
             {/* Walk-Forward Validation Cards */}
             {optResult.validation?.enabled && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
-                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>OOS SHARPE</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.bestOosSharpe || 0) > 0 ? green : red }}>
-                    {optResult.validation.bestOosSharpe != null ? optResult.validation.bestOosSharpe.toFixed(2) : 'N/A'}
+              <div>
+                {/* Mode badge */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
+                    background: optResult.validation.mode === 'anchored_expanding' ? `${blue}20` : optResult.validation.mode === 'rolling' ? `${purple}20` : `${muted}20`,
+                    color: optResult.validation.mode === 'anchored_expanding' ? blue : optResult.validation.mode === 'rolling' ? purple : muted,
+                    textTransform: 'uppercase', letterSpacing: 0.5
+                  }}>
+                    {optResult.validation.mode === 'anchored_expanding' ? 'ANCHORED EXPANDING' : optResult.validation.mode === 'rolling' ? 'ROLLING WF' : 'SINGLE SPLIT'}
+                  </span>
+                  {optResult.validation.numFolds && (
+                    <span style={{ fontSize: 10, color: muted }}>{optResult.validation.numFolds} folds</span>
+                  )}
+                  {optResult.validation.parameterStability && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 3,
+                      background: optResult.validation.parameterStability.consistent ? `${green}15` : `${amber}15`,
+                      color: optResult.validation.parameterStability.consistent ? green : amber
+                    }}>
+                      Estabilidad: {optResult.validation.parameterStability.stabilityScore?.toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>OOS SHARPE</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.bestOosSharpe || 0) > 0 ? green : red }}>
+                      {optResult.validation.bestOosSharpe != null ? optResult.validation.bestOosSharpe.toFixed(2) : (optResult.validation.bestCompositeScore != null ? optResult.validation.bestCompositeScore.toFixed(2) : 'N/A')}
+                    </div>
+                  </div>
+                  <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>DEGRADACION</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.avgDegradation || 0) > 0.5 ? red : (optResult.validation.avgDegradation || 0) > 0.3 ? '#f59e0b' : green }}>
+                      {optResult.validation.avgDegradation != null ? `${(optResult.validation.avgDegradation * 100).toFixed(0)}%` : 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>RANK CORR.</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.rankCorrelation || 0) > 0.5 ? green : (optResult.validation.rankCorrelation || 0) > 0.2 ? '#f59e0b' : red }}>
+                      {optResult.validation.rankCorrelation != null ? optResult.validation.rankCorrelation.toFixed(2) : 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>
+                      {optResult.validation.mode === 'anchored_expanding' ? 'FOLDS' : 'SPLIT'}
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>
+                      {optResult.validation.numFolds
+                        ? `${optResult.validation.numFolds}x ${optResult.validation.testDaysPerFold || optResult.validation.testDays}d`
+                        : `${optResult.validation.trainDays}d / ${optResult.validation.testDays}d`}
+                    </div>
+                    <div style={{ fontSize: 9, color: muted }}>
+                      {optResult.validation.numFolds ? 'folds x test' : 'train / test'}
+                    </div>
                   </div>
                 </div>
-                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>DEGRADACION</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.avgDegradation || 0) > 0.5 ? red : (optResult.validation.avgDegradation || 0) > 0.3 ? '#f59e0b' : green }}>
-                    {optResult.validation.avgDegradation != null ? `${(optResult.validation.avgDegradation * 100).toFixed(0)}%` : 'N/A'}
+
+                {/* Data Efficiency (anchored only) */}
+                {optResult.validation.dataEfficiency && (
+                  <div style={{
+                    padding: 10, marginBottom: 12, borderRadius: 6,
+                    background: optResult.validation.dataEfficiency.trend === 'improving' ? `${green}10` : optResult.validation.dataEfficiency.trend === 'degrading' ? `${red}10` : `${muted}10`,
+                    border: `1px solid ${optResult.validation.dataEfficiency.trend === 'improving' ? green : optResult.validation.dataEfficiency.trend === 'degrading' ? red : muted}30`,
+                    fontSize: 11
+                  }}>
+                    <span style={{ fontWeight: 700, color: optResult.validation.dataEfficiency.trend === 'improving' ? green : optResult.validation.dataEfficiency.trend === 'degrading' ? red : muted }}>
+                      Data Efficiency: {optResult.validation.dataEfficiency.trend.toUpperCase()}
+                    </span>
+                    <span style={{ color: muted, marginLeft: 8 }}>
+                      {optResult.validation.dataEfficiency.interpretation}
+                    </span>
                   </div>
-                </div>
-                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>RANK CORR.</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: (optResult.validation.rankCorrelation || 0) > 0.5 ? green : (optResult.validation.rankCorrelation || 0) > 0.2 ? '#f59e0b' : red }}>
-                    {optResult.validation.rankCorrelation != null ? optResult.validation.rankCorrelation.toFixed(2) : 'N/A'}
-                  </div>
-                </div>
-                <div style={{ background: bg2, borderRadius: 8, padding: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4 }}>SPLIT</div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    {optResult.validation.trainDays}d / {optResult.validation.testDays}d
-                  </div>
-                  <div style={{ fontSize: 9, color: muted }}>train / test</div>
-                </div>
+                )}
               </div>
             )}
 

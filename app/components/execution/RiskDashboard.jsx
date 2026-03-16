@@ -176,6 +176,66 @@ export default function RiskDashboard({ dashboard, colors }) {
           ))}
         </div>
       </div>
+
+      {/* Liquidation Proximity (perpetuals) */}
+      {dashboard.positions && dashboard.positions.some(p => p.liquidationPrice) && (
+        <div style={{
+          background: bg,
+          border: `1px solid ${border}`,
+          borderRadius: 8,
+          padding: 16,
+          marginTop: 16
+        }}>
+          <div style={{ color: text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+            Liquidacion (Perpetuales)
+          </div>
+          {dashboard.positions.filter(p => p.liquidationPrice).map((pos, i) => {
+            const liqPrice = parseFloat(pos.liquidationPrice);
+            const currentPrice = parseFloat(pos.currentPrice || pos.markPrice || 0);
+            const distancePct = currentPrice > 0
+              ? Math.abs((currentPrice - liqPrice) / currentPrice) * 100
+              : 0;
+            const isClose = distancePct < 10;
+            const isCritical = distancePct < 5;
+            const barColor = isCritical ? red : isClose ? '#f59e0b' : green;
+
+            return (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ color: text, fontSize: 12, fontWeight: 600 }}>
+                    {pos.asset || pos.symbol} ({pos.leverage || '?'}x)
+                  </span>
+                  <span style={{ color: barColor, fontSize: 12, fontWeight: 700 }}>
+                    {distancePct.toFixed(1)}% de liq
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ color: muted, fontSize: 10 }}>
+                    Actual: ${currentPrice.toLocaleString()}
+                  </span>
+                  <span style={{ color: isCritical ? red : muted, fontSize: 10, fontWeight: isCritical ? 700 : 400 }}>
+                    Liq: ${liqPrice.toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, Math.max(5, 100 - distancePct * 2))}%`,
+                    borderRadius: 3,
+                    background: barColor,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                {isCritical && (
+                  <div style={{ color: red, fontSize: 10, fontWeight: 700, marginTop: 4 }}>
+                    PELIGRO: Posicion cerca de liquidacion
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

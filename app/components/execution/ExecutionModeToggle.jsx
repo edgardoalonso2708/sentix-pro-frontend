@@ -40,7 +40,22 @@ export default function ExecutionModeToggle({ mode, onModeChange, autoExecute, o
             cursor: 'pointer'
           }}
         >
-          🔗 LIVE
+          🔗 SPOT
+        </button>
+        <button
+          onClick={() => onModeChange?.('perp')}
+          style={{
+            padding: '8px 16px',
+            background: mode === 'perp' ? amber : bg,
+            color: mode === 'perp' ? '#000' : muted,
+            border: 'none',
+            borderLeft: `1px solid ${border}`,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          ⚡ PERP
         </button>
       </div>
 
