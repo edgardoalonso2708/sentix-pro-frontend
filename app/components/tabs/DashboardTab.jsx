@@ -22,11 +22,16 @@ export default function DashboardTab({
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
     }
 
-    const topGainers = Object.entries(marketData.crypto)
+    const cryptoWithChange = Object.entries(marketData.crypto)
+      .filter(([, d]) => d.change24h !== 0 && Number.isFinite(d.change24h));
+
+    const topGainers = [...cryptoWithChange]
+      .filter(([, d]) => d.change24h > 0)
       .sort((a, b) => b[1].change24h - a[1].change24h)
       .slice(0, 3);
 
-    const topLosers = Object.entries(marketData.crypto)
+    const topLosers = [...cryptoWithChange]
+      .filter(([, d]) => d.change24h < 0)
       .sort((a, b) => a[1].change24h - b[1].change24h)
       .slice(0, 3);
 
@@ -111,6 +116,7 @@ export default function DashboardTab({
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>
           <div style={card}>
             <div style={sTitle}>{t('dash.topGainers')}</div>
+            {topGainers.length === 0 && <div style={{ fontSize: 12, color: muted, padding: '8px 0' }}>No gainers data</div>}
             {topGainers.map(([id, data]) => (
               <div key={id} style={{
                 display: "flex",
@@ -132,6 +138,7 @@ export default function DashboardTab({
 
           <div style={card}>
             <div style={sTitle}>{t('dash.topLosers')}</div>
+            {topLosers.length === 0 && <div style={{ fontSize: 12, color: muted, padding: '8px 0' }}>No losers data</div>}
             {topLosers.map(([id, data]) => (
               <div key={id} style={{
                 display: "flex",
