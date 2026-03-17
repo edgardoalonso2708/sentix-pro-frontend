@@ -112,6 +112,52 @@ function StrategyConfigContent({
       color: text, fontFamily: 'monospace', fontSize: 12
     };
 
+    const ALPHA_SIGNAL_PARAMS = {
+      buyThreshold: 28, sellThreshold: -28,
+      confidenceCap: 85,
+      atrStopMult: 2.0, atrTrailingMult: 3.0,
+      strongConfluenceMult: 1.15, conflictingMult: 0.65,
+      governorMultMild: 0.80, governorMultStrong: 0.50, governorStrongThreshold: 40,
+      rsiOversold: 30, rsiOverbought: 70,
+      trendScoreStrong: 20, derivativesScore: 15,
+      orderBookScore: 12, ichimokuScore: 10, marketStructureScore: 12,
+    };
+
+    const handleApplyAlpha = async () => {
+      // 1. Apply paper trading config (form fields)
+      setConfigForm(prev => ({
+        ...prev,
+        risk_per_trade: 0.012,
+        max_daily_loss_percent: 0.04,
+        max_position_percent: 0.25,
+        max_open_positions: 3,
+        atr_stop_mult: 2.0,
+        atr_tp2_mult: 2.5,
+        atr_trailing_mult: 3.0,
+        atr_trailing_activation: 1.5,
+        min_rr_ratio: 1.5,
+        min_confluence: 2,
+        partial_close_ratio: 0.5,
+        max_holding_hours: 168,
+        move_sl_to_breakeven_after_tp1: true,
+        allowed_strength: ['BUY', 'STRONG BUY', 'SELL', 'STRONG SELL'],
+        max_portfolio_correlation: 0.70,
+        max_sector_exposure_pct: 0.60,
+        max_same_direction_crypto: 3,
+      }));
+
+      // 2. Apply signal-engine params via backend preset endpoint
+      try {
+        await authFetch(`${apiUrl}/api/autotune/apply-preset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ params: ALPHA_SIGNAL_PARAMS, name: 'alpha-preset' })
+        });
+      } catch (err) {
+        console.warn('Alpha signal preset apply failed (non-blocking):', err.message);
+      }
+    };
+
     const handleSaveStrategy = async () => {
       if (!configForm) return;
       setSavingConfig(true);
@@ -349,8 +395,20 @@ function StrategyConfigContent({
           </div>
         </div>
 
-        {/* Save button */}
+        {/* Alpha Preset + Save */}
         <div style={{ ...card, padding: "16px 20px" }}>
+          <button onClick={handleApplyAlpha} style={{
+            padding: "10px 28px",
+            background: `linear-gradient(135deg, ${amber}, #d97706)`,
+            border: "none", borderRadius: 6, color: "#000",
+            fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
+            width: "100%", marginBottom: 8, letterSpacing: 0.5
+          }}>
+            ALPHA PRESET — Apply Professional Config
+          </button>
+          <div style={{ fontSize: 9, color: muted, marginBottom: 12, textAlign: 'center', lineHeight: 1.4 }}>
+            ATR SL 2.0x | TP2 2.5x | Trail 3.0x@1.5x | Risk 1.2% | Daily Loss 4% | Max Pos 25% | Confluence 2/3 TF
+          </div>
           <button onClick={handleSaveStrategy} disabled={savingConfig}
             style={{
               padding: "10px 28px", background: `linear-gradient(135deg, ${purple}, #7c3aed)`,
