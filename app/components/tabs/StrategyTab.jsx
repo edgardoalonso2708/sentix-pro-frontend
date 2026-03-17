@@ -265,21 +265,21 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.riskPerTrade')}</label>
-              <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade || 0.01) * 100}
+              <input type="number" step="0.5" min="0.1" max="10" value={(configForm.risk_per_trade ?? 0.01) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, risk_per_trade: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.riskPerTradeDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxDailyLoss')}</label>
-              <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent || 0.05) * 100}
+              <input type="number" step="1" min="1" max="20" value={(configForm.max_daily_loss_percent ?? 0.05) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_daily_loss_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxDailyLossDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxPosition')}</label>
-              <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent || 0.30) * 100}
+              <input type="number" step="5" min="5" max="50" value={(configForm.max_position_percent ?? 0.30) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_position_percent: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxPositionDesc')}</div>
@@ -293,26 +293,26 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxOpenPositions')}</label>
-              <input type="number" min="1" max="10" value={configForm.max_open_positions || 3}
+              <input type="number" min="1" max="10" value={configForm.max_open_positions ?? 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_open_positions: e.target.value }))}
                 style={inputStyle} />
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.cooldown')}</label>
-              <input type="number" min="5" max="1440" value={configForm.cooldown_minutes || 30}
+              <input type="number" min="5" max="1440" value={configForm.cooldown_minutes ?? 30}
                 onChange={e => setConfigForm(prev => ({ ...prev, cooldown_minutes: e.target.value }))}
                 style={inputStyle} />
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxHolding')}</label>
-              <input type="number" min="0" max="720" value={configForm.max_holding_hours || 168}
+              <input type="number" min="0" max="720" value={configForm.max_holding_hours ?? 168}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_holding_hours: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxHoldingDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.partialClose')}</label>
-              <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio || 0.5) * 100}
+              <input type="number" step="5" min="25" max="75" value={(configForm.partial_close_ratio ?? 0.5) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, partial_close_ratio: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.partialCloseDesc')}</div>
@@ -336,28 +336,28 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.stopLossAtr')}</label>
-              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult || 2.5}
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_stop_mult ?? 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_stop_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.stopLossAtrDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.tp2Atr')}</label>
-              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult || 2.0}
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_tp2_mult ?? 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_tp2_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.tp2AtrDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.trailingStopAtr')}</label>
-              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult || 2.5}
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_mult ?? 2.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_mult: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.trailingStopAtrDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.trailingActivation')}</label>
-              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation || 2.0}
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.atr_trailing_activation ?? 2.0}
                 onChange={e => setConfigForm(prev => ({ ...prev, atr_trailing_activation: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.trailingActivationDesc')}</div>
@@ -371,14 +371,14 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.minConfluence')}</label>
-              <input type="number" min="2" max="3" value={configForm.min_confluence || 2}
+              <input type="number" min="2" max="3" value={configForm.min_confluence ?? 2}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_confluence: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.minConfluenceDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.minRR')}</label>
-              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio || 1.5}
+              <input type="number" step="0.1" min="0.5" max="5.0" value={configForm.min_rr_ratio ?? 1.5}
                 onChange={e => setConfigForm(prev => ({ ...prev, min_rr_ratio: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.minRRDesc')}</div>
@@ -418,21 +418,21 @@ function StrategyConfigContent({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxCorrelation')}</label>
-              <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation || 0.70}
+              <input type="number" step="0.05" min="0.3" max="1.0" value={configForm.max_portfolio_correlation ?? 0.70}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_portfolio_correlation: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxCorrelationDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxSectorExposure')}</label>
-              <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct || 0.60) * 100}
+              <input type="number" step="5" min="30" max="100" value={(configForm.max_sector_exposure_pct ?? 0.60) * 100}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_sector_exposure_pct: parseFloat(e.target.value) / 100 }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxSectorExposureDesc')}</div>
             </div>
             <div>
               <label style={{ fontSize: 10, color: muted, marginBottom: 4, display: "block" }}>{t('strat.maxSameDirection')}</label>
-              <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto || 3}
+              <input type="number" min="1" max="10" value={configForm.max_same_direction_crypto ?? 3}
                 onChange={e => setConfigForm(prev => ({ ...prev, max_same_direction_crypto: e.target.value }))}
                 style={inputStyle} />
               <div style={{ fontSize: 8, color: muted, marginTop: 2 }}>{t('strat.maxSameDirectionDesc')}</div>
