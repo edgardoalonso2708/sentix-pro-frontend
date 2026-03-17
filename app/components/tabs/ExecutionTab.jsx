@@ -46,6 +46,12 @@ export default function ExecutionTab({
     const [bybitStatus, setBybitStatus] = useState({ bybitConfigured: false, testnet: true, healthy: false });
     const [switchingMode, setSwitchingMode] = useState(false);
 
+    // Bybit-specific data (separate from paper data)
+    const [bybitPositions, setBybitPositions] = useState([]);
+    const [bybitHistory, setBybitHistory] = useState([]);
+    const [bybitBalance, setBybitBalance] = useState(null);
+    const [bybitLoading, setBybitLoading] = useState(false);
+
     useEffect(() => {
       (async () => {
         try {
@@ -59,18 +65,61 @@ export default function ExecutionTab({
       })();
     }, []);
 
+    // Fetch Bybit data when in live mode
+    const loadBybitData = async () => {
+      if (!bybitStatus.bybitConfigured) return;
+      setBybitLoading(true);
+      try {
+        const [posRes, histRes] = await Promise.allSettled([
+          authFetch(`${apiUrl}/api/bybit/positions`),
+          authFetch(`${apiUrl}/api/bybit/history?limit=50`),
+        ]);
+        if (posRes.status === 'fulfilled' && posRes.value.ok) {
+          const d = await posRes.value.json();
+          setBybitPositions(d.positions || []);
+          setBybitBalance(d.balance || null);
+        }
+        if (histRes.status === 'fulfilled' && histRes.value.ok) {
+          const d = await histRes.value.json();
+          setBybitHistory(d.trades || []);
+        }
+      } catch (err) {
+        console.error('Bybit data load error:', err);
+      } finally {
+        setBybitLoading(false);
+      }
+    };
+
+    // Reload Bybit data when switching to live mode
+    useEffect(() => {
+      if ((execMode === 'live' || execMode === 'perp') && bybitStatus.bybitConfigured) {
+        loadBybitData();
+      }
+    }, [execMode, bybitStatus.bybitConfigured]);
+
+    // Select data source based on mode
+    const isLiveMode = (execMode === 'live' || execMode === 'perp') && bybitStatus.bybitConfigured;
+    const activePositions = isLiveMode ? bybitPositions : paperPositions;
+    const activeHistory = isLiveMode ? bybitHistory : paperHistory;
+    const activeHistoryTotal = isLiveMode ? bybitHistory.length : paperHistoryTotal;
+    const activeLoading = isLiveMode ? bybitLoading : paperLoading;
+
     // Aliases for paper state
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
     const closingTrade = paperClosingTrade, setClosingTrade = setPaperClosingTrade;
     const historyPage = paperHistoryPage, setHistoryPage = setPaperHistoryPage;
-    const historyTotal = paperHistoryTotal;
+    const historyTotal = isLiveMode ? bybitHistory.length : paperHistoryTotal;
 
     // Derived values for status banner
     const isEnabled = paperConfig?.is_enabled;
-    const capital = parseFloat(paperConfig?.current_capital || 10000);
-    const initialCap = parseFloat(paperConfig?.initial_capital || 10000);
-    const capitalPnl = capital - initialCap;
-    const capitalPnlPct = initialCap > 0 ? ((capitalPnl / initialCap) * 100) : 0;
+    const capital = isLiveMode
+      ? parseFloat(bybitBalance?.total || 0)
+      : parseFloat(paperConfig?.current_capital || 10000);
+    const initialCap = isLiveMode
+      ? parseFloat(bybitBalance?.total || 0) // Bybit doesn't track initial capital
+      : parseFloat(paperConfig?.initial_capital || 10000);
+    const capitalPnl = isLiveMode ? 0 : capital - initialCap;
+    const capitalPnlPct = isLiveMode ? 0 : (initialCap > 0 ? ((capitalPnl / initialCap) * 100) : 0);
 
     // Handlers
     const handleCloseTrade = async (tradeId) => {
@@ -559,7 +608,7 @@ export default function ExecutionTab({
         {subTab === 'positions' && (execMode !== 'live' || bybitStatus?.bybitConfigured) && (
           <div>
             <PositionMonitor
-              positions={paperPositions}
+              positions={activePositions}
               heatMap={execRiskDashboard?.heatMap}
               colors={executionColors}
             />
@@ -632,8 +681,8 @@ export default function ExecutionTab({
 
         {/* HISTORY SUB-TAB */}
         {subTab === 'history' && (() => {
-          const totalTrades = paperHistory.length;
-          const paginatedTrades = paperHistory.slice(historyPage * PAPER_HISTORY_PAGE_SIZE, (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE);
+          const totalTrades = activeHistory.length;
+          const paginatedTrades = activeHistory.slice(historyPage * PAPER_HISTORY_PAGE_SIZE, (historyPage + 1) * PAPER_HISTORY_PAGE_SIZE);
           return (
           <div style={{ ...card, padding: "16px 20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -802,7 +851,7 @@ export default function ExecutionTab({
           />
         )}
 
-        {(execLoading || paperLoading) && (
+        {(execLoading || activeLoading) && (
           <div style={{ textAlign: 'center', padding: 10, fontSize: 10, color: muted, fontFamily: 'monospace' }}>
             {t('exec.updatingData')}
           </div>
