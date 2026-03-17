@@ -15,65 +15,123 @@ export default function ExecutionModeToggle({
   const red = colors?.red || '#ef4444';
   const purple = colors?.purple || '#a855f7';
 
-  const [confirmTarget, setConfirmTarget] = useState(null); // 'live' or 'perp'
+  const [confirmAction, setConfirmAction] = useState(null); // 'spot-on' | 'perp-on'
 
   const bybitOk = bybitStatus?.bybitConfigured;
   const testnet = bybitStatus?.testnet !== false;
 
-  const handleModeClick = (target) => {
+  const isSpotActive = mode === 'live';
+  const isPerpActive = mode === 'perp';
+
+  // Toggle switch component (reusable)
+  const ToggleSwitch = ({ label, active, onToggle, activeColor, disabled = false, statusLabel }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ color: muted, fontSize: 12 }}>{label}:</span>
+      <button
+        onClick={onToggle}
+        disabled={disabled || switching}
+        style={{
+          width: 44,
+          height: 24,
+          borderRadius: 12,
+          border: 'none',
+          background: active ? activeColor : 'rgba(107,114,128,0.3)',
+          cursor: disabled || switching ? 'not-allowed' : 'pointer',
+          position: 'relative',
+          transition: 'background 0.2s',
+          opacity: disabled ? 0.4 : switching ? 0.6 : 1
+        }}
+      >
+        <div style={{
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          background: '#fff',
+          position: 'absolute',
+          top: 3,
+          left: active ? 23 : 3,
+          transition: 'left 0.2s'
+        }} />
+      </button>
+      <span style={{
+        color: active ? activeColor : muted,
+        fontSize: 11, fontWeight: 600, fontFamily: 'monospace'
+      }}>
+        {statusLabel || (active ? 'ON' : 'OFF')}
+      </span>
+    </div>
+  );
+
+  // Handle spot toggle
+  const handleSpotToggle = () => {
     if (switching) return;
-    if (target === 'paper') {
-      // Switch to paper directly (no confirmation needed)
-      setConfirmTarget(null);
-      onModeChange?.(target);
-    } else if (mode === target) {
-      // Already in this mode → toggle OFF (back to paper)
-      setConfirmTarget(null);
+    if (isSpotActive) {
+      // Turn OFF → back to paper
       onModeChange?.('paper');
     } else {
-      // Activating SPOT or PERP → require confirmation
-      setConfirmTarget(target);
+      // Turn ON → needs confirmation
+      if (!bybitOk) {
+        setConfirmAction('no-bybit');
+      } else {
+        setConfirmAction('spot-on');
+      }
+    }
+  };
+
+  // Handle perp toggle
+  const handlePerpToggle = () => {
+    if (switching) return;
+    if (isPerpActive) {
+      onModeChange?.('paper');
+    } else {
+      if (!bybitOk) {
+        setConfirmAction('no-bybit');
+      } else {
+        setConfirmAction('perp-on');
+      }
     }
   };
 
   const handleConfirm = () => {
-    if (confirmTarget) {
-      onModeChange?.(confirmTarget);
-      setConfirmTarget(null);
-    }
+    if (confirmAction === 'spot-on') onModeChange?.('live');
+    if (confirmAction === 'perp-on') onModeChange?.('perp');
+    setConfirmAction(null);
   };
 
-  const modeBtn = (id, label, activeColor, activeTxt = '#fff') => (
-    <button
-      onClick={() => handleModeClick(id)}
-      disabled={switching}
-      style={{
-        padding: '8px 16px',
-        background: mode === id ? activeColor : bg,
-        color: mode === id ? activeTxt : muted,
-        border: 'none',
-        borderLeft: id !== 'paper' ? `1px solid ${border}` : 'none',
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: switching ? 'wait' : 'pointer',
-        opacity: switching ? 0.6 : 1,
-        transition: 'background 0.2s'
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-      {/* Execution mode buttons */}
-      <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${border}` }}>
-        {modeBtn('paper', '\uD83D\uDCDD PAPER', purple)}
-        {modeBtn('live', '\uD83D\uDD17 SPOT', green)}
-        {modeBtn('perp', '\u26A1 PERP', amber, '#000')}
-      </div>
+    <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
 
-      {/* Bybit connection status dot */}
+      {/* Auto-execute toggle */}
+      <ToggleSwitch
+        label="Auto-ejecutar"
+        active={autoExecute}
+        onToggle={() => onAutoExecuteChange?.(!autoExecute)}
+        activeColor={green}
+        statusLabel={autoExecute ? 'ON' : 'MANUAL'}
+      />
+
+      {/* Separator */}
+      <div style={{ width: 1, height: 24, background: border }} />
+
+      {/* Bybit Spot toggle */}
+      <ToggleSwitch
+        label={`Spot ${testnet ? 'Test' : 'Live'}`}
+        active={isSpotActive}
+        onToggle={handleSpotToggle}
+        activeColor={green}
+        statusLabel={isSpotActive ? (testnet ? 'TESTNET' : 'LIVE') : 'OFF'}
+      />
+
+      {/* Bybit Perp toggle (future) */}
+      <ToggleSwitch
+        label="Perp"
+        active={isPerpActive}
+        onToggle={handlePerpToggle}
+        activeColor={amber}
+        statusLabel={isPerpActive ? (testnet ? 'TESTNET' : 'LIVE') : 'OFF'}
+      />
+
+      {/* Bybit connection indicator */}
       {bybitOk && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div style={{
@@ -82,26 +140,26 @@ export default function ExecutionModeToggle({
             boxShadow: `0 0 4px ${bybitStatus?.healthy ? green : red}`
           }} />
           <span style={{ fontSize: 10, color: muted, fontFamily: 'monospace' }}>
-            Bybit {testnet ? 'Test' : 'Live'}{bybitStatus?.healthy ? '' : ' (err)'}
+            Bybit {bybitStatus?.healthy ? 'OK' : 'err'}
           </span>
         </div>
       )}
 
-      {/* Confirmation dialog for SPOT/PERP */}
-      {confirmTarget && (
+      {/* Confirmation / error popover */}
+      {confirmAction && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          background: 'rgba(255,168,0,0.08)',
-          border: `1px solid ${amber}44`,
+          background: confirmAction === 'no-bybit' ? 'rgba(239,68,68,0.08)' : 'rgba(255,168,0,0.08)',
+          border: `1px solid ${confirmAction === 'no-bybit' ? red : amber}44`,
           borderRadius: 6, padding: '6px 12px'
         }}>
-          {!bybitOk ? (
+          {confirmAction === 'no-bybit' ? (
             <>
               <span style={{ fontSize: 11, color: red, fontFamily: 'monospace' }}>
-                Bybit no configurado
+                Bybit API no configurado
               </span>
               <button
-                onClick={() => setConfirmTarget(null)}
+                onClick={() => setConfirmAction(null)}
                 style={{
                   padding: '3px 8px', borderRadius: 4, fontSize: 10,
                   background: 'transparent', border: `1px solid ${border}`,
@@ -114,7 +172,7 @@ export default function ExecutionModeToggle({
           ) : (
             <>
               <span style={{ fontSize: 11, color: amber, fontFamily: 'monospace' }}>
-                {confirmTarget === 'live' ? 'Activar SPOT' : 'Activar PERP'} {testnet ? '(testnet)' : '(REAL)'}?
+                Activar {confirmAction === 'spot-on' ? 'SPOT' : 'PERP'} {testnet ? '(testnet)' : '(REAL)'}?
               </span>
               <button
                 onClick={handleConfirm}
@@ -129,7 +187,7 @@ export default function ExecutionModeToggle({
                 {switching ? '...' : 'SI'}
               </button>
               <button
-                onClick={() => setConfirmTarget(null)}
+                onClick={() => setConfirmAction(null)}
                 style={{
                   padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700,
                   background: 'transparent', border: `1px solid ${border}`,
@@ -142,38 +200,6 @@ export default function ExecutionModeToggle({
           )}
         </div>
       )}
-
-      {/* Auto-execute toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ color: muted, fontSize: 12 }}>Auto-ejecutar:</span>
-        <button
-          onClick={() => onAutoExecuteChange?.(!autoExecute)}
-          style={{
-            width: 44,
-            height: 24,
-            borderRadius: 12,
-            border: 'none',
-            background: autoExecute ? green : 'rgba(107,114,128,0.3)',
-            cursor: 'pointer',
-            position: 'relative',
-            transition: 'background 0.2s'
-          }}
-        >
-          <div style={{
-            width: 18,
-            height: 18,
-            borderRadius: '50%',
-            background: '#fff',
-            position: 'absolute',
-            top: 3,
-            left: autoExecute ? 23 : 3,
-            transition: 'left 0.2s'
-          }} />
-        </button>
-        <span style={{ color: autoExecute ? green : amber, fontSize: 11, fontWeight: 600 }}>
-          {autoExecute ? 'ON' : 'MANUAL'}
-        </span>
-      </div>
     </div>
   );
 }
