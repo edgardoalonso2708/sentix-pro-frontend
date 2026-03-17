@@ -123,6 +123,51 @@ function StrategyConfigContent({
       orderBookScore: 12, ichimokuScore: 10, marketStructureScore: 12,
     };
 
+    const ALPHA_RISK_PARAMS = {
+      risk_per_trade: 0.012,
+      max_daily_loss_percent: 0.04,
+      max_position_percent: 0.25,
+      max_open_positions: 3,
+      atr_stop_mult: 2.0,
+      atr_tp2_mult: 2.5,
+      atr_trailing_mult: 3.0,
+      atr_trailing_activation: 1.5,
+      min_rr_ratio: 1.5,
+      partial_close_ratio: 0.5,
+      move_sl_to_breakeven_after_tp1: true,
+      max_portfolio_correlation: 0.70,
+      max_sector_exposure_pct: 0.60,
+      max_same_direction_crypto: 3,
+      max_holding_hours: 168,
+      allowed_strength: ['BUY', 'STRONG BUY', 'SELL', 'STRONG SELL'],
+    };
+
+    const handleApplyRiskAlpha = async () => {
+      // Apply risk-only params to form
+      setConfigForm(prev => ({ ...prev, ...ALPHA_RISK_PARAMS }));
+
+      // Also sync risk params to signal engine
+      try {
+        await authFetch(`${apiUrl}/api/autotune/apply-preset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            params: {
+              riskPerTrade: 0.012,
+              maxPositionPct: 0.25,
+              dailyLossLimit: 0.04,
+              atrStopMult: 2.0,
+              atrTrailingMult: 3.0,
+              atrTrailingActivation: 1.5,
+            },
+            name: 'alpha-risk-preset'
+          })
+        });
+      } catch (err) {
+        console.warn('Alpha risk preset apply failed (non-blocking):', err.message);
+      }
+    };
+
     const handleApplyAlpha = async () => {
       // 1. Apply paper trading config (form fields)
       setConfigForm(prev => ({
@@ -395,19 +440,40 @@ function StrategyConfigContent({
           </div>
         </div>
 
-        {/* Alpha Preset + Save */}
+        {/* Preset Buttons + Save */}
         <div style={{ ...card, padding: "16px 20px" }}>
-          <button onClick={handleApplyAlpha} style={{
-            padding: "10px 28px",
-            background: `linear-gradient(135deg, ${amber}, #d97706)`,
-            border: "none", borderRadius: 6, color: "#000",
-            fontFamily: "monospace", fontSize: 12, fontWeight: 700, cursor: "pointer",
-            width: "100%", marginBottom: 8, letterSpacing: 0.5
-          }}>
-            ALPHA PRESET — Apply Professional Config
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div>
+              <button onClick={handleApplyAlpha} style={{
+                padding: "10px 16px",
+                background: `linear-gradient(135deg, ${amber}, #d97706)`,
+                border: "none", borderRadius: 6, color: "#000",
+                fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                width: "100%", letterSpacing: 0.5
+              }}>
+                ALPHA PRESET — Full Config
+              </button>
+              <div style={{ fontSize: 8, color: muted, marginTop: 4, textAlign: 'center', lineHeight: 1.3 }}>
+                Signal + Risk params completos
+              </div>
+            </div>
+            <div>
+              <button onClick={handleApplyRiskAlpha} style={{
+                padding: "10px 16px",
+                background: `linear-gradient(135deg, ${red}, #dc2626)`,
+                border: "none", borderRadius: 6, color: "#fff",
+                fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                width: "100%", letterSpacing: 0.5
+              }}>
+                RISK ALPHA — Risk Management
+              </button>
+              <div style={{ fontSize: 8, color: muted, marginTop: 4, textAlign: 'center', lineHeight: 1.3 }}>
+                Solo gestion de riesgo profesional
+              </div>
+            </div>
+          </div>
           <div style={{ fontSize: 9, color: muted, marginBottom: 12, textAlign: 'center', lineHeight: 1.4 }}>
-            ATR SL 2.0x | TP2 2.5x | Trail 3.0x@1.5x | Risk 1.2% | Daily Loss 4% | Max Pos 25% | Confluence 2/3 TF
+            Risk 1-1.5% | Daily DD 4% | Max 3 pos | Kelly sizing | ATR SL 2.0x + Trail 3.0x@1.5x | 4h swing + 1h/15m
           </div>
           <button onClick={handleSaveStrategy} disabled={savingConfig}
             style={{
