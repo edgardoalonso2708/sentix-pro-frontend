@@ -23,11 +23,15 @@ export default function ExecutionModeToggle({
   const handleModeClick = (target) => {
     if (switching) return;
     if (target === 'paper') {
+      // Switch to paper directly (no confirmation needed)
       setConfirmTarget(null);
       onModeChange?.(target);
+    } else if (mode === target) {
+      // Already in this mode → toggle OFF (back to paper)
+      setConfirmTarget(null);
+      onModeChange?.('paper');
     } else {
-      // SPOT or PERP → require confirmation
-      if (confirmTarget === target) return; // already showing confirm
+      // Activating SPOT or PERP → require confirmation
       setConfirmTarget(target);
     }
   };
