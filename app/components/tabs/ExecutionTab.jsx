@@ -556,7 +556,7 @@ export default function ExecutionTab({
         )}
 
         {/* POSITIONS SUB-TAB (with live guard) */}
-        {subTab === 'positions' && execMode !== 'live' && (
+        {subTab === 'positions' && (execMode !== 'live' || bybitStatus?.bybitConfigured) && (
           <div>
             <PositionMonitor
               positions={paperPositions}
@@ -735,8 +735,8 @@ export default function ExecutionTab({
           </div>
         )}
 
-        {/* Live/Perp mode: exchange not connected yet */}
-        {(execMode === 'live' || execMode === 'perp') && (subTab === 'positions' || subTab === 'risk' || subTab === 'audit' || subTab === 'orders') && (
+        {/* Live/Perp mode: exchange not connected — only show if Bybit NOT configured */}
+        {(execMode === 'live' || execMode === 'perp') && !bybitStatus?.bybitConfigured && (subTab === 'positions' || subTab === 'risk' || subTab === 'audit' || subTab === 'orders') && (
           <div style={{
             ...card,
             textAlign: 'center',
@@ -786,16 +786,16 @@ export default function ExecutionTab({
           </div>
         )}
 
-        {/* Risk sub-tab (paper mode only) */}
-        {subTab === 'risk' && execMode === 'paper' && (
+        {/* Risk sub-tab */}
+        {subTab === 'risk' && (execMode === 'paper' || bybitStatus?.bybitConfigured) && (
           <RiskDashboard
             dashboard={execRiskDashboard}
             colors={executionColors}
           />
         )}
 
-        {/* Audit sub-tab (paper mode only) */}
-        {subTab === 'audit' && execMode === 'paper' && (
+        {/* Audit sub-tab */}
+        {subTab === 'audit' && (execMode === 'paper' || bybitStatus?.bybitConfigured) && (
           <ExecutionAuditLog
             logs={execAuditLog}
             colors={executionColors}
