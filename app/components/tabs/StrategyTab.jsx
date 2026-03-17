@@ -231,16 +231,12 @@ function StrategyConfigContent({
             max_same_direction_crypto: parseInt(configForm.max_same_direction_crypto)
           })
         });
-        const d = await res.json();
         if (res.ok) {
+          const d = await res.json();
           setPaperConfig(d.config);
           setConfigForm(d.config);
-          alert(`Config saved OK. min_rr_ratio=${d.config?.min_rr_ratio}, min_confluence=${d.config?.min_confluence}`);
-        } else {
-          alert(`Save FAILED (${res.status}): ${d.error || JSON.stringify(d)}`);
         }
       } catch (err) {
-        alert(`Save ERROR: ${err.message}`);
         console.error('Save strategy error:', err);
       } finally {
         setSavingConfig(false);
