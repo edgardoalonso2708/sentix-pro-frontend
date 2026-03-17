@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -40,6 +41,23 @@ export default function ExecutionTab({
     const subTab = execSubTab;
     const setSubTab = setExecSubTab;
     const executionColors = { bg, bg2, bg3, border, text, muted, green, red, accent: purple };
+
+    // Bybit connection status (fetched once on mount)
+    const [bybitStatus, setBybitStatus] = useState({ bybitConfigured: false, testnet: true, healthy: false });
+    const [switchingMode, setSwitchingMode] = useState(false);
+
+    useEffect(() => {
+      (async () => {
+        try {
+          const res = await authFetch(`${apiUrl}/api/execution/mode`);
+          if (res.ok) {
+            const d = await res.json();
+            setBybitStatus({ bybitConfigured: d.bybitConfigured, testnet: d.testnet, healthy: d.bybitConfigured });
+            if (d.mode && d.mode !== execMode) setExecMode(d.mode === 'bybit' ? 'live' : d.mode);
+          }
+        } catch (_) {}
+      })();
+    }, []);
 
     // Aliases for paper state
     const configForm = paperConfigForm, setConfigForm = setPaperConfigForm;
@@ -147,14 +165,34 @@ export default function ExecutionTab({
             <ExecutionModeToggle
               mode={execMode}
               onModeChange={async (val) => {
-                setExecMode(val);
+                setSwitchingMode(true);
                 try {
-                  await authFetch(`${apiUrl}/api/paper/config/${userId}`, {
+                  // Map frontend mode names to backend adapter names
+                  const backendMode = (val === 'live' || val === 'perp') ? 'bybit' : 'paper';
+                  const res = await authFetch(`${apiUrl}/api/execution/mode`, {
                     method: 'POST',
-                    body: JSON.stringify({ execution_mode: val })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: backendMode })
                   });
-                  await loadExecutionData();
-                } catch (e) { console.error('Mode change failed:', e); }
+                  if (res.ok) {
+                    setExecMode(val);
+                    // Also persist in paper_config for UI state
+                    await authFetch(`${apiUrl}/api/paper/config/${userId}`, {
+                      method: 'POST',
+                      body: JSON.stringify({ execution_mode: val })
+                    });
+                    await loadExecutionData();
+                  } else {
+                    const err = await res.json().catch(() => ({}));
+                    console.error('Mode switch rejected:', err.error);
+                    setExecFeedback?.({ type: 'error', message: err.error || 'Error al cambiar modo' });
+                  }
+                } catch (e) {
+                  console.error('Mode change failed:', e);
+                  setExecFeedback?.({ type: 'error', message: 'Error de conexion al cambiar modo' });
+                } finally {
+                  setSwitchingMode(false);
+                }
               }}
               autoExecute={execAutoExecute}
               onAutoExecuteChange={async (val) => {
@@ -167,6 +205,8 @@ export default function ExecutionTab({
                   await loadExecutionData();
                 } catch (e) { console.error('Auto-execute change failed:', e); }
               }}
+              bybitStatus={bybitStatus}
+              switching={switchingMode}
               colors={executionColors}
             />
             {/* Manual orders toggle */}
@@ -714,12 +754,20 @@ export default function ExecutionTab({
               {execMode === 'perp' ? t('exec.perpDesc') : t('exec.liveDesc')}
             </div>
             <button
-              onClick={() => {
+              onClick={async () => {
                 setExecMode('paper');
-                authFetch(`${apiUrl}/api/paper/config/${userId}`, {
-                  method: 'POST',
-                  body: JSON.stringify({ execution_mode: 'paper' })
-                }).then(() => loadExecutionData()).catch(() => {});
+                try {
+                  await authFetch(`${apiUrl}/api/execution/mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'paper' })
+                  });
+                  await authFetch(`${apiUrl}/api/paper/config/${userId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ execution_mode: 'paper' })
+                  });
+                  await loadExecutionData();
+                } catch (_) {}
               }}
               style={{
                 marginTop: 8,
