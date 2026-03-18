@@ -31,7 +31,6 @@ export function AuthProvider({ children }) {
 
   // Auth is only enabled when Supabase env vars are configured
   const authEnabled = !!supabase;
-  console.log('[AUTH] supabase:', supabase ? 'EXISTS' : 'NULL', '| authEnabled:', authEnabled, '| user:', user?.id || 'NONE', '| loading:', loading);
 
   // Fetch user profile (role, display_name) from backend
   const fetchProfile = useCallback(async () => {

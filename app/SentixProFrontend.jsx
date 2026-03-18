@@ -225,7 +225,6 @@ export default function SentixProFrontend() {
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
         const cfg = d.config || d;
-        console.log('[DASHBOARD POLL] min_rr_ratio from API:', cfg.min_rr_ratio, '| USER_ID:', USER_ID);
         setPaperConfig(cfg);
         setPaperConfigForm(prev => prev ? { ...prev, current_capital: cfg.current_capital, daily_pnl: cfg.daily_pnl } : cfg);
       }
@@ -568,11 +567,8 @@ export default function SentixProFrontend() {
       const res = await authFetch(`${API_URL}/api/paper/config/${userIdRef.current}`);
       if (res.ok) {
         const d = await res.json();
-        console.log('[CONFIG LOAD] min_rr_ratio from API:', d.config?.min_rr_ratio, '| USER_ID:', USER_ID);
         setPaperConfig(d.config);
         setPaperConfigForm(d.config);
-      } else {
-        console.warn('[CONFIG LOAD] Failed:', res.status, res.statusText);
       }
     } catch (err) {
       console.error('Config load error:', err);
