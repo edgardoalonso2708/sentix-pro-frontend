@@ -216,7 +216,7 @@ export default function SentixProFrontend() {
     try {
       const [cfgRes, posRes, perfRes, histRes, eqRes, advRes] = await Promise.allSettled([
         authFetch(`${API_URL}/api/paper/config/${userIdRef.current}`),
-        authFetch(`${API_URL}/api/paper/positions/${userIdRef.current}`),
+        authFetch(`${API_URL}/api/positions/${userIdRef.current}`),
         authFetch(`${API_URL}/api/paper/performance/${userIdRef.current}`),
         authFetch(`${API_URL}/api/paper/history/${userIdRef.current}?status=closed&limit=200&offset=0`),
         authFetch(`${API_URL}/api/paper/equity/${userIdRef.current}?days=7`),

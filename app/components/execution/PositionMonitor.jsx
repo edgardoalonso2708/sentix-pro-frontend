@@ -40,6 +40,12 @@ function PositionCard({ position, colors }) {
 
   const side = position.action || position.side || 'BUY';
   const sideColor = side === 'BUY' ? green : red;
+  const isUntracked = position.source === 'bybit-untracked';
+
+  const sourceBadge = position.source === 'paper' ? { label: 'PAPER', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' }
+    : position.source === 'bybit-tracked' ? { label: 'BYBIT', color: '#f59e0b', bg: 'rgba(255,168,0,0.15)' }
+    : position.source === 'bybit-untracked' ? { label: 'HOLDING', color: muted, bg: 'rgba(128,128,128,0.15)' }
+    : null;
 
   const trailingActive = position.trailing_stop_pct && parseFloat(position.trailing_stop_pct) > 0;
   const hasSL = position.stop_loss && parseFloat(position.stop_loss) > 0;
@@ -52,7 +58,8 @@ function PositionCard({ position, colors }) {
       border: `1px solid ${border}`,
       borderRadius: 8,
       padding: 16,
-      borderLeft: `3px solid ${heatColor}`
+      borderLeft: `3px solid ${isUntracked ? muted : heatColor}`,
+      opacity: isUntracked ? 0.6 : 1
     }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -70,16 +77,30 @@ function PositionCard({ position, colors }) {
           }}>
             {side}
           </span>
-          <span style={{
-            color: heatColor,
-            fontSize: 10,
-            fontWeight: 600,
-            padding: '2px 6px',
-            borderRadius: 3,
-            background: `${heatColor}15`
-          }}>
-            {HEAT_LABELS[heat]}
-          </span>
+          {!isUntracked && (
+            <span style={{
+              color: heatColor,
+              fontSize: 10,
+              fontWeight: 600,
+              padding: '2px 6px',
+              borderRadius: 3,
+              background: `${heatColor}15`
+            }}>
+              {HEAT_LABELS[heat]}
+            </span>
+          )}
+          {sourceBadge && (
+            <span style={{
+              color: sourceBadge.color,
+              fontSize: 9,
+              fontWeight: 700,
+              padding: '2px 6px',
+              borderRadius: 3,
+              background: sourceBadge.bg
+            }}>
+              {sourceBadge.label}
+            </span>
+          )}
         </div>
         <span style={{ color: pnlColor, fontWeight: 700, fontSize: 14 }}>
           {formatPnl(pnl)}
@@ -91,8 +112,9 @@ function PositionCard({ position, colors }) {
         <div>
           <div style={{ color: muted, fontSize: 10 }}>Entrada</div>
           <div style={{ color: text, fontSize: 12, fontWeight: 600 }}>
-            ${parseFloat(position.entry_price || 0).toLocaleString()}
+            {parseFloat(position.entry_price || 0) > 0 ? `$${parseFloat(position.entry_price).toLocaleString()}` : (isUntracked ? 'N/A' : '$0')}
           </div>
+          {isUntracked && <div style={{ color: muted, fontSize: 9, marginTop: 2 }}>{position.sourceLabel || 'Not managed by SENTIX'}</div>}
         </div>
         <div>
           <div style={{ color: muted, fontSize: 10 }}>Actual</div>
