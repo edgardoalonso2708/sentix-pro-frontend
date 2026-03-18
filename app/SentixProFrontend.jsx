@@ -59,6 +59,10 @@ export default function SentixProFrontend() {
   const router = useRouter();
   const USER_ID = authUserId || 'default-user';
 
+  // Ref to always have the latest USER_ID in callbacks without re-creating them
+  const userIdRef = useRef(USER_ID);
+  userIdRef.current = USER_ID;
+
   // Redirect to login if auth is enabled but no session
   useEffect(() => {
     if (!authLoading && authEnabled && !authUser) {
@@ -211,12 +215,12 @@ export default function SentixProFrontend() {
     dashboardPaperFetching.current = true;
     try {
       const [cfgRes, posRes, perfRes, histRes, eqRes, advRes] = await Promise.allSettled([
-        authFetch(`${API_URL}/api/paper/config/${USER_ID}`),
-        authFetch(`${API_URL}/api/paper/positions/${USER_ID}`),
-        authFetch(`${API_URL}/api/paper/performance/${USER_ID}`),
-        authFetch(`${API_URL}/api/paper/history/${USER_ID}?status=closed&limit=200&offset=0`),
-        authFetch(`${API_URL}/api/paper/equity/${USER_ID}?days=7`),
-        authFetch(`${API_URL}/api/paper/performance-advanced/${USER_ID}?days=${advancedPerfDays}`),
+        authFetch(`${API_URL}/api/paper/config/${userIdRef.current}`),
+        authFetch(`${API_URL}/api/paper/positions/${userIdRef.current}`),
+        authFetch(`${API_URL}/api/paper/performance/${userIdRef.current}`),
+        authFetch(`${API_URL}/api/paper/history/${userIdRef.current}?status=closed&limit=200&offset=0`),
+        authFetch(`${API_URL}/api/paper/equity/${userIdRef.current}?days=7`),
+        authFetch(`${API_URL}/api/paper/performance-advanced/${userIdRef.current}?days=${advancedPerfDays}`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
         const d = await cfgRes.value.json();
@@ -255,7 +259,7 @@ export default function SentixProFrontend() {
 
   const fetchBacktestHistory = useCallback(async () => {
     try {
-      const response = await authFetch(`${API_URL}/api/backtest/history/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/backtest/history/${userIdRef.current}`);
       if (response.ok) {
         const data = await response.json();
         setBacktestHistory(data);
@@ -281,7 +285,7 @@ export default function SentixProFrontend() {
   const fetchWallets = useCallback(async () => {
     try {
       setWalletsLoading(true);
-      const response = await authFetch(`${API_URL}/api/wallets/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/wallets/${userIdRef.current}`);
       if (response.ok) {
         const data = await response.json();
         setWallets(data.wallets || []);
@@ -296,7 +300,7 @@ export default function SentixProFrontend() {
   const fetchPortfolio = useCallback(async () => {
     try {
       setPortfolioLoading(true);
-      const response = await authFetch(`${API_URL}/api/portfolio/${USER_ID}`);
+      const response = await authFetch(`${API_URL}/api/portfolio/${userIdRef.current}`);
       if (response.ok) {
         const data = await response.json();
         // Flatten wallet positions into portfolio array
@@ -541,7 +545,7 @@ export default function SentixProFrontend() {
       // Correlation needs ≥2 positions
       if (paperPositions.length >= 2) {
         try {
-          const corrRes = await authFetch(`${API_URL}/api/paper/correlation/${USER_ID}`);
+          const corrRes = await authFetch(`${API_URL}/api/paper/correlation/${userIdRef.current}`);
           if (corrRes.ok) {
             const corrData = await corrRes.json();
             setCorrelationData(corrData.correlation || null);
@@ -561,7 +565,7 @@ export default function SentixProFrontend() {
   // Load just config for strategy tab (lightweight, no positions/history)
   const loadConfigOnly = useCallback(async () => {
     try {
-      const res = await authFetch(`${API_URL}/api/paper/config/${USER_ID}`);
+      const res = await authFetch(`${API_URL}/api/paper/config/${userIdRef.current}`);
       if (res.ok) {
         const d = await res.json();
         console.log('[CONFIG LOAD] min_rr_ratio from API:', d.config?.min_rr_ratio, '| USER_ID:', USER_ID);
@@ -590,10 +594,10 @@ export default function SentixProFrontend() {
     setExecLoading(true);
     try {
       const [ordersRes, riskRes, auditRes, ksRes] = await Promise.allSettled([
-        authFetch(`${API_URL}/api/orders/${USER_ID}?limit=50`),
-        authFetch(`${API_URL}/api/risk/${USER_ID}/dashboard`),
-        authFetch(`${API_URL}/api/execution-log/${USER_ID}?limit=50`),
-        authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`)
+        authFetch(`${API_URL}/api/orders/${userIdRef.current}?limit=50`),
+        authFetch(`${API_URL}/api/risk/${userIdRef.current}/dashboard`),
+        authFetch(`${API_URL}/api/execution-log/${userIdRef.current}?limit=50`),
+        authFetch(`${API_URL}/api/risk/${userIdRef.current}/kill-switch`)
       ]);
 
       if (ordersRes.status === 'fulfilled' && ordersRes.value.ok) {
@@ -644,7 +648,7 @@ export default function SentixProFrontend() {
 
   const handleCreateOrder = async (orderSpec) => {
     try {
-      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}`, {
+      const res = await authFetch(`${API_URL}/api/orders/${userIdRef.current}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderSpec)
@@ -667,7 +671,7 @@ export default function SentixProFrontend() {
 
   const handleCancelOrder = async (orderId) => {
     try {
-      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/cancel`, { method: 'POST' });
+      const res = await authFetch(`${API_URL}/api/orders/${userIdRef.current}/${orderId}/cancel`, { method: 'POST' });
       if (res.ok) {
         showFeedback('success', 'Orden cancelada');
       } else {
@@ -682,7 +686,7 @@ export default function SentixProFrontend() {
 
   const handleSubmitOrder = async (orderId) => {
     try {
-      const res = await authFetch(`${API_URL}/api/orders/${USER_ID}/${orderId}/submit`, { method: 'POST' });
+      const res = await authFetch(`${API_URL}/api/orders/${userIdRef.current}/${orderId}/submit`, { method: 'POST' });
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
         showFeedback('success', d.trade ? `Orden ejecutada a $${d.trade.entry_price}` : 'Orden enviada');
@@ -700,13 +704,13 @@ export default function SentixProFrontend() {
     try {
       let res;
       if (activate) {
-        res = await authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, {
+        res = await authFetch(`${API_URL}/api/risk/${userIdRef.current}/kill-switch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason: reason || 'Manual activation' })
         });
       } else {
-        res = await authFetch(`${API_URL}/api/risk/${USER_ID}/kill-switch`, { method: 'DELETE' });
+        res = await authFetch(`${API_URL}/api/risk/${userIdRef.current}/kill-switch`, { method: 'DELETE' });
       }
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
