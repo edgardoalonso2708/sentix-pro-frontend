@@ -159,6 +159,20 @@ export default function SentixProFrontend() {
     } catch (_) { /* backend unavailable */ }
   }, [API_URL]);
 
+  // ─── FETCH EXECUTION MODE ON MOUNT (so Dashboard knows if we're in Bybit mode) ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch(`${API_URL}/api/execution/mode`);
+        if (res.ok) {
+          const d = await res.json();
+          const mode = d.mode === 'bybit' ? 'live' : (d.mode || 'paper');
+          setExecMode(mode);
+        }
+      } catch (_) {}
+    })();
+  }, [API_URL]);
+
   // ─── FETCH MARKET DATA ─────────────────────────────────────────────────────
   const fetchMarketData = useCallback(async () => {
     try {
