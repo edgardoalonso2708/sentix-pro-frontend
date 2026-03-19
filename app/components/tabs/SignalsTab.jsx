@@ -531,6 +531,65 @@ export default function SignalsTab({
                     </div>
                   )}
 
+                  {/* Liquidity Composite Score Gauge */}
+                  {signal.liquidityScore && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 9, color: muted, letterSpacing: 0.5, fontWeight: 700 }}>LIQUIDITY</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 800,
+                          color: signal.liquidityScore.score >= 20 ? green : signal.liquidityScore.score <= -20 ? red : amber
+                        }}>
+                          {signal.liquidityScore.score > 0 ? '+' : ''}{signal.liquidityScore.score}
+                        </span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                          background: signal.liquidityScore.signal?.includes('bullish') ? `${green}15` : signal.liquidityScore.signal?.includes('bearish') ? `${red}15` : `${amber}15`,
+                          color: signal.liquidityScore.signal?.includes('bullish') ? green : signal.liquidityScore.signal?.includes('bearish') ? red : amber,
+                          textTransform: "uppercase", letterSpacing: 0.3
+                        }}>
+                          {signal.liquidityScore.label}
+                        </span>
+                      </div>
+                      {/* Gauge bar: -100 to +100 */}
+                      <div style={{ position: "relative", height: 6, borderRadius: 3, background: bg2, overflow: "hidden" }}>
+                        {/* Center marker */}
+                        <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: `${muted}40`, zIndex: 2 }} />
+                        {/* Fill bar */}
+                        <div style={{
+                          position: "absolute", top: 0, bottom: 0, borderRadius: 3,
+                          left: signal.liquidityScore.score >= 0 ? "50%" : `${50 + (signal.liquidityScore.score / 2)}%`,
+                          width: `${Math.abs(signal.liquidityScore.score) / 2}%`,
+                          background: signal.liquidityScore.score >= 20 ? green : signal.liquidityScore.score <= -20 ? red : amber,
+                          opacity: 0.85,
+                          transition: "all 0.3s ease"
+                        }} />
+                      </div>
+                      {/* Component breakdown (compact row) */}
+                      {signal.liquidityScore.components && (
+                        <div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
+                          {[
+                            { key: 'cmf', label: 'CMF' },
+                            { key: 'mfi', label: 'MFI' },
+                            { key: 'obv', label: 'OBV' },
+                            { key: 'volumeZScore', label: 'Vol-Z' },
+                            { key: 'volumeProfile', label: 'V.Prof' }
+                          ].map(({ key, label }) => {
+                            const val = signal.liquidityScore.components[key] || 0;
+                            return (
+                              <div key={key} style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                                <span style={{ color: `${muted}90`, marginRight: 2 }}>{label}</span>
+                                <span style={{ color: val > 0 ? green : val < 0 ? red : muted, fontWeight: 700 }}>
+                                  {val > 0 ? '+' : ''}{val}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Advanced Indicators Badges */}
                   {signal.action !== 'HOLD' && signal.indicators && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
@@ -588,6 +647,28 @@ export default function SignalsTab({
                         }}>
                           FIB: {signal.indicators.fibonacci.nearestLevel.label}
                           {signal.indicators.fibonacci.goldenRatio && ' \u2605'}
+                        </div>
+                      )}
+                      {signal.indicators.cmf != null && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: signal.indicators.cmfSignal?.includes('accumulation') ? `${green}20` : signal.indicators.cmfSignal?.includes('distribution') ? `${red}20` : `${muted}20`,
+                          color: signal.indicators.cmfSignal?.includes('accumulation') ? green : signal.indicators.cmfSignal?.includes('distribution') ? red : muted,
+                          fontWeight: 600
+                        }}>
+                          CMF: {signal.indicators.cmf > 0 ? '+' : ''}{signal.indicators.cmf}
+                        </div>
+                      )}
+                      {signal.indicators.mfi != null && (
+                        <div style={{
+                          fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                          background: signal.indicators.mfi <= 20 ? `${green}20` : signal.indicators.mfi >= 80 ? `${red}20` : signal.indicators.mfi <= 30 ? `${green}15` : signal.indicators.mfi >= 70 ? `${red}15` : `${muted}20`,
+                          color: signal.indicators.mfi <= 20 ? green : signal.indicators.mfi >= 80 ? red : signal.indicators.mfi <= 30 ? green : signal.indicators.mfi >= 70 ? red : muted,
+                          fontWeight: 600
+                        }}>
+                          MFI: {signal.indicators.mfi}
+                          {signal.indicators.mfi >= 80 && ' OB'}
+                          {signal.indicators.mfi <= 20 && ' OS'}
                         </div>
                       )}
                     </div>
