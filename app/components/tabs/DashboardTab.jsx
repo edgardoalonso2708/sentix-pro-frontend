@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,8 +16,22 @@ export default function DashboardTab({
   realtimeEquityCurve, backtestHistory, backtestEquityCurve,
   systemHealth, sseConnected, lastUpdate,
   setTab, setStrategySubTab, apiUrl,
+  execMode, authFetch: authFetchProp, userId,
 }) {
     const { t } = useLanguage();
+    const [bybitOverview, setBybitOverview] = useState(null);
+    const isLiveMode = execMode === 'live' || execMode === 'perp';
+
+    // Fetch Bybit overview when in live mode
+    useEffect(() => {
+      if (!isLiveMode || !authFetchProp || !apiUrl) return;
+      (async () => {
+        try {
+          const res = await authFetchProp(`${apiUrl}/api/bybit/overview`);
+          if (res.ok) setBybitOverview(await res.json());
+        } catch (_) {}
+      })();
+    }, [isLiveMode, apiUrl]);
 
     if (!marketData || !marketData.crypto) {
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
@@ -232,30 +247,42 @@ export default function DashboardTab({
           </div>
         )}
 
-        {/* PAPER TRADING PERFORMANCE */}
+        {/* TRADING PERFORMANCE — mode-aware */}
         <div style={{ ...card, marginTop: 16 }}>
-          <div style={sTitle}>{t('dash.paperPerformance')}</div>
+          <div style={sTitle}>
+            {isLiveMode ? `BYBIT ${bybitOverview?.testnet ? 'TESTNET' : 'LIVE'} PERFORMANCE` : t('dash.paperPerformance')}
+          </div>
           {(() => {
             const pm = paperMetrics;
-            const closedTrades = paperHistory.filter(t => t.exit_price != null);
-            const currentCapital = pm?.currentCapital || paperConfig?.initial_capital || 10000;
-            const totalPnl = pm?.totalPnl || 0;
-            const winRate = pm?.winRate || 0;
-            const openCount = paperPositions.filter(p => p.status === 'open').length;
-            const maxDD = pm?.maxDrawdown || 0;
-            const profitFactor = pm?.profitFactor || 0;
+            const closedTrades = Array.isArray(paperHistory) ? paperHistory.filter(t => t.exit_price != null) : [];
+            const currentCapital = isLiveMode
+              ? parseFloat(bybitOverview?.balance?.total || 0)
+              : (pm?.currentCapital || paperConfig?.initial_capital || 10000);
+            const totalPnl = isLiveMode ? 0 : (pm?.totalPnl || 0);
+            const winRate = isLiveMode ? 0 : (pm?.winRate || 0);
+            const openCount = isLiveMode
+              ? (bybitOverview?.positions_count || 0)
+              : (Array.isArray(paperPositions) ? paperPositions.filter(p => p.status === 'open').length : 0);
+            const maxDD = isLiveMode ? 0 : (pm?.maxDrawdown || 0);
+            const profitFactor = isLiveMode ? 0 : (pm?.profitFactor || 0);
 
             return (
               <div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
-                  {[
+                  {(isLiveMode ? [
+                    { label: 'BALANCE', value: `$${currentCapital.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: green },
+                    { label: 'AVAILABLE', value: `$${parseFloat(bybitOverview?.balance?.available || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                    { label: 'EQUITY', value: `$${parseFloat(bybitOverview?.total_equity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                    { label: t('dash.openPositions'), value: openCount, color: openCount > 0 ? amber : muted },
+                    { label: 'POS VALUE', value: `$${parseFloat(bybitOverview?.total_position_value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                  ] : [
                     { label: t('common.pnlTotal'), value: `$${totalPnl.toFixed(2)}`, color: totalPnl >= 0 ? green : red },
                     { label: t('common.winRate'), value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? green : red },
                     { label: t('common.capital'), value: `$${currentCapital.toFixed(0)}`, color: text },
                     { label: t('dash.openPositions'), value: openCount, color: openCount > 0 ? amber : muted },
                     { label: t('common.maxDrawdown'), value: `${maxDD.toFixed(2)}%`, color: maxDD > 10 ? red : maxDD > 5 ? amber : green },
                     { label: t('common.profitFactor'), value: profitFactor.toFixed(2), color: profitFactor >= 1.5 ? green : profitFactor >= 1 ? amber : red },
-                  ].map(({ label, value, color }) => (
+                  ]).map(({ label, value, color }) => (
                     <div key={label} style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{label}</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>

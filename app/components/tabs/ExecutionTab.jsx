@@ -323,29 +323,36 @@ export default function ExecutionTab({
         {/* DASHBOARD SUB-TAB */}
         {subTab === 'dashboard' && (
           <div>
-            {/* Status Banner */}
+            {/* Status Banner — mode-aware */}
             <div style={{
-              background: isEnabled ? "rgba(0, 212, 170, 0.08)" : "rgba(239, 68, 68, 0.08)",
-              border: `1px solid ${isEnabled ? green : red}`,
+              background: isLiveMode
+                ? "rgba(255, 168, 0, 0.08)"
+                : (isEnabled ? "rgba(0, 212, 170, 0.08)" : "rgba(239, 68, 68, 0.08)"),
+              border: `1px solid ${isLiveMode ? amber : (isEnabled ? green : red)}`,
               borderRadius: 8, padding: "14px 18px", marginBottom: 16,
               display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                   width: 10, height: 10, borderRadius: "50%",
-                  background: isEnabled ? green : red,
-                  boxShadow: `0 0 8px ${isEnabled ? green : red}`,
-                  animation: isEnabled ? "pulse 2s infinite" : "none"
+                  background: isLiveMode ? amber : (isEnabled ? green : red),
+                  boxShadow: `0 0 8px ${isLiveMode ? amber : (isEnabled ? green : red)}`,
+                  animation: (isLiveMode || isEnabled) ? "pulse 2s infinite" : "none"
                 }} />
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: isEnabled ? green : red }}>
-                    {isEnabled ? t('exec.paperActive') : t('exec.paperDisabled')}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isLiveMode ? amber : (isEnabled ? green : red) }}>
+                    {isLiveMode
+                      ? `BYBIT ${bybitStatus.testnet ? 'TESTNET' : 'LIVE'} ACTIVO`
+                      : (isEnabled ? t('exec.paperActive') : t('exec.paperDisabled'))}
                   </div>
                   <div style={{ fontSize: 10, color: muted, fontFamily: "monospace" }}>
-                    Capital: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} ·
-                    P&L: <span style={{ color: capitalPnl >= 0 ? green : red }}>
-                      {capitalPnl >= 0 ? '+' : ''}${capitalPnl.toFixed(2)} ({capitalPnlPct.toFixed(1)}%)
-                    </span>
+                    {isLiveMode ? (
+                      <>Balance: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT · Available: ${parseFloat(bybitBalance?.available || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</>
+                    ) : (
+                      <>Capital: ${capital.toLocaleString(undefined, { minimumFractionDigits: 2 })} · P&L: <span style={{ color: capitalPnl >= 0 ? green : red }}>
+                        {capitalPnl >= 0 ? '+' : ''}${capitalPnl.toFixed(2)} ({capitalPnlPct.toFixed(1)}%)
+                      </span></>
+                    )}
                   </div>
                 </div>
               </div>
@@ -359,16 +366,22 @@ export default function ExecutionTab({
               </button>
             </div>
 
-            {/* Performance Cards */}
+            {/* Performance Cards — mode-aware */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
-              {[
+              {(isLiveMode ? [
+                { label: 'BALANCE', value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: green },
+                { label: 'AVAILABLE', value: `$${parseFloat(bybitBalance?.available || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                { label: 'EQUITY', value: `$${parseFloat(bybitBalance?.total || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                { label: t('common.trades'), value: `${activeHistory.length}`, color: text },
+                { label: 'POSICIONES', value: `${activePositions.length}`, color: text },
+              ] : [
                 { label: t('common.pnlTotal'), value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
                 { label: t('common.winRate'), value: `${paperMetrics?.winRate || 0}%`, color: (paperMetrics?.winRate || 0) >= 50 ? green : (paperMetrics?.winRate || 0) > 0 ? amber : muted },
                 { label: t('common.trades'), value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
                 { label: t('common.capital'), value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: capital >= initialCap ? green : red },
                 { label: t('common.maxDrawdown'), value: `$${(paperMetrics?.maxDrawdown || 0).toFixed(2)}`, color: red },
                 { label: t('common.profitFactor'), value: paperMetrics?.profitFactor === Infinity ? '\∞' : `${(paperMetrics?.profitFactor || 0).toFixed(2)}`, color: (paperMetrics?.profitFactor || 0) >= 1.5 ? green : (paperMetrics?.profitFactor || 0) >= 1 ? amber : red },
-              ].map((stat, i) => (
+              ]).map((stat, i) => (
                 <div key={i} style={{ ...card, padding: "12px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 6 }}>{stat.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", color: stat.color }}>{stat.value}</div>
@@ -691,9 +704,62 @@ export default function ExecutionTab({
 
             {totalTrades === 0 ? (
               <div style={{ textAlign: "center", padding: 20, color: muted, fontSize: 12 }}>
-                {t('exec.noClosedTrades')}
+                {isLiveMode ? 'No hay ordenes ejecutadas en Bybit.' : t('exec.noClosedTrades')}
               </div>
+            ) : isLiveMode ? (
+              /* ── Bybit History Table ── */
+              <>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        {['Simbolo', 'Dir', 'Tipo', 'Precio', 'Qty', 'Valor', 'Fee', 'Fecha/Hora', 'Status'].map((h, i) => (
+                          <th key={i} style={{
+                            padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
+                            textTransform: "uppercase", letterSpacing: "0.08em",
+                            borderBottom: `1px solid ${border}`, fontWeight: 700
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedTrades.map((order, i) => {
+                        const isBuy = order.side === 'Buy';
+                        const execTime = order.updatedTime || order.createdTime;
+                        return (
+                          <tr key={order.orderId || i} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{order.symbol}</td>
+                            <td style={{ padding: "6px 8px", color: isBuy ? green : red }}>{isBuy ? '\▲ BUY' : '\▼ SELL'}</td>
+                            <td style={{ padding: "6px 8px", color: muted }}>{order.orderType}</td>
+                            <td style={{ padding: "6px 8px" }}>${Number(order.avgPrice || order.price || 0).toLocaleString()}</td>
+                            <td style={{ padding: "6px 8px" }}>{order.cumExecQty || order.qty}</td>
+                            <td style={{ padding: "6px 8px" }}>${Number(order.cumExecValue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                            <td style={{ padding: "6px 8px", color: muted }}>${Number(order.cumExecFee || 0).toFixed(4)}</td>
+                            <td style={{ padding: "6px 8px", color: muted, whiteSpace: "nowrap" }}>
+                              {execTime ? new Date(Number(execTime)).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '\u2014'}
+                              {' '}
+                              <span style={{ opacity: 0.7 }}>{execTime ? new Date(Number(execTime)).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}</span>
+                            </td>
+                            <td style={{ padding: "6px 8px" }}>
+                              <span style={{
+                                padding: "2px 6px", borderRadius: 4, fontSize: 9,
+                                background: order.orderStatus === 'Filled' ? "rgba(0,212,170,0.15)" :
+                                  order.orderStatus === 'Cancelled' ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)",
+                                color: order.orderStatus === 'Filled' ? green :
+                                  order.orderStatus === 'Cancelled' ? red : muted
+                              }}>
+                                {order.orderStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
+              /* ── Paper History Table ── */
               <>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
@@ -722,7 +788,7 @@ export default function ExecutionTab({
                             <td style={{ padding: "6px 8px", color: isWin ? green : red, fontWeight: 700 }}>{isWin ? '+' : ''}${pnl.toFixed(2)}</td>
                             <td style={{ padding: "6px 8px", color: isWin ? green : red }}>{isWin ? '+' : ''}{pnlPct.toFixed(2)}%</td>
                             <td style={{ padding: "6px 8px", color: muted, whiteSpace: "nowrap" }}>
-                              {trade.entry_at ? new Date(trade.entry_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '—'}
+                              {trade.entry_at ? new Date(trade.entry_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '\u2014'}
                               {' '}
                               <span style={{ opacity: 0.7 }}>{trade.entry_at ? new Date(trade.entry_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                             </td>

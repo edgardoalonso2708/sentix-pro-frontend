@@ -951,7 +951,7 @@ export default function SentixProFrontend() {
 
         {/* Tab Content — lazy-loaded with Suspense for code splitting */}
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>{t('main.loading')}</div>}>
-        {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} />}
+        {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} execMode={execMode} authFetch={authFetch} userId={userIdRef.current} />}
         {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
         {tab === "portfolio" && <PortfolioTab
           portfolio={portfolio} wallets={wallets} marketData={marketData}
