@@ -699,7 +699,7 @@ export default function ExecutionTab({
                   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 11 }}>
                     <thead>
                       <tr>
-                        {[t('exec.thAsset'), t('exec.thDir'), t('exec.thEntry'), t('exec.thExit'), t('exec.thPnl'), t('exec.thPct'), t('exec.thDuration'), t('exec.thReason')].map((h, i) => (
+                        {[t('exec.thAsset'), t('exec.thDir'), t('exec.thEntry'), t('exec.thExit'), t('exec.thPnl'), t('exec.thPct'), t('exec.thDate'), t('exec.thDuration'), t('exec.thReason')].map((h, i) => (
                           <th key={i} style={{
                             padding: "6px 8px", textAlign: "left", fontSize: 9, color: muted,
                             textTransform: "uppercase", letterSpacing: "0.08em",
@@ -721,6 +721,11 @@ export default function ExecutionTab({
                             <td style={{ padding: "6px 8px" }}>${Number(trade.exit_price).toLocaleString()}</td>
                             <td style={{ padding: "6px 8px", color: isWin ? green : red, fontWeight: 700 }}>{isWin ? '+' : ''}${pnl.toFixed(2)}</td>
                             <td style={{ padding: "6px 8px", color: isWin ? green : red }}>{isWin ? '+' : ''}{pnlPct.toFixed(2)}%</td>
+                            <td style={{ padding: "6px 8px", color: muted, whiteSpace: "nowrap" }}>
+                              {trade.entry_at ? new Date(trade.entry_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '—'}
+                              {' '}
+                              <span style={{ opacity: 0.7 }}>{trade.entry_at ? new Date(trade.entry_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                            </td>
                             <td style={{ padding: "6px 8px", color: muted }}>{formatDuration(trade.entry_at, trade.exit_at)}</td>
                             <td style={{ padding: "6px 8px" }}>
                               <span style={{
