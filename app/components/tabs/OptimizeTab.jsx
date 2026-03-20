@@ -731,6 +731,114 @@ export default function OptimizeTab({
                 </button>
               </div>
 
+              {/* Pending Proposals — Approve/Reject from UI */}
+              {autoTunePending && autoTunePending.length > 0 && autoTunePending.map(proposal => (
+                <div key={proposal.runId} style={{
+                  background: `${amber}08`, border: `1px solid ${amber}44`,
+                  borderRadius: 8, padding: 14, marginBottom: 12
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: amber }}>⏳ Propuesta Pendiente</span>
+                      <span style={{ fontSize: 10, color: muted, marginLeft: 8 }}>
+                        {proposal.context?.asset?.toUpperCase()} · {proposal.context?.marketRegime}
+                        {proposal.remainingMs > 0 && ` · Expira en ${Math.round(proposal.remainingMs / 60000)}min`}
+                      </span>
+                    </div>
+                    {proposal.context?.aiReview && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: proposal.context.aiReview.decision === 'APPLY' ? `${green}20` : `${amber}20`,
+                        color: proposal.context.aiReview.decision === 'APPLY' ? green : amber
+                      }}>
+                        🧠 IA: {proposal.context.aiReview.decision}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Proposed changes */}
+                  <div style={{ marginBottom: 10 }}>
+                    {(proposal.accepted || []).map(p => (
+                      <div key={p.paramName} style={{
+                        display: 'flex', justifyContent: 'space-between', padding: '5px 10px',
+                        background: bg3, borderRadius: 4, marginBottom: 3, fontSize: 11, fontFamily: 'monospace'
+                      }}>
+                        <span style={{ fontWeight: 600 }}>{p.paramName}</span>
+                        <span>
+                          <span style={{ color: muted }}>{p.currentValue}</span>
+                          <span style={{ color: text }}> → </span>
+                          <span style={{ color: green, fontWeight: 700 }}>{p.proposedValue}</span>
+                          <span style={{ color: green, marginLeft: 8 }}>+{p.improvementPct?.toFixed(1)}% Sharpe</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* AI reasoning */}
+                  {proposal.context?.aiReview?.reasoning && (
+                    <div style={{ fontSize: 10, color: muted, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5, padding: '6px 10px', background: bg3, borderRadius: 4 }}>
+                      🧠 {proposal.context.aiReview.reasoning.substring(0, 300)}{proposal.context.aiReview.reasoning.length > 300 ? '...' : ''}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await authFetch(`${apiUrl}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'apply' })
+                          });
+                          if (res.ok) loadAutoTuneData();
+                          else console.error('Approve failed:', await res.text());
+                        } catch (e) { console.error('Approve error:', e); }
+                      }}
+                      style={{
+                        flex: 1, padding: '8px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                        border: 'none', background: `linear-gradient(135deg, ${green}, #059669)`,
+                        color: '#fff', cursor: 'pointer'
+                      }}>
+                      ✅ Aplicar Cambios
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await authFetch(`${apiUrl}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'blend' })
+                          });
+                          if (res.ok) loadAutoTuneData();
+                        } catch (e) { console.error('Blend error:', e); }
+                      }}
+                      style={{
+                        padding: '8px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                        border: `1px solid ${amber}`, background: `${amber}15`,
+                        color: amber, cursor: 'pointer'
+                      }}>
+                      🔀 Blend 50/50
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await authFetch(`${apiUrl}/api/autotune/approve`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ runId: proposal.runId, decision: 'reject' })
+                          });
+                          if (res.ok) loadAutoTuneData();
+                        } catch (e) { console.error('Reject error:', e); }
+                      }}
+                      style={{
+                        padding: '8px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                        border: `1px solid ${red}44`, background: `${red}10`,
+                        color: red, cursor: 'pointer'
+                      }}>
+                      ❌ Descartar
+                    </button>
+                  </div>
+                </div>
+              ))}
+
               {/* Run History Table */}
               {autoTuneHistory.length > 0 && (
                 <div>
