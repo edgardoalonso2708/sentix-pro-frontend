@@ -160,7 +160,7 @@ export function useOptimization(apiUrl) {
     optParams, optConfig, setOptConfig, optPhase, setOptPhase,
     optRunning, optResult, setOptResult, optError, optProgress, optHistory,
     optApplying, showSignalParams, setShowSignalParams,
-    autoTuneHistory, autoTuneConfig, autoTuneRunning,
+    autoTuneHistory, autoTuneConfig, autoTuneRunning, setAutoTuneRunning,
     autoTuneExpanded, setAutoTuneExpanded, autoTunePending,
     loadOptParams, loadOptHistory, loadAutoTuneData,
     runOptimize, applyResult,
