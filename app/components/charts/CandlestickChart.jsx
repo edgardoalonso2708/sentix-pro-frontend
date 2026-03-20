@@ -136,7 +136,9 @@ export default function CandlestickChart({
         }))
       );
 
-      if (markers.length > 0) {
+      // setMarkers was removed in lightweight-charts v5+
+      // Use guard to prevent crash; markers display is a nice-to-have
+      if (markers.length > 0 && typeof candleSeriesRef.current.setMarkers === 'function') {
         candleSeriesRef.current.setMarkers(
           markers.sort((a, b) => a.time - b.time)
         );
