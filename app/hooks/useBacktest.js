@@ -168,7 +168,7 @@ export function useBacktest(apiUrl, userId) {
 
   return {
     config, setConfig, running, result, setResult, history, error, progress,
-    tradesPage, setTradesPage, selected, setSelected, deleting,
+    tradesPage, setTradesPage, selected, setSelected, deleting, setDeleting,
     strategyOverrides, setStrategyOverrides, inherited, setInherited,
     run, loadHistoricResult, loadHistory, deleteSelected, inheritFromPaperConfig,
   };

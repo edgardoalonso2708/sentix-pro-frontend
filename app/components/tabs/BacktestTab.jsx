@@ -13,7 +13,7 @@ const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = c
 
 export default function BacktestTab({
   config, setConfig, running, result, setResult, history, error, progress,
-  tradesPage, setTradesPage, selected, setSelected, deleting,
+  tradesPage, setTradesPage, selected, setSelected, deleting, setDeleting,
   strategyOverrides, setStrategyOverrides, inherited, setInherited,
   run, loadHistoricResult, loadHistory, deleteSelected, inheritFromPaperConfig,
   apiUrl, userId, paperConfigForm,
