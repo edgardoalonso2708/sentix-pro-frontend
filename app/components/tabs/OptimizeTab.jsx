@@ -793,6 +793,106 @@ export default function OptimizeTab({
                   🤖 Auto-tune se ejecuta diariamente a las 3:00 AM o manualmente. Primer run generara historial.
                 </div>
               )}
+
+              {/* Executive Summary — last run detail */}
+              {autoTuneHistory.length > 0 && (() => {
+                const last = autoTuneHistory[0];
+                const params = last.param_results || [];
+                const applied = last.params_applied ? Object.entries(last.params_applied) : [];
+                const rejected = params.filter(p => !p.accepted);
+                const noChange = params.filter(p => p.reason === 'no change');
+                const insuffData = params.filter(p => p.improvementPct === 0 && p.reason !== 'no change');
+
+                return (
+                  <div style={{ marginTop: 12, background: bg, borderRadius: 8, padding: 14, border: `1px solid ${border}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: text }}>
+                      📊 Resumen Ejecutivo — Ultimo Run
+                    </div>
+
+                    {/* Status bar */}
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 10, flexWrap: 'wrap', fontSize: 10 }}>
+                      <span style={{ color: muted }}>Asset: <b style={{ color: text }}>{last.asset?.toUpperCase()}</b></span>
+                      <span style={{ color: muted }}>Regimen: <b style={{ color: text }}>{last.market_regime || '?'}</b></span>
+                      <span style={{ color: muted }}>Lookback: <b style={{ color: text }}>{last.lookback_days}d</b></span>
+                      <span style={{ color: muted }}>Params: <b style={{ color: text }}>{params.length}</b></span>
+                    </div>
+
+                    {/* Results grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                      <div style={{ background: bg3, borderRadius: 6, padding: 8, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: muted }}>ACEPTADOS</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: applied.length > 0 ? green : muted }}>{applied.length}</div>
+                      </div>
+                      <div style={{ background: bg3, borderRadius: 6, padding: 8, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: muted }}>RECHAZADOS</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: rejected.length > 0 ? red : muted }}>{rejected.length}</div>
+                      </div>
+                      <div style={{ background: bg3, borderRadius: 6, padding: 8, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: muted }}>SIN CAMBIO</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: muted }}>{noChange.length}</div>
+                      </div>
+                    </div>
+
+                    {/* Applied changes detail */}
+                    {applied.length > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: green, marginBottom: 6 }}>🔧 CAMBIOS APLICADOS</div>
+                        {applied.map(([param, value]) => {
+                          const detail = params.find(p => p.paramName === param);
+                          return (
+                            <div key={param} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: `${green}08`, borderRadius: 4, marginBottom: 3, fontSize: 10 }}>
+                              <span style={{ fontWeight: 600 }}>{param}</span>
+                              <span>
+                                <span style={{ color: muted }}>{detail?.currentValue}</span>
+                                <span style={{ color: text }}> → </span>
+                                <span style={{ color: green, fontWeight: 700 }}>{value}</span>
+                                {detail?.improvementPct > 0 && <span style={{ color: green, marginLeft: 6 }}>+{detail.improvementPct}% Sharpe</span>}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* All params detail table */}
+                    {params.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: muted, marginBottom: 6 }}>📋 DETALLE POR PARAMETRO</div>
+                        <div style={{ fontSize: 9, fontFamily: 'monospace' }}>
+                          {params.map(p => {
+                            const icon = p.accepted ? '✅' : p.reason === 'no change' ? '⚪' : '❌';
+                            return (
+                              <div key={p.paramName} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: `1px solid ${bg3}` }}>
+                                <span>{icon} {p.paramName}</span>
+                                <span style={{ color: muted }}>
+                                  {p.currentValue} → {p.proposedValue}
+                                  {' | '}
+                                  <span style={{ color: p.improvementPct > 5 ? green : p.improvementPct > 0 ? amber : muted }}>
+                                    {p.improvementPct > 0 ? '+' : ''}{p.improvementPct}%
+                                  </span>
+                                  {' | '}{p.reason}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Conclusion */}
+                    <div style={{ marginTop: 10, padding: 8, background: bg3, borderRadius: 6, fontSize: 10, color: muted, lineHeight: 1.5 }}>
+                      <b style={{ color: text }}>Conclusion:</b>{' '}
+                      {applied.length > 0
+                        ? `Se aplicaron ${applied.length} cambio(s) que mejoran el Sharpe ratio. La estrategia fue actualizada automaticamente.`
+                        : insuffData.length > params.length / 2
+                          ? 'No se aplicaron cambios. La mayoria de los folds de validacion no tienen suficientes datos historicos para calcular indicadores de forma confiable.'
+                          : noChange.length === params.length
+                            ? 'Todos los parametros ya estan en su valor optimo. No se requieren ajustes.'
+                            : 'Las propuestas no superaron los filtros de seguridad (min 5% mejora Sharpe, min 15 trades, sin overfitting).'}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
