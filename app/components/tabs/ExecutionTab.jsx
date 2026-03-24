@@ -845,13 +845,15 @@ export default function ExecutionTab({
         })()}
 
         {/* ORDERS SUB-TAB */}
-        {subTab === 'orders' && execManualOrdersEnabled && (
+        {subTab === 'orders' && (
           <div>
-            <OrderEntryForm
-              onSubmit={handleCreateOrder}
-              colors={executionColors}
-            />
-            <div style={{ marginTop: 16 }}>
+            {execManualOrdersEnabled && (
+              <OrderEntryForm
+                onSubmit={handleCreateOrder}
+                colors={executionColors}
+              />
+            )}
+            <div style={{ marginTop: execManualOrdersEnabled ? 16 : 0 }}>
               <div style={{ color: text, fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
                 {t('exec.orderBook')}
               </div>
