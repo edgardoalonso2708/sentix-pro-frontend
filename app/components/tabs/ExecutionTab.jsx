@@ -627,6 +627,28 @@ export default function ExecutionTab({
               positions={activePositions}
               heatMap={execRiskDashboard?.heatMap}
               colors={executionColors}
+              onClose={async (position) => {
+                // Close position: create a reverse order (BUY→SELL, SELL→BUY)
+                const closeSide = (position.side || position.action || 'BUY') === 'BUY' ? 'SELL' : 'BUY';
+                const result = await handleCreateOrder({
+                  asset: position.asset,
+                  side: closeSide,
+                  orderType: 'MARKET',
+                  quantity: parseFloat(position.quantity),
+                  source: 'manual',
+                  parentTradeId: position.trade_id || position.id
+                });
+                if (result?.success) {
+                  // Also close the paper_trade if it exists
+                  if (position.trade_id || position.id) {
+                    try {
+                      await authFetch(`${apiUrl}/api/paper/close/${position.trade_id || position.id}`, { method: 'POST' });
+                    } catch (e) { console.error('Paper trade close failed:', e); }
+                  }
+                  loadExecutionData();
+                }
+                return result;
+              }}
             />
             {/* Position Correlation */}
             {correlationData && correlationData.pairs && correlationData.pairs.length > 0 && (

@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 
 const HEAT_COLORS = {
   cool: '#3b82f6',
@@ -24,7 +25,7 @@ function formatPct(value) {
   return `${sign}${n.toFixed(2)}%`;
 }
 
-function PositionCard({ position, colors }) {
+function PositionCard({ position, colors, onClose }) {
   const bg = colors?.bg3 || '#1a1a1a';
   const border = colors?.border || 'rgba(255,255,255,0.08)';
   const text = colors?.text || '#f9fafb';
@@ -231,11 +232,79 @@ function PositionCard({ position, colors }) {
           })()}
         </div>
       )}
+
+      {/* Close position button */}
+      {onClose && !isUntracked && (
+        <div style={{ borderTop: `1px solid ${border}`, paddingTop: 10, marginTop: 8 }}>
+          <CloseButton position={position} onClose={onClose} colors={colors} />
+        </div>
+      )}
     </div>
   );
 }
 
-export default function PositionMonitor({ positions, heatMap, colors }) {
+function CloseButton({ position, onClose, colors }) {
+  const [confirming, setConfirming] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const red = colors?.red || '#ef4444';
+  const muted = colors?.muted || '#6b7280';
+  const border = colors?.border || 'rgba(255,255,255,0.08)';
+
+  const handleClose = async () => {
+    setClosing(true);
+    try {
+      await onClose(position);
+    } catch (err) {
+      console.error('Close position failed:', err);
+    } finally {
+      setClosing(false);
+      setConfirming(false);
+    }
+  };
+
+  if (confirming) {
+    return (
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <span style={{ color: muted, fontSize: 11 }}>Cerrar posicion?</span>
+        <button
+          onClick={handleClose}
+          disabled={closing}
+          style={{
+            padding: '4px 12px', borderRadius: 4, border: 'none',
+            background: red, color: '#fff', fontSize: 11, fontWeight: 700,
+            cursor: closing ? 'wait' : 'pointer', opacity: closing ? 0.6 : 1
+          }}
+        >
+          {closing ? 'Cerrando...' : 'Confirmar'}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          style={{
+            padding: '4px 12px', borderRadius: 4, border: `1px solid ${border}`,
+            background: 'transparent', color: muted, fontSize: 11, cursor: 'pointer'
+          }}
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      style={{
+        padding: '5px 16px', borderRadius: 4, border: `1px solid ${red}40`,
+        background: `${red}15`, color: red, fontSize: 11, fontWeight: 700,
+        cursor: 'pointer', width: '100%'
+      }}
+    >
+      Cerrar Posicion
+    </button>
+  );
+}
+
+export default function PositionMonitor({ positions, heatMap, colors, onClose }) {
   const muted = colors?.muted || '#6b7280';
   const text = colors?.text || '#f9fafb';
   const bg = colors?.bg3 || '#1a1a1a';
@@ -293,7 +362,7 @@ export default function PositionMonitor({ positions, heatMap, colors }) {
       {/* Position cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
         {positions.map((pos, i) => (
-          <PositionCard key={pos.id || i} position={pos} colors={colors} />
+          <PositionCard key={pos.id || i} position={pos} colors={colors} onClose={onClose} />
         ))}
       </div>
     </div>
