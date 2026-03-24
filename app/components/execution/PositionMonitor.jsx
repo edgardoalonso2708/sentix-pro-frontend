@@ -233,8 +233,8 @@ function PositionCard({ position, colors, onClose }) {
         </div>
       )}
 
-      {/* Close position button */}
-      {onClose && !isUntracked && (
+      {/* Close position button — all positions including HOLDING */}
+      {onClose && (
         <div style={{ borderTop: `1px solid ${border}`, paddingTop: 10, marginTop: 8 }}>
           <CloseButton position={position} onClose={onClose} colors={colors} />
         </div>

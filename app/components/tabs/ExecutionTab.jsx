@@ -630,23 +630,27 @@ export default function ExecutionTab({
               onClose={async (position) => {
                 // Close position: create a reverse order (BUY→SELL, SELL→BUY)
                 const closeSide = (position.side || position.action || 'BUY') === 'BUY' ? 'SELL' : 'BUY';
+                const qty = parseFloat(position.quantity);
+
+                // Send SELL order to Bybit (works for both tracked and HOLDING)
                 const result = await handleCreateOrder({
                   asset: position.asset,
                   side: closeSide,
                   orderType: 'MARKET',
-                  quantity: parseFloat(position.quantity),
-                  source: 'manual',
-                  parentTradeId: position.trade_id || position.id
+                  quantity: qty,
+                  source: 'manual'
                 });
-                if (result?.success) {
-                  // Also close the paper_trade if it exists
-                  if (position.trade_id || position.id) {
-                    try {
-                      await authFetch(`${apiUrl}/api/paper/close/${position.trade_id || position.id}`, { method: 'POST' });
-                    } catch (e) { console.error('Paper trade close failed:', e); }
-                  }
-                  loadExecutionData();
+
+                // Close the paper_trade if it exists (tracked positions)
+                const tradeId = position.trade_id || position.id;
+                const isTracked = position.source === 'bybit-tracked' || position.source === 'paper';
+                if (isTracked && tradeId) {
+                  try {
+                    await authFetch(`${apiUrl}/api/paper/close/${tradeId}`, { method: 'POST' });
+                  } catch (e) { console.error('Paper trade close failed:', e); }
                 }
+
+                loadExecutionData();
                 return result;
               }}
             />
