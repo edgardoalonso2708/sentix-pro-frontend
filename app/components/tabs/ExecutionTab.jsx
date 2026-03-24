@@ -374,7 +374,8 @@ export default function ExecutionTab({
                 { label: 'BALANCE', value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: green },
                 { label: 'AVAILABLE', value: `$${parseFloat(bybitBalance?.available || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
                 { label: 'EQUITY', value: `$${(bybitEquity > 0 ? bybitEquity : capital).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
-                { label: t('common.trades'), value: `${activeHistory.length}`, color: text },
+                { label: 'ÓRDENES', value: `${activeHistory.length}`, color: text },
+                { label: 'TRADES', value: `${paperMetrics?.totalTrades || 0}`, sub: `${paperMetrics?.winCount || 0}W / ${paperMetrics?.lossCount || 0}L`, color: text },
                 { label: 'POSICIONES', value: `${activePositions.length}`, color: text },
               ] : [
                 { label: t('common.pnlTotal'), value: `$${(paperMetrics?.totalPnl || 0).toFixed(2)}`, color: (paperMetrics?.totalPnl || 0) >= 0 ? green : red },
