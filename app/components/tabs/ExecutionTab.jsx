@@ -724,31 +724,38 @@ export default function ExecutionTab({
                     </thead>
                     <tbody>
                       {paginatedTrades.map((order, i) => {
-                        const isBuy = order.side === 'Buy';
-                        const execTime = order.updatedTime || order.createdTime;
+                        const isBuy = (order.side || '').toUpperCase() === 'BUY';
+                        const execTime = order.updated_at || order.created_at || order.updatedTime || order.createdTime;
+                        const avgPrice = Number(order.avg_price || order.avgPrice || order.price || 0);
+                        const filledQty = Number(order.filled_quantity || order.cumExecQty || order.quantity || order.qty || 0);
+                        const execValue = Number(order.cumExecValue || (avgPrice * filledQty) || 0);
+                        const execFee = Number(order.cumExecFee || order.fee || 0);
+                        const orderType = order.order_type || order.orderType || '';
+                        const orderStatus = order.status || order.orderStatus || '';
+                        const displayStatus = orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1).toLowerCase();
                         return (
-                          <tr key={order.orderId || i} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                          <tr key={order.id || order.orderId || i} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
                             <td style={{ padding: "6px 8px", fontWeight: 600 }}>{order.symbol}</td>
                             <td style={{ padding: "6px 8px", color: isBuy ? green : red }}>{isBuy ? '\▲ BUY' : '\▼ SELL'}</td>
-                            <td style={{ padding: "6px 8px", color: muted }}>{order.orderType}</td>
-                            <td style={{ padding: "6px 8px" }}>${Number(order.avgPrice || order.price || 0).toLocaleString()}</td>
-                            <td style={{ padding: "6px 8px" }}>{order.cumExecQty || order.qty}</td>
-                            <td style={{ padding: "6px 8px" }}>${Number(order.cumExecValue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                            <td style={{ padding: "6px 8px", color: muted }}>${Number(order.cumExecFee || 0).toFixed(4)}</td>
+                            <td style={{ padding: "6px 8px", color: muted }}>{orderType}</td>
+                            <td style={{ padding: "6px 8px" }}>${avgPrice.toLocaleString()}</td>
+                            <td style={{ padding: "6px 8px" }}>{filledQty}</td>
+                            <td style={{ padding: "6px 8px" }}>${execValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                            <td style={{ padding: "6px 8px", color: muted }}>${execFee.toFixed(4)}</td>
                             <td style={{ padding: "6px 8px", color: muted, whiteSpace: "nowrap" }}>
-                              {execTime ? new Date(Number(execTime)).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '\u2014'}
+                              {execTime ? new Date(execTime).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '\u2014'}
                               {' '}
-                              <span style={{ opacity: 0.7 }}>{execTime ? new Date(Number(execTime)).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}</span>
+                              <span style={{ opacity: 0.7 }}>{execTime ? new Date(execTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}</span>
                             </td>
                             <td style={{ padding: "6px 8px" }}>
                               <span style={{
                                 padding: "2px 6px", borderRadius: 4, fontSize: 9,
-                                background: order.orderStatus === 'Filled' ? "rgba(0,212,170,0.15)" :
-                                  order.orderStatus === 'Cancelled' ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)",
-                                color: order.orderStatus === 'Filled' ? green :
-                                  order.orderStatus === 'Cancelled' ? red : muted
+                                background: orderStatus === 'filled' ? "rgba(0,212,170,0.15)" :
+                                  orderStatus === 'cancelled' ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)",
+                                color: orderStatus === 'filled' ? green :
+                                  orderStatus === 'cancelled' ? red : muted
                               }}>
-                                {order.orderStatus}
+                                {displayStatus}
                               </span>
                             </td>
                           </tr>
