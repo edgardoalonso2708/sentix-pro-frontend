@@ -50,6 +50,7 @@ export default function ExecutionTab({
     const [bybitPositions, setBybitPositions] = useState([]);
     const [bybitHistory, setBybitHistory] = useState([]);
     const [bybitBalance, setBybitBalance] = useState(null);
+    const [bybitEquity, setBybitEquity] = useState(0);
     const [bybitLoading, setBybitLoading] = useState(false);
 
     useEffect(() => {
@@ -78,6 +79,7 @@ export default function ExecutionTab({
           const d = await posRes.value.json();
           setBybitPositions(d.positions || []);
           setBybitBalance(d.balance || null);
+          setBybitEquity(d.equity || 0);
         }
         if (histRes.status === 'fulfilled' && histRes.value.ok) {
           const d = await histRes.value.json();
@@ -371,7 +373,7 @@ export default function ExecutionTab({
               {(isLiveMode ? [
                 { label: 'BALANCE', value: `$${capital.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: green },
                 { label: 'AVAILABLE', value: `$${parseFloat(bybitBalance?.available || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
-                { label: 'EQUITY', value: `$${parseFloat(bybitBalance?.total || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
+                { label: 'EQUITY', value: `$${(bybitEquity > 0 ? bybitEquity : capital).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, color: text },
                 { label: t('common.trades'), value: `${activeHistory.length}`, color: text },
                 { label: 'POSICIONES', value: `${activePositions.length}`, color: text },
               ] : [
@@ -599,10 +601,10 @@ export default function ExecutionTab({
                 <div style={sTitle}>{t('exec.detailedStats')}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                   {[
-                    { label: t('exec.avgGain'), value: `+$${Math.abs(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
-                    { label: t('exec.avgLoss'), value: `-$${Math.abs(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
-                    { label: t('exec.bestTrade'), value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} ${paperMetrics.bestTrade.pnl >= 0 ? '+' : '-'}$${Math.abs(paperMetrics.bestTrade.pnl).toFixed(2)}` : '-', color: paperMetrics.bestTrade?.pnl >= 0 ? green : red },
-                    { label: t('exec.worstTrade'), value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} ${paperMetrics.worstTrade.pnl >= 0 ? '+' : '-'}$${Math.abs(paperMetrics.worstTrade.pnl).toFixed(2)}` : '-', color: red },
+                    { label: t('exec.avgGain'), value: `+$${Math.abs(parseFloat(paperMetrics.avgProfit) || 0).toFixed(2)}`, color: green },
+                    { label: t('exec.avgLoss'), value: `-$${Math.abs(parseFloat(paperMetrics.avgLoss) || 0).toFixed(2)}`, color: red },
+                    { label: t('exec.bestTrade'), value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} ${parseFloat(paperMetrics.bestTrade.pnl) >= 0 ? '+' : ''}$${parseFloat(paperMetrics.bestTrade.pnl).toFixed(2)}` : '-', color: parseFloat(paperMetrics.bestTrade?.pnl) >= 0 ? green : red },
+                    { label: t('exec.worstTrade'), value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${parseFloat(paperMetrics.worstTrade.pnl).toFixed(2)}` : '-', color: red },
                     { label: t('exec.avgTime'), value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
                     { label: t('exec.currentStreak'), value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? t('exec.victories') : paperMetrics.streakType === 'loss' ? t('exec.defeats') : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
                   ].map((stat, i) => (
