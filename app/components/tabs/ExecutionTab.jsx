@@ -175,7 +175,7 @@ export default function ExecutionTab({
       { k: 'positions', label: `\u{1F4C8} ${t('exec.positions')}`, desc: t('exec.positionsDesc') },
       { k: 'history', label: `\u{1F4CB} ${t('exec.history')}`, desc: t('exec.historyDesc') },
       { k: 'risk', label: `\⚠️ ${t('exec.risk')}`, desc: t('exec.riskDesc') },
-      ...(execManualOrdersEnabled ? [{ k: 'orders', label: `\u{1F4DD} ${t('exec.orders')}`, desc: t('exec.ordersDesc') }] : []),
+      { k: 'orders', label: `\u{1F4DD} ${t('exec.orders')}`, desc: t('exec.ordersDesc') },
       { k: 'audit', label: `\u{1F50D} ${t('exec.audit')}`, desc: t('exec.auditDesc') }
     ];
 
