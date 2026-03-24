@@ -1004,6 +1004,7 @@ export default function SentixProFrontend() {
           handleCancelOrder={handleCancelOrder} handleSubmitOrder={handleSubmitOrder}
           fetchDashboardPaper={fetchDashboardPaper} loadExecutionData={loadExecutionData}
           authFetch={authFetch} apiUrl={API_URL} userId={USER_ID}
+          marketData={marketData}
         />}
         {tab === "strategy" && <StrategyTab
           strategySubTab={strategySubTab} setStrategySubTab={setStrategySubTab}

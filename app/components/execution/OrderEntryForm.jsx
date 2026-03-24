@@ -262,26 +262,34 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
         </div>
       )}
 
-      {/* Quantity / Size */}
+      {/* Quantity / Size — auto-sync between fields */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>CANTIDAD (ASSET)</label>
+          <label style={labelStyle}>CANTIDAD ({form.asset.toUpperCase().replace('AVALANCHE-2','AVAX').replace('BINANCECOIN','BNB').slice(0,6)})</label>
           <input
             type="number"
             step="any"
             value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+            onChange={(e) => {
+              const qty = e.target.value;
+              const usd = qty && currentPrice > 0 ? (parseFloat(qty) * currentPrice).toFixed(2) : '';
+              setForm({ ...form, quantity: qty, positionSizeUsd: usd });
+            }}
             placeholder="0.01"
             style={inputStyle}
           />
         </div>
         <div>
-          <label style={labelStyle}>TAMANO USD</label>
+          <label style={labelStyle}>TAMAÑO USD</label>
           <input
             type="number"
             step="any"
             value={form.positionSizeUsd}
-            onChange={(e) => setForm({ ...form, positionSizeUsd: e.target.value })}
+            onChange={(e) => {
+              const usd = e.target.value;
+              const qty = usd && currentPrice > 0 ? (parseFloat(usd) / currentPrice).toFixed(6) : '';
+              setForm({ ...form, positionSizeUsd: usd, quantity: qty });
+            }}
             placeholder="500"
             style={inputStyle}
           />

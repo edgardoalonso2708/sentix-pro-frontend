@@ -35,7 +35,8 @@ export default function ExecutionTab({
   setExecFeedback, setPaperConfig,
   handleKillSwitch, handleCreateOrder, handleCancelOrder, handleSubmitOrder,
   fetchDashboardPaper, loadExecutionData,
-  authFetch, apiUrl, userId
+  authFetch, apiUrl, userId,
+  marketData
 }) {
     const { t } = useLanguage();
     const subTab = execSubTab;
@@ -849,6 +850,7 @@ export default function ExecutionTab({
             {execManualOrdersEnabled && (
               <OrderEntryForm
                 onSubmit={handleCreateOrder}
+                marketData={marketData}
                 colors={executionColors}
               />
             )}
