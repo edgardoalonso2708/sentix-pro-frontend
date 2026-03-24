@@ -599,10 +599,10 @@ export default function ExecutionTab({
                 <div style={sTitle}>{t('exec.detailedStats')}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                   {[
-                    { label: t('exec.avgGain'), value: `+$${(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
-                    { label: t('exec.avgLoss'), value: `-$${(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
-                    { label: t('exec.bestTrade'), value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} +$${paperMetrics.bestTrade.pnl.toFixed(2)}` : '-', color: green },
-                    { label: t('exec.worstTrade'), value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} $${paperMetrics.worstTrade.pnl.toFixed(2)}` : '-', color: red },
+                    { label: t('exec.avgGain'), value: `+$${Math.abs(paperMetrics.avgProfit || 0).toFixed(2)}`, color: green },
+                    { label: t('exec.avgLoss'), value: `-$${Math.abs(paperMetrics.avgLoss || 0).toFixed(2)}`, color: red },
+                    { label: t('exec.bestTrade'), value: paperMetrics.bestTrade ? `${paperMetrics.bestTrade.asset} ${paperMetrics.bestTrade.pnl >= 0 ? '+' : '-'}$${Math.abs(paperMetrics.bestTrade.pnl).toFixed(2)}` : '-', color: paperMetrics.bestTrade?.pnl >= 0 ? green : red },
+                    { label: t('exec.worstTrade'), value: paperMetrics.worstTrade ? `${paperMetrics.worstTrade.asset} ${paperMetrics.worstTrade.pnl >= 0 ? '+' : '-'}$${Math.abs(paperMetrics.worstTrade.pnl).toFixed(2)}` : '-', color: red },
                     { label: t('exec.avgTime'), value: `${(paperMetrics.avgHoldingTimeHours || 0).toFixed(1)}h`, color: text },
                     { label: t('exec.currentStreak'), value: `${paperMetrics.currentStreak || 0} ${paperMetrics.streakType === 'win' ? t('exec.victories') : paperMetrics.streakType === 'loss' ? t('exec.defeats') : '-'}`, color: paperMetrics.streakType === 'win' ? green : paperMetrics.streakType === 'loss' ? red : muted },
                   ].map((stat, i) => (
