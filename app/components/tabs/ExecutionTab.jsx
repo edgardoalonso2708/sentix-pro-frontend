@@ -268,7 +268,6 @@ export default function ExecutionTab({
                   const next = !execManualOrdersEnabled;
                   setExecManualOrdersEnabled(next);
                   if (next && execSubTab !== 'orders') setExecSubTab('orders');
-                  if (!next && execSubTab === 'orders') setExecSubTab('dashboard');
                 }}
                 style={{
                   width: 44, height: 24, borderRadius: 12, border: 'none',
