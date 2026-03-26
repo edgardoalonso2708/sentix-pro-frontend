@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine
@@ -20,6 +21,15 @@ export default function BacktestTab({
 }) {
     // All state and actions received as props from useBacktest hook
     const BT_TRADES_PER_PAGE = 15;
+    const [presets, setPresets] = useState([]);
+
+    useEffect(() => {
+      if (!apiUrl) return;
+      authFetch(`${apiUrl}/api/backtest/presets`)
+        .then(r => r.ok ? r.json() : [])
+        .then(d => Array.isArray(d) ? setPresets(d) : null)
+        .catch(() => {});
+    }, [apiUrl]);
 
     const ASSETS = SHARED_ASSETS;
 
@@ -165,6 +175,35 @@ export default function BacktestTab({
               >
                 {SHARED_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} dias</option>)}
               </select>
+            </div>
+
+            {/* Market Cycle Preset */}
+            <div>
+              <label style={labelStyle}>Ciclo de mercado</label>
+              <select
+                value={config.preset || ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val) {
+                    const p = presets.find(x => x.id === val);
+                    setConfig({ ...config, preset: val, startDate: p?.startDate, endDate: p?.endDate });
+                  } else {
+                    setConfig({ ...config, preset: undefined, startDate: undefined, endDate: undefined });
+                  }
+                }}
+                style={inputStyle}
+                disabled={running}
+              >
+                <option value="">Custom (usar dias)</option>
+                {presets.map(p => (
+                  <option key={p.id} value={p.id}>{p.label} ({p.days}d)</option>
+                ))}
+              </select>
+              {config.preset && (
+                <div style={{ fontSize: 9, color: muted, marginTop: 3 }}>
+                  {presets.find(x => x.id === config.preset)?.description}
+                </div>
+              )}
             </div>
 
             {/* Step Interval */}

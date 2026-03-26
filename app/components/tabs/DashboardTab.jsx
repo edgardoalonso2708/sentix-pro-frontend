@@ -21,6 +21,9 @@ export default function DashboardTab({
     const { t } = useLanguage();
     const [bybitOverview, setBybitOverview] = useState(null);
     const [onChainData, setOnChainData] = useState(null);
+    const [mlStatus, setMlStatus] = useState(null);
+    const [orderFlowData, setOrderFlowData] = useState(null);
+    const [rotationData, setRotationData] = useState(null);
     const isLiveMode = execMode === 'live' || execMode === 'perp';
 
     // Fetch Bybit overview when in live mode
@@ -45,6 +48,26 @@ export default function DashboardTab({
       };
       fetchOnChain();
       const iv = setInterval(fetchOnChain, 5 * 60 * 1000);
+      return () => clearInterval(iv);
+    }, [apiUrl]);
+
+    // Fetch ML ensemble status, order flow, and rotation data
+    useEffect(() => {
+      if (!authFetchProp || !apiUrl) return;
+      const fetchAll = async () => {
+        try {
+          const [mlRes, ofRes, rotRes] = await Promise.allSettled([
+            authFetchProp(`${apiUrl}/api/ml/status`),
+            authFetchProp(`${apiUrl}/api/orderflow`),
+            authFetchProp(`${apiUrl}/api/rotation`),
+          ]);
+          if (mlRes.status === 'fulfilled' && mlRes.value.ok) setMlStatus(await mlRes.value.json());
+          if (ofRes.status === 'fulfilled' && ofRes.value.ok) setOrderFlowData(await ofRes.value.json());
+          if (rotRes.status === 'fulfilled' && rotRes.value.ok) setRotationData(await rotRes.value.json());
+        } catch (_) {}
+      };
+      fetchAll();
+      const iv = setInterval(fetchAll, 60 * 1000);
       return () => clearInterval(iv);
     }, [apiUrl]);
 
@@ -690,6 +713,133 @@ export default function DashboardTab({
             </div>
           );
         })()}
+
+        {/* ML ENSEMBLE + ORDER FLOW + ROTATION */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>
+          {/* ML Ensemble Status */}
+          <div style={card}>
+            <div style={sTitle}>ML ENSEMBLE</div>
+            {mlStatus ? (
+              <div style={{ fontSize: 11, color: text }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${border}` }}>
+                  <span style={{ color: muted }}>Model</span>
+                  <span style={{ color: mlStatus.modelTrained ? green : amber, fontWeight: 700 }}>
+                    {mlStatus.modelTrained ? 'TRAINED' : 'PENDING'}
+                  </span>
+                </div>
+                {mlStatus.stats && (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${border}` }}>
+                      <span style={{ color: muted }}>Accuracy</span>
+                      <span style={{ color: mlStatus.stats.trainAccuracy > 60 ? green : amber, fontWeight: 700 }}>
+                        {mlStatus.stats.trainAccuracy}%
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${border}` }}>
+                      <span style={{ color: muted }}>Samples</span>
+                      <span>{mlStatus.stats.samples}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                      <span style={{ color: muted }}>Trees</span>
+                      <span>{mlStatus.stats.nEstimators}</span>
+                    </div>
+                  </>
+                )}
+                {!mlStatus.stats && (
+                  <div style={{ fontSize: 10, color: muted, marginTop: 6 }}>
+                    Needs {'>'}50 signal outcomes to train
+                  </div>
+                )}
+                <div style={{ fontSize: 9, color: muted, marginTop: 6 }}>
+                  Blend: {(mlStatus.config?.blendWeight * 100) || 30}% ML / {100 - ((mlStatus.config?.blendWeight * 100) || 30)}% Traditional
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: muted }}>Loading...</div>
+            )}
+          </div>
+
+          {/* Order Flow */}
+          <div style={card}>
+            <div style={sTitle}>ORDER FLOW (L2)</div>
+            {orderFlowData && Object.keys(orderFlowData).length > 0 ? (
+              <div style={{ fontSize: 11 }}>
+                {Object.entries(orderFlowData).slice(0, 3).map(([asset, ind]) => (
+                  <div key={asset} style={{ padding: "6px 0", borderBottom: `1px solid ${border}` }}>
+                    <div style={{ fontWeight: 700, color: text, marginBottom: 4 }}>{asset.toUpperCase()}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 10 }}>
+                      <div>
+                        <span style={{ color: muted }}>Imbalance: </span>
+                        <span style={{ color: ind.bidAskImbalance > 0.1 ? green : ind.bidAskImbalance < -0.1 ? red : muted, fontWeight: 700 }}>
+                          {ind.bidAskImbalance > 0 ? '+' : ''}{ind.bidAskImbalance?.toFixed(3)}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: muted }}>Spread: </span>
+                        <span style={{ color: ind.spreadBps > 15 ? amber : muted }}>
+                          {ind.spreadBps?.toFixed(1)} bps
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: muted }}>Lg Bids: </span>
+                        <span style={{ color: green }}>{ind.largeBids || 0}</span>
+                      </div>
+                      <div>
+                        <span style={{ color: muted }}>Lg Asks: </span>
+                        <span style={{ color: red }}>{ind.largeAsks || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: muted }}>Connecting to Bybit L2...</div>
+            )}
+          </div>
+
+          {/* Asset Rotation */}
+          <div style={card}>
+            <div style={sTitle}>ROTATION RANKING</div>
+            {rotationData && Array.isArray(rotationData.rankings) ? (
+              <div style={{ fontSize: 11 }}>
+                {rotationData.rankings.slice(0, 6).map((r, i) => {
+                  const topN = rotationData.config?.topN || 5;
+                  const inTop = i < topN;
+                  return (
+                    <div key={r.asset} style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "5px 0", borderBottom: `1px solid ${border}`
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, width: 18, height: 18,
+                          borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                          background: inTop ? green : bg3, color: inTop ? '#000' : muted
+                        }}>
+                          {i + 1}
+                        </span>
+                        <span style={{ fontWeight: 700, color: text }}>{r.asset?.toUpperCase()}</span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 700, color: r.score > 0 ? green : red }}>
+                          {r.score > 0 ? '+' : ''}{r.score?.toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: 9, color: muted }}>
+                          24h: {r.change24h > 0 ? '+' : ''}{r.change24h?.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ fontSize: 9, color: muted, marginTop: 6 }}>
+                  Top {rotationData.config?.topN || 5} assets in rotation
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: muted }}>Loading rotation data...</div>
+            )}
+          </div>
+        </div>
 
         {/* ESTADO DEL SISTEMA */}
         <div style={{ ...card, marginTop: 4 }}>
