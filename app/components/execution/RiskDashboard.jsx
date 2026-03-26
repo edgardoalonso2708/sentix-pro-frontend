@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 
 function GaugeBar({ value, max, label, color, bgColor, muted, text }) {
   const pct = max > 0 ? Math.min((Math.abs(value) / max) * 100, 100) : 0;
@@ -39,7 +40,7 @@ function StatCard({ label, value, subValue, color, bg, border, muted }) {
   );
 }
 
-export default function RiskDashboard({ dashboard, colors }) {
+export default function RiskDashboard({ dashboard, colors, apiUrl, authFetch, userId }) {
   const bg = colors?.bg3 || '#1a1a1a';
   const bg2 = colors?.bg2 || '#111111';
   const border = colors?.border || 'rgba(255,255,255,0.08)';
@@ -48,7 +49,26 @@ export default function RiskDashboard({ dashboard, colors }) {
   const green = colors?.green || '#00d4aa';
   const red = colors?.red || '#ef4444';
   const accent = colors?.accent || '#a855f7';
+  const amber = '#f59e0b';
   const bgBar = 'rgba(255,255,255,0.06)';
+
+  // Portfolio VaR
+  const [varData, setVarData] = useState(null);
+  const [varLoading, setVarLoading] = useState(false);
+  useEffect(() => {
+    if (!apiUrl || !authFetch || !userId) return;
+    const fetchVaR = async () => {
+      setVarLoading(true);
+      try {
+        const res = await authFetch(`${apiUrl}/api/risk/${userId}/var`);
+        if (res.ok) setVarData(await res.json());
+      } catch (_) {}
+      setVarLoading(false);
+    };
+    fetchVaR();
+    const iv = setInterval(fetchVaR, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [apiUrl, userId]);
 
   if (!dashboard) {
     return (
@@ -266,6 +286,105 @@ export default function RiskDashboard({ dashboard, colors }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Portfolio Value at Risk */}
+      {varData && varData.portfolioValue > 0 && (
+        <div style={{
+          background: bg,
+          border: `1px solid ${border}`,
+          borderRadius: 8,
+          padding: 16,
+          marginTop: 16
+        }}>
+          <div style={{ color: text, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+            Value at Risk (VaR)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
+            <StatCard
+              label="VaR 95%"
+              value={`$${Math.abs(varData.var95 || 0).toFixed(2)}`}
+              subValue={`${(Math.abs(varData.varPct || 0) * 100).toFixed(2)}% del portfolio`}
+              color={amber}
+              bg={bg} border={border} muted={muted}
+            />
+            <StatCard
+              label="VaR 99%"
+              value={`$${Math.abs(varData.var99 || 0).toFixed(2)}`}
+              subValue="Escenario extremo"
+              color={red}
+              bg={bg} border={border} muted={muted}
+            />
+            <StatCard
+              label="CVaR 95%"
+              value={`$${Math.abs(varData.cvar95 || 0).toFixed(2)}`}
+              subValue="Perdida esperada en cola"
+              color={red}
+              bg={bg} border={border} muted={muted}
+            />
+            <StatCard
+              label="Peor Dia"
+              value={`${((varData.worstDayPct || 0) * 100).toFixed(2)}%`}
+              subValue={`Portfolio: $${(varData.portfolioValue || 0).toLocaleString()}`}
+              color={red}
+              bg={bg} border={border} muted={muted}
+            />
+          </div>
+
+          {/* Per-position VaR contributions */}
+          {Array.isArray(varData.contributions) && varData.contributions.length > 0 && (
+            <div>
+              <div style={{ color: muted, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>
+                Contribucion por Posicion
+              </div>
+              {varData.contributions.map((c, i) => {
+                const pct = varData.portfolioValue > 0 ? (Math.abs(c.var95 || 0) / varData.portfolioValue) * 100 : 0;
+                return (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '6px 0',
+                    borderBottom: i < varData.contributions.length - 1 ? `1px solid ${border}` : 'none'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: text, fontSize: 12, fontWeight: 600 }}>{c.asset}</span>
+                      <span style={{
+                        fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                        background: c.direction === 'LONG' ? `${green}20` : `${red}20`,
+                        color: c.direction === 'LONG' ? green : red,
+                        fontWeight: 700
+                      }}>
+                        {c.direction}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: muted, fontSize: 9 }}>VaR 95%</div>
+                        <div style={{ color: amber, fontSize: 11, fontWeight: 600 }}>
+                          ${Math.abs(c.var95 || 0).toFixed(2)}
+                        </div>
+                      </div>
+                      <div style={{ width: 60 }}>
+                        <div style={{ height: 4, borderRadius: 2, background: bgBar, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${Math.min(100, pct * 10)}%`,
+                            borderRadius: 2,
+                            background: pct > 5 ? red : pct > 2 ? amber : accent
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {varLoading && !varData && (
+        <div style={{ color: muted, fontSize: 11, textAlign: 'center', padding: 12, marginTop: 16 }}>
+          Calculando Value at Risk...
         </div>
       )}
 

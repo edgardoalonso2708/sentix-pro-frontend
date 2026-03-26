@@ -20,6 +20,7 @@ export default function DashboardTab({
 }) {
     const { t } = useLanguage();
     const [bybitOverview, setBybitOverview] = useState(null);
+    const [onChainData, setOnChainData] = useState(null);
     const isLiveMode = execMode === 'live' || execMode === 'perp';
 
     // Fetch Bybit overview when in live mode
@@ -32,6 +33,20 @@ export default function DashboardTab({
         } catch (_) {}
       })();
     }, [isLiveMode, apiUrl]);
+
+    // Fetch on-chain metrics (BTC mempool, hash rate, exchange flows)
+    useEffect(() => {
+      if (!authFetchProp || !apiUrl) return;
+      const fetchOnChain = async () => {
+        try {
+          const res = await authFetchProp(`${apiUrl}/api/onchain`);
+          if (res.ok) setOnChainData(await res.json());
+        } catch (_) {}
+      };
+      fetchOnChain();
+      const iv = setInterval(fetchOnChain, 5 * 60 * 1000);
+      return () => clearInterval(iv);
+    }, [apiUrl]);
 
     if (!marketData || !marketData.crypto) {
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
@@ -126,6 +141,40 @@ export default function DashboardTab({
             </div>
           ))}
         </div>
+
+        {/* On-Chain Metrics */}
+        {onChainData && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
+            {[
+              onChainData.mempool != null && {
+                label: "BTC Mempool",
+                value: onChainData.mempool >= 1000 ? `${(onChainData.mempool / 1000).toFixed(1)}K` : String(onChainData.mempool || 0),
+                sublabel: onChainData.mempoolTrend === 'spike' ? 'Congestion' : onChainData.mempoolTrend === 'declining' ? 'Clearing' : 'Normal',
+                color: onChainData.mempoolTrend === 'spike' ? red : onChainData.mempoolTrend === 'declining' ? green : muted
+              },
+              onChainData.hashRate != null && {
+                label: "Hash Rate",
+                value: onChainData.hashRate >= 1e9 ? `${(onChainData.hashRate / 1e9).toFixed(0)} EH/s` : `${(onChainData.hashRate / 1e6).toFixed(0)} TH/s`,
+                sublabel: onChainData.hashTrend === 'declining' ? 'Declining (bearish)' : onChainData.hashTrend === 'rising' ? 'Rising (bullish)' : 'Stable',
+                color: onChainData.hashTrend === 'declining' ? red : onChainData.hashTrend === 'rising' ? green : muted
+              },
+              onChainData.exchangeNetflow != null && {
+                label: "Exchange Netflow",
+                value: onChainData.exchangeNetflow > 0
+                  ? `+${onChainData.exchangeNetflow.toFixed(1)} BTC`
+                  : `${onChainData.exchangeNetflow.toFixed(1)} BTC`,
+                sublabel: onChainData.exchangeNetflow > 0 ? 'Inflows (sell pressure)' : 'Outflows (accumulation)',
+                color: onChainData.exchangeNetflow > 0 ? red : green
+              },
+            ].filter(Boolean).map(({ label, value, sublabel, color }) => (
+              <div key={label} style={card}>
+                <div style={{ ...sTitle, marginBottom: 6 }}>{label}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
+                {sublabel && <div style={{ fontSize: 10, color: muted, marginTop: 4 }}>{sublabel}</div>}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Top Movers */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>

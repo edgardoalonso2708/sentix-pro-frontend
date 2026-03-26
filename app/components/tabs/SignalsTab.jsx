@@ -134,6 +134,80 @@ export default function SignalsTab({
           )}
         </div>
 
+        {/* ACCURACY FEEDBACK LOOP */}
+        {signalAccuracy?.byStrength && Object.keys(signalAccuracy.byStrength).length > 0 && (
+          <div style={{ ...card, marginTop: 12 }}>
+            <div style={sTitle}>AUTO-TUNING FEEDBACK</div>
+            <div style={{ fontSize: 10, color: muted, marginBottom: 12, fontFamily: "monospace" }}>
+              El sistema ajusta automaticamente los umbrales segun la precision por tier
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+              {["STRONG BUY", "BUY", "SELL", "STRONG SELL"].filter(k => signalAccuracy.byStrength[k]).map(k => {
+                const s = signalAccuracy.byStrength[k];
+                const rate = s.hitRate24h;
+                const total = s.total || 0;
+                const minForAdj = 20;
+                const floor = 40;
+                const ceiling = 65;
+                let status, statusColor, statusLabel;
+                if (total < minForAdj) {
+                  status = 'waiting';
+                  statusColor = muted;
+                  statusLabel = `${total}/${minForAdj} signals`;
+                } else if (rate !== null && rate < floor) {
+                  status = 'tightening';
+                  statusColor = red;
+                  statusLabel = 'Tightening thresholds';
+                } else if (rate !== null && rate > ceiling) {
+                  status = 'relaxing';
+                  statusColor = green;
+                  statusLabel = 'Relaxing thresholds';
+                } else {
+                  status = 'optimal';
+                  statusColor = amber;
+                  statusLabel = 'Optimal range';
+                }
+                return (
+                  <div key={k} style={{
+                    background: bg3, borderRadius: 8, padding: "12px 14px",
+                    borderLeft: `3px solid ${k.includes("BUY") ? green : red}`
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: k.includes("BUY") ? green : red }}>{k}</span>
+                      <span style={{
+                        fontSize: 8, padding: '2px 6px', borderRadius: 3,
+                        background: `${statusColor}20`, color: statusColor,
+                        fontWeight: 700, textTransform: 'uppercase'
+                      }}>
+                        {status === 'tightening' ? '\u25B2' : status === 'relaxing' ? '\u25BC' : '\u25CF'} {statusLabel}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', position: 'relative' }}>
+                        {/* Floor/Ceiling markers */}
+                        <div style={{ position: 'absolute', left: `${floor}%`, top: 0, bottom: 0, width: 1, background: `${red}60` }} />
+                        <div style={{ position: 'absolute', left: `${ceiling}%`, top: 0, bottom: 0, width: 1, background: `${green}60` }} />
+                        {rate !== null && (
+                          <div style={{
+                            height: '100%',
+                            width: `${Math.min(100, rate)}%`,
+                            borderRadius: 3,
+                            background: rate < floor ? red : rate > ceiling ? green : amber,
+                            transition: 'width 0.3s ease'
+                          }} />
+                        )}
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: rate !== null ? (rate < floor ? red : rate > ceiling ? green : amber) : muted, minWidth: 36 }}>
+                        {rate !== null ? `${rate}%` : '\u2014'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* SIGNAL CARDS */}
         <div style={card}>
           <div style={sTitle}>{t('sig.allActive')}</div>

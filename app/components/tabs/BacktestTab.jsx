@@ -277,6 +277,54 @@ export default function BacktestTab({
             </div>
           </div>
 
+          {/* Regime Filter */}
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Filtro de Regimen (opcional)</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {[
+                { value: 'trending_up', label: 'Trending Up', color: green },
+                { value: 'trending_down', label: 'Trending Down', color: red },
+                { value: 'ranging', label: 'Ranging', color: amber },
+                { value: 'volatile', label: 'Volatile', color: purple },
+                { value: 'reversal_top', label: 'Reversal Top', color: red },
+                { value: 'reversal_bottom', label: 'Reversal Bot', color: green },
+              ].map(r => {
+                const regimeFilter = config.regimeFilter || {};
+                const allowed = regimeFilter.allowedRegimes || [];
+                const isChecked = allowed.includes(r.value);
+                const noFilter = allowed.length === 0;
+                return (
+                  <label key={r.value} style={{
+                    fontSize: 10, color: noFilter ? muted : (isChecked ? r.color : `${muted}88`),
+                    fontFamily: "monospace", display: "flex", alignItems: "center", gap: 4
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={running}
+                      onChange={e => {
+                        const prev = config.regimeFilter?.allowedRegimes || [];
+                        const updated = e.target.checked
+                          ? [...prev, r.value]
+                          : prev.filter(x => x !== r.value);
+                        setConfig({
+                          ...config,
+                          regimeFilter: updated.length > 0 ? { allowedRegimes: updated } : null
+                        });
+                      }}
+                    />
+                    {r.label}
+                  </label>
+                );
+              })}
+            </div>
+            {config.regimeFilter?.allowedRegimes?.length > 0 && (
+              <div style={{ fontSize: 9, color: amber, marginTop: 4, fontFamily: "monospace" }}>
+                Solo se ejecutaran trades en los regimenes seleccionados
+              </div>
+            )}
+          </div>
+
           {/* Kelly Criterion & Volatility Targeting */}
           <div style={{ marginTop: 14, background: "rgba(168,85,247,0.05)", border: `1px solid ${border}`, borderRadius: 8, padding: 12 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: purple, marginBottom: 10, fontFamily: "monospace" }}>

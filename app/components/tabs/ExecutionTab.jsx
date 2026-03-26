@@ -950,6 +950,9 @@ export default function ExecutionTab({
           <RiskDashboard
             dashboard={execRiskDashboard}
             colors={executionColors}
+            apiUrl={apiUrl}
+            authFetch={authFetch}
+            userId={userId}
           />
         )}
 
