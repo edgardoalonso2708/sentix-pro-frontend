@@ -35,7 +35,7 @@ export default function DashboardTab({
           if (res.ok) setBybitOverview(await res.json());
         } catch (_) {}
       })();
-    }, [isLiveMode, apiUrl]);
+    }, [isLiveMode, apiUrl, authFetchProp]);
 
     // Fetch on-chain metrics (BTC mempool, hash rate, exchange flows)
     useEffect(() => {
@@ -49,7 +49,7 @@ export default function DashboardTab({
       fetchOnChain();
       const iv = setInterval(fetchOnChain, 5 * 60 * 1000);
       return () => clearInterval(iv);
-    }, [apiUrl]);
+    }, [apiUrl, authFetchProp]);
 
     // Fetch ML ensemble status, order flow, and rotation data
     useEffect(() => {
@@ -61,15 +61,31 @@ export default function DashboardTab({
             authFetchProp(`${apiUrl}/api/orderflow`),
             authFetchProp(`${apiUrl}/api/rotation`),
           ]);
-          if (mlRes.status === 'fulfilled' && mlRes.value.ok) setMlStatus(await mlRes.value.json());
-          if (ofRes.status === 'fulfilled' && ofRes.value.ok) setOrderFlowData(await ofRes.value.json());
-          if (rotRes.status === 'fulfilled' && rotRes.value.ok) setRotationData(await rotRes.value.json());
-        } catch (_) {}
+          if (mlRes.status === 'fulfilled' && mlRes.value.ok) {
+            setMlStatus(await mlRes.value.json());
+          } else if (mlRes.status === 'rejected') {
+            console.warn('[SENTIX] ML fetch failed:', mlRes.reason);
+          } else if (mlRes.status === 'fulfilled' && !mlRes.value.ok) {
+            console.warn('[SENTIX] ML fetch HTTP', mlRes.value.status, mlRes.value.statusText);
+          }
+          if (ofRes.status === 'fulfilled' && ofRes.value.ok) {
+            setOrderFlowData(await ofRes.value.json());
+          } else if (ofRes.status === 'rejected') {
+            console.warn('[SENTIX] OrderFlow fetch failed:', ofRes.reason);
+          }
+          if (rotRes.status === 'fulfilled' && rotRes.value.ok) {
+            setRotationData(await rotRes.value.json());
+          } else if (rotRes.status === 'rejected') {
+            console.warn('[SENTIX] Rotation fetch failed:', rotRes.reason);
+          }
+        } catch (err) {
+          console.warn('[SENTIX] Dashboard fetch error:', err.message);
+        }
       };
       fetchAll();
       const iv = setInterval(fetchAll, 60 * 1000);
       return () => clearInterval(iv);
-    }, [apiUrl]);
+    }, [apiUrl, authFetchProp]);
 
     if (!marketData || !marketData.crypto) {
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
