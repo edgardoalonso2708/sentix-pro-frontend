@@ -24,6 +24,7 @@ export default function DashboardTab({
     const [mlStatus, setMlStatus] = useState(null);
     const [orderFlowData, setOrderFlowData] = useState(null);
     const [rotationData, setRotationData] = useState(null);
+    const [regimeData, setRegimeData] = useState(null);
     const isLiveMode = execMode === 'live' || execMode === 'perp';
 
     // Fetch Bybit overview when in live mode
@@ -56,10 +57,11 @@ export default function DashboardTab({
       if (!authFetchProp || !apiUrl) return;
       const fetchAll = async () => {
         try {
-          const [mlRes, ofRes, rotRes] = await Promise.allSettled([
+          const [mlRes, ofRes, rotRes, regRes] = await Promise.allSettled([
             authFetchProp(`${apiUrl}/api/ml/status`),
             authFetchProp(`${apiUrl}/api/orderflow`),
             authFetchProp(`${apiUrl}/api/rotation`),
+            authFetchProp(`${apiUrl}/api/regime`),
           ]);
           if (mlRes.status === 'fulfilled' && mlRes.value.ok) {
             setMlStatus(await mlRes.value.json());
@@ -77,6 +79,9 @@ export default function DashboardTab({
             setRotationData(await rotRes.value.json());
           } else if (rotRes.status === 'rejected') {
             console.warn('[SENTIX] Rotation fetch failed:', rotRes.reason);
+          }
+          if (regRes.status === 'fulfilled' && regRes.value.ok) {
+            setRegimeData(await regRes.value.json());
           }
         } catch (err) {
           console.warn('[SENTIX] Dashboard fetch error:', err.message);
@@ -144,6 +149,67 @@ export default function DashboardTab({
             </span>
           </div>
         </div>
+
+        {/* Market Regime Banner */}
+        {(() => {
+          const btcRegime = regimeData?.btc?.regime;
+          const regimeConf = regimeData?.btc?.confidence;
+          const fg = marketData.macro?.fearGreed || 50;
+          const bearishGateActive = btcRegime === 'trending_down' && fg < 20;
+
+          const regimeConfig = {
+            trending_up:      { label: 'TRENDING UP',      icon: '\u2197', color: green,  bg: `${green}12`, border: green },
+            trending_down:    { label: 'TRENDING DOWN',    icon: '\u2198', color: red,    bg: `${red}12`,   border: red },
+            volatile:         { label: 'VOLATILE',         icon: '\u26A1', color: amber,  bg: `${amber}12`, border: amber },
+            ranging:          { label: 'RANGING',          icon: '\u2194', color: blue,   bg: `${blue}12`,  border: blue },
+            reversal_top:     { label: 'REVERSAL TOP',     icon: '\u21BA', color: red,    bg: `${red}12`,   border: red },
+            reversal_bottom:  { label: 'REVERSAL BOTTOM',  icon: '\u21BB', color: green,  bg: `${green}12`, border: green },
+          };
+          const rc = regimeConfig[btcRegime] || { label: btcRegime?.toUpperCase() || 'LOADING', icon: '\u2022', color: muted, bg: `${muted}12`, border: muted };
+
+          if (!btcRegime) return null;
+          return (
+            <div style={{
+              background: rc.bg, border: `1px solid ${rc.border}33`, borderRadius: 8,
+              padding: "10px 16px", marginBottom: 12,
+              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 16 }}>{rc.icon}</span>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: rc.color, letterSpacing: "0.05em" }}>
+                    MARKET REGIME: {rc.label}
+                  </span>
+                  {regimeConf != null && (
+                    <span style={{ fontSize: 10, color: muted, marginLeft: 8, fontFamily: "monospace" }}>
+                      {regimeConf}% conf
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {bearishGateActive && (
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4,
+                    background: `${red}20`, color: red, border: `1px solid ${red}44`,
+                    display: "flex", alignItems: "center", gap: 4
+                  }}>
+                    <span style={{ fontSize: 12 }}>{'\u26D4'}</span>
+                    BEARISH GATE ACTIVE
+                  </div>
+                )}
+                {btcRegime === 'trending_down' && (
+                  <div style={{
+                    fontSize: 9, color: muted, fontFamily: "monospace",
+                    padding: "3px 8px", background: `${muted}10`, borderRadius: 4
+                  }}>
+                    Stops tightened -30% &middot; Only STRONG BUY allowed
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Macro Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
@@ -398,6 +464,41 @@ export default function DashboardTab({
                     </div>
                   </div>
                 )}
+
+                {/* Win Rate by Regime */}
+                {closedTrades.length >= 3 && (() => {
+                  const regimeStats = {};
+                  for (const tr of closedTrades) {
+                    const regime = tr.entry_regime || 'unknown';
+                    if (!regimeStats[regime]) regimeStats[regime] = { wins: 0, losses: 0 };
+                    const pnl = tr.pnl || ((tr.exit_price - tr.entry_price) * tr.size * (tr.direction === 'SHORT' ? -1 : 1));
+                    if (pnl >= 0) regimeStats[regime].wins++; else regimeStats[regime].losses++;
+                  }
+                  const entries = Object.entries(regimeStats).filter(([, s]) => s.wins + s.losses >= 2);
+                  if (entries.length === 0) return null;
+                  return (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>WIN RATE BY REGIME</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {entries.map(([regime, s]) => {
+                          const total = s.wins + s.losses;
+                          const wr = ((s.wins / total) * 100);
+                          const wrColor = wr >= 50 ? green : wr >= 35 ? amber : red;
+                          return (
+                            <div key={regime} style={{
+                              background: bg3, borderRadius: 6, padding: "6px 10px",
+                              borderLeft: `3px solid ${wrColor}`, minWidth: 100
+                            }}>
+                              <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", marginBottom: 2 }}>{regime.replace('_', ' ')}</div>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: wrColor }}>{wr.toFixed(0)}%</div>
+                              <div style={{ fontSize: 9, color: muted }}>{s.wins}W / {s.losses}L ({total})</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Recent Trades */}
                 {closedTrades.length > 0 ? (
