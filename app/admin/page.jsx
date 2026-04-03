@@ -65,10 +65,16 @@ export default function AdminPage() {
   const { isAdmin, loading: authLoading, user } = useAuth();
   const router = useRouter();
 
-  const [tab, setTab] = useState('users'); // users | audit
+  const [tab, setTab] = useState('users'); // users | audit | maintenance
   const [users, setUsers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+
+  // Maintenance state
+  const [maintenanceStatus, setMaintenanceStatus] = useState(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState(null);
 
   // Invite form
   const [invEmail, setInvEmail] = useState('');
@@ -91,6 +97,36 @@ export default function AdminPage() {
     } catch { /* ignore */ }
   }, []);
 
+  const fetchMaintenance = useCallback(async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await authFetch(`${API_URL}/api/maintenance/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setMaintenanceStatus(data);
+      }
+    } catch { /* ignore */ }
+    finally { setMaintenanceLoading(false); }
+  }, []);
+
+  const handlePurge = async (dryRun = false) => {
+    setPurging(true);
+    setPurgeResult(null);
+    try {
+      const res = await authFetch(`${API_URL}/api/maintenance/purge`, {
+        method: 'POST',
+        body: JSON.stringify({ dryRun }),
+      });
+      const data = await res.json();
+      setPurgeResult(data);
+      if (!dryRun) fetchMaintenance();
+    } catch {
+      setPurgeResult({ error: 'Error de conexion' });
+    } finally {
+      setPurging(false);
+    }
+  };
+
   const fetchAudit = useCallback(async () => {
     try {
       let url = `${API_URL}/api/admin/audit?days=${auditDays}&limit=100`;
@@ -110,7 +146,7 @@ export default function AdminPage() {
       return;
     }
     setLoadingData(true);
-    Promise.all([fetchUsers(), fetchAudit()]).finally(() => setLoadingData(false));
+    Promise.all([fetchUsers(), fetchAudit(), fetchMaintenance()]).finally(() => setLoadingData(false));
   }, [authLoading, isAdmin, router, fetchUsers, fetchAudit]);
 
   const handleInvite = async (e) => {
@@ -191,7 +227,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 24, background: surfaceAlt, borderRadius: 8, padding: 3 }}>
-        {[{ id: 'users', label: 'Usuarios' }, { id: 'audit', label: 'Audit Log' }].map(t => (
+        {[{ id: 'users', label: 'Usuarios' }, { id: 'audit', label: 'Audit Log' }, { id: 'maintenance', label: 'Mantenimiento' }].map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -348,6 +384,200 @@ export default function AdminPage() {
               </table>
             </div>
           </div>
+        </>
+      )}
+
+      {/* ─── MAINTENANCE TAB ───────────────────────────────────────── */}
+      {tab === 'maintenance' && (
+        <>
+          {/* Table Sizes */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Estado de Tablas</h3>
+              <button
+                onClick={fetchMaintenance}
+                disabled={maintenanceLoading}
+                style={{ ...btnStyle('#374151'), padding: '6px 14px', fontSize: 12, opacity: maintenanceLoading ? 0.6 : 1 }}
+              >
+                {maintenanceLoading ? 'Cargando...' : 'Refrescar'}
+              </button>
+            </div>
+
+            {maintenanceStatus?.tableSizes && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${border}` }}>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', color: muted, fontWeight: 600 }}>Tabla</th>
+                      <th style={{ textAlign: 'right', padding: '8px 12px', color: muted, fontWeight: 600 }}>Filas</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', color: muted, fontWeight: 600 }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceStatus.tableSizes.map(t => {
+                      const severity = t.rows > 100000 ? 'critical' : t.rows > 50000 ? 'warning' : t.rows > 10000 ? 'info' : 'ok';
+                      const sevColor = severity === 'critical' ? red : severity === 'warning' ? yellow : severity === 'info' ? '#3b82f6' : green;
+                      const sevLabel = severity === 'critical' ? 'CRITICO' : severity === 'warning' ? 'ALERTA' : severity === 'info' ? 'GRANDE' : 'OK';
+                      return (
+                        <tr key={t.table} style={{ borderBottom: `1px solid ${border}` }}>
+                          <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>{t.table}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                            {t.rows >= 0 ? t.rows.toLocaleString() : t.error || 'N/A'}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                              background: `${sevColor}20`, color: sevColor,
+                            }}>
+                              {sevLabel}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Retention Config */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 16 }}>Retencion de Datos</h3>
+            {maintenanceStatus?.retentionConfig && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                {maintenanceStatus.retentionConfig.map(r => (
+                  <div key={r.table} style={{
+                    background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: '12px 16px',
+                  }}>
+                    <div style={{ fontSize: 12, fontFamily: 'monospace', color: muted, marginBottom: 4 }}>{r.table}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{r.label}</div>
+                    <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
+                      Retencion: <span style={{ color: primary, fontWeight: 600 }}>{r.retentionDays} dias</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Last Purge Info */}
+          {maintenanceStatus?.lastPurge && (
+            <div style={cardStyle}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 12 }}>Ultimo Purge</h3>
+              <div style={{ fontSize: 13, color: muted }}>
+                Fecha: <span style={{ color: text }}>{new Date(maintenanceStatus.lastPurge).toLocaleString()}</span>
+              </div>
+              {maintenanceStatus.lastPurgeResults && (
+                <div style={{ marginTop: 8, fontSize: 13, color: muted }}>
+                  Filas eliminadas: <span style={{ color: green, fontWeight: 600 }}>{maintenanceStatus.lastPurgeResults.totalDeleted?.toLocaleString() || 0}</span>
+                  {' | '}Tablas procesadas: {maintenanceStatus.lastPurgeResults.results?.length || 0}
+                  {maintenanceStatus.lastPurgeResults.errors?.length > 0 && (
+                    <span style={{ color: red }}> | Errores: {maintenanceStatus.lastPurgeResults.errors.length}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Purge Actions */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 16 }}>Limpieza Manual</h3>
+            <p style={{ fontSize: 13, color: muted, marginTop: 0, marginBottom: 16 }}>
+              Elimina registros antiguos segun la politica de retencion configurada.
+              Usa "Simulacion" primero para ver que se eliminaria sin borrar datos.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handlePurge(true)}
+                disabled={purging}
+                style={{ ...btnStyle('#374151'), opacity: purging ? 0.6 : 1 }}
+              >
+                {purging ? 'Procesando...' : 'Simulacion (Dry Run)'}
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Esto eliminara datos antiguos de forma permanente. Continuar?')) {
+                    handlePurge(false);
+                  }
+                }}
+                disabled={purging}
+                style={{ ...btnStyle(red), opacity: purging ? 0.6 : 1 }}
+              >
+                {purging ? 'Procesando...' : 'Ejecutar Purge'}
+              </button>
+            </div>
+
+            {/* Purge Result */}
+            {purgeResult && (
+              <div style={{
+                marginTop: 16, padding: 16, borderRadius: 8,
+                background: purgeResult.error ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                border: `1px solid ${purgeResult.error ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+              }}>
+                {purgeResult.error ? (
+                  <div style={{ color: red, fontSize: 13 }}>{purgeResult.error}</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: green, marginBottom: 8 }}>
+                      {purgeResult.message}
+                    </div>
+                    {Array.isArray(purgeResult.results) && purgeResult.results.length > 0 && (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${border}` }}>
+                            <th style={{ textAlign: 'left', padding: '6px 8px', color: muted }}>Tabla</th>
+                            <th style={{ textAlign: 'right', padding: '6px 8px', color: muted }}>
+                              {purgeResult.results[0]?.wouldDelete !== undefined ? 'Se eliminarian' : 'Eliminadas'}
+                            </th>
+                            <th style={{ textAlign: 'right', padding: '6px 8px', color: muted }}>Retencion</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {purgeResult.results.map(r => (
+                            <tr key={r.table} style={{ borderBottom: `1px solid ${border}` }}>
+                              <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontSize: 11 }}>{r.label || r.table}</td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: (r.deleted || r.wouldDelete) > 0 ? yellow : muted }}>
+                                {r.skipped ? 'N/A' : (r.deleted ?? r.wouldDelete ?? 0).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', color: muted }}>{r.retentionDays ? `${r.retentionDays}d` : '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Growth Alerts */}
+          {maintenanceStatus?.growthAlerts?.length > 0 && (
+            <div style={{
+              ...cardStyle,
+              borderColor: yellow + '60',
+            }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 12, color: yellow }}>
+                Alertas de Crecimiento
+              </h3>
+              {maintenanceStatus.growthAlerts.map(a => (
+                <div key={a.table} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 12px', marginBottom: 8, borderRadius: 6,
+                  background: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : a.severity === 'warning' ? 'rgba(234,179,8,0.1)' : 'rgba(59,130,246,0.1)',
+                }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{a.table}</span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 600,
+                    color: a.severity === 'critical' ? red : a.severity === 'warning' ? yellow : '#3b82f6',
+                  }}>
+                    {a.rows.toLocaleString()} filas
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
