@@ -64,6 +64,14 @@ export default function GuideTab() {
     { icon: "🛡", title: "Risk Engine" },
     { icon: "💼", title: "Portfolio (APM)" },
     { icon: "⚡", title: "Ejecucion" },
+    { icon: "🌐", title: "Regimen de Mercado" },
+    { icon: "🤖", title: "ML Ensemble (IA)" },
+    { icon: "🔄", title: "Rotacion de Activos" },
+    { icon: "🔧", title: "Auto-Tuner" },
+    { icon: "📡", title: "Perpetuos Bybit" },
+    { icon: "⛓", title: "Metricas On-Chain" },
+    { icon: "🎯", title: "Precision de Senales" },
+    { icon: "⚡", title: "Guia Rapida: 5 Pasos" },
     { icon: "🎯", title: "Guia de Uso" },
     { icon: "📐", title: "Parametros" },
     { icon: "📖", title: "Glosario" },
@@ -604,7 +612,246 @@ El sistema:
       </div>);
 
       case 20: return (<div>
-        <div style={sectionHeaderStyle}>🎯 21. Guia de Uso: Mejores Resultados</div>
+        <div style={sectionHeaderStyle}>🌐 21. Regimen de Mercado</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sentix Pro clasifica automaticamente el estado del mercado en 7 regimenes usando EMA, ADX, ATR, Bollinger Squeeze, MACD y volumen:</p>
+        <GuideTable headers={["Regimen", "Significado", "Como Operar"]} rows={[
+          [<span style={{color: green, fontWeight: 700}}>TRENDING UP</span>, "Tendencia alcista fuerte. EMAs alineadas.", "Operar longs con confianza. Trailing amplios."],
+          [<span style={{color: red, fontWeight: 700}}>TRENDING DOWN</span>, "Tendencia bajista fuerte.", "Shorts o esperar. No comprar en caida."],
+          [<strong>RANGING</strong>, "Consolidacion. ADX bajo.", "Esperar breakout. Reducir posiciones."],
+          [<span style={{color: amber, fontWeight: 700}}>VOLATILE</span>, "Alta volatilidad sin direccion.", "Reducir tamano 50%. Stops mas amplios."],
+          [<span style={{color: red, fontWeight: 700}}>REVERSAL TOP</span>, "Posible techo. Divergencias bajistas.", "Cerrar longs. Preparar shorts."],
+          [<span style={{color: green, fontWeight: 700}}>REVERSAL BOTTOM</span>, "Posible piso. Divergencias alcistas.", "Buscar compras."],
+          [<strong>UNKNOWN</strong>, "Datos insuficientes.", "No operar."],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Multiplicadores Automaticos</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "TRENDING UP: senales BUY se amplifican +20%, SELL se reducen",
+            "TRENDING DOWN: senales SELL se amplifican, BUY se reducen",
+            "RANGING/VOLATILE: todas las senales se reducen (mercado incierto)",
+            "El regimen se calcula por activo individual y a nivel de BTC"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+        <div style={tipBox}>💡 <strong>Clave:</strong> El regimen se muestra en el Dashboard. Si dice VOLATILE o RANGING, reduce tu tamano de posicion a la mitad.</div>
+      </div>);
+
+      case 21: return (<div>
+        <div style={sectionHeaderStyle}>🤖 22. ML Ensemble — Inteligencia Artificial</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sentix Pro incluye un modelo de Machine Learning (Gradient Boosting, 30 arboles) que mejora la calidad de las senales automaticamente:</p>
+        <div style={{ ...sTitle }}>Como Funciona</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "1. Se entrena automaticamente con resultados historicos de senales (outcomes reales)",
+            "2. Analiza: score, confianza, confluencia, regimen, cambios de precio (1h, 4h, 24h)",
+            "3. Produce un ajuste que se mezcla: 30% ML + 70% motor clasico",
+            "4. Se reentrena cada 24 horas con datos frescos"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Para el Usuario</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "No necesitas configurar nada — el ML trabaja en segundo plano",
+            "En el Dashboard veras ML Status: active/inactive",
+            "El score que ves ya incluye el ajuste ML",
+            "Si la IA confirma la senal, es mas confiable"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+        <div style={tipBox}>💡 El ML mejora progresivamente: cuantas mas senales se generan, mejor se vuelve el modelo.</div>
+      </div>);
+
+      case 22: return (<div>
+        <div style={sectionHeaderStyle}>🔄 23. Rotacion de Activos</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sistema que selecciona automaticamente los mejores activos para operar basado en momentum compuesto:</p>
+        <div style={{ ...sTitle }}>Universo: 10 Activos</div>
+        <p style={{ color: muted, fontSize: 11, lineHeight: 1.6, marginBottom: 14 }}>Bitcoin, Ethereum, Solana, BNB, Cardano, XRP, Polkadot, Dogecoin, Avalanche, Chainlink</p>
+        <div style={{ ...sTitle }}>Ranking Compuesto</div>
+        <GuideTable headers={["Factor", "Peso", "Que Mide"]} rows={[
+          [<strong>Retorno 7d</strong>, "40%", "Momentum a corto plazo"],
+          [<strong>Retorno 30d</strong>, "20%", "Tendencia a mediano plazo"],
+          [<strong>RSI Strength</strong>, "20%", "Fuerza relativa del indicador"],
+          [<strong>Volume Z-Score</strong>, "20%", "Volumen anormal (interes institucional)"],
+        ]} />
+        <div style={{ ...card, padding: 14, marginTop: 14 }}>
+          {[
+            "Selecciona Top 5 activos con mejor score compuesto",
+            "Concentracion maxima: 30% por activo",
+            "Rebalanceo con cooldown de 5 minutos"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+        <div style={tipBox}>💡 Consulta la seccion Rotation en el Dashboard para ver que activos tienen mejor momentum ahora mismo.</div>
+      </div>);
+
+      case 23: return (<div>
+        <div style={sectionHeaderStyle}>🔧 24. Auto-Tuner</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sistema hibrido IA + aprobacion humana para optimizacion continua de parametros:</p>
+        <div style={{ ...sTitle }}>Como Funciona</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "1. Cada 12 horas analiza rendimiento reciente (120 dias lookback)",
+            "2. Optimiza 5 parametros: buyThreshold, sellThreshold, ADX, ATR stops, RSI levels",
+            "3. Valida con Walk-Forward antes de proponer cambios",
+            "4. Envia propuesta via Telegram para tu aprobacion",
+            "5. Monitorea post-aplicacion. Si cae >20%, revierte automaticamente"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Modos de Aprobacion</div>
+        <GuideTable headers={["Modo", "Descripcion"]} rows={[
+          [<span style={{color: purple, fontWeight: 700}}>telegram</span>, "Envia propuesta al bot. Tu apruebas o rechazas manualmente."],
+          [<span style={{color: green, fontWeight: 700}}>auto</span>, "Aplica automaticamente si Walk-Forward valida. Sin intervencion."],
+        ]} />
+        <div style={tipBox}>💡 Recomendamos modo <strong>telegram</strong> al inicio. Cambia a <strong>auto</strong> cuando confies en el sistema.</div>
+        <div style={alertBox}>⚠ El Auto-Tuner guarda los parametros en la base de datos (saved_strategy_configs), nunca en el codigo.</div>
+      </div>);
+
+      case 24: return (<div>
+        <div style={sectionHeaderStyle}>📡 25. Perpetuos Bybit</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Soporte completo para futuros perpetuos USDT en Bybit:</p>
+        <div style={{ ...sTitle }}>Funcionalidades</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "Configuracion de apalancamiento y modo de margen (cross/isolated)",
+            "Position sizing automatico para perpetuos",
+            "Stop-loss y take-profit nativos en la orden",
+            "Soporte testnet y mainnet",
+            "Precision automatica de cantidad y precio segun instrumento"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+        <div style={{ ...sTitle, marginTop: 18 }}>Adaptadores Disponibles</div>
+        <GuideTable headers={["Adaptador", "Uso", "Mercados"]} rows={[
+          [<strong>Paper</strong>, "Simulacion sin riesgo", "Todos"],
+          [<strong>Bybit Spot</strong>, "Trading real spot", "Pares USDT"],
+          [<strong>Bybit Perpetuos</strong>, "Futuros USDT perpetuos", "Con apalancamiento"],
+        ]} />
+        <div style={alertBox}>⚠ <strong>Cuidado:</strong> Los perpetuos amplifican ganancias Y perdidas. Usa apalancamiento bajo (2-3x max) al inicio.</div>
+      </div>);
+
+      case 25: return (<div>
+        <div style={sectionHeaderStyle}>⛓ 26. Metricas On-Chain</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Datos directos del blockchain para complementar el analisis tecnico:</p>
+        <GuideTable headers={["Metrica", "Fuente", "Que Indica"]} rows={[
+          [<strong>Mempool BTC</strong>, "Blockchain.com", "Congestion de la red. Alta = alta demanda."],
+          [<strong>Hash Rate</strong>, "Blockchain.com", "Seguridad de red. Creciente = mineros confiados."],
+          [<strong>Exchange Inflows</strong>, "CoinGlass", "Crypto entrando a exchanges (posible venta)."],
+          [<strong>Exchange Outflows</strong>, "CoinGlass", "Crypto saliendo de exchanges (acumulacion)."],
+          [<strong>Whale Activity</strong>, "On-chain", "Movimientos de grandes wallets."],
+        ]} />
+        <div style={tipBox}>💡 <strong>Regla:</strong> Outflows {">"} Inflows = acumulacion (bullish). Inflows {">"} Outflows = distribucion (bearish).</div>
+      </div>);
+
+      case 26: return (<div>
+        <div style={sectionHeaderStyle}>🎯 27. Precision de Senales</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sentix Pro trackea automaticamente si cada senal fue acertada o no:</p>
+        <GuideTable headers={["Metrica", "Que Mide"]} rows={[
+          [<strong>Signal Accuracy</strong>, "% de senales que acertaron la direccion del precio"],
+          [<strong>Regime-Confluence</strong>, "Precision filtrada por regimen y nivel de confluencia"],
+          [<strong>Alpha Decay</strong>, "Cuanto se degrada el alpha con el tiempo (TTL: 15 min, -5%/min)"],
+          [<strong>Signal Health</strong>, "Salud general del motor en los ultimos 7 dias"],
+        ]} />
+        <div style={{ ...sTitle, marginTop: 18 }}>Como Usarlo</div>
+        <div style={{ ...card, padding: 14 }}>
+          {[
+            "Revisa semanalmente: si accuracy < 50% por 2 semanas, ejecuta Auto-Tuner",
+            "Compara accuracy por activo: enfocate en los que tienen mejor alpha",
+            "Alpha Decay te dice cuanto tiempo tienes para actuar despues de una senal",
+            "Signal Health muestra si el motor esta funcionando correctamente"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+        <div style={tipBox}>💡 La precision varia por regimen: en TRENDING es mayor, en VOLATILE es menor. Usa los filtros de regimen para ver esto.</div>
+      </div>);
+
+      case 27: return (<div>
+        <div style={sectionHeaderStyle}>⚡ 28. Guia Rapida: 5 Pasos para Operar</div>
+        <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Resumen ejecutivo de los pasos e indicadores clave para un trading efectivo:</p>
+
+        <div style={{ ...sTitle }}>Paso 1: Dashboard (30 seg)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "Fear & Greed: < 25 = oportunidad de compra. > 75 = precaucion.",
+            "BTC Dominance: > 55% = solo BTC. < 45% = alt season.",
+            "DXY: Cayendo = bullish crypto. Subiendo = bearish.",
+            "Regimen: TRENDING = operar. VOLATILE/RANGING = reducir o esperar."
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+
+        <div style={{ ...sTitle }}>Paso 2: Filtrar Senales (1 min)</div>
+        <GuideTable headers={["Criterio", "Valor Minimo"]} rows={[
+          ["Fuerza", "STRONG BUY o STRONG SELL"],
+          ["Confluencia", "2/3 o 3/3 timeframes"],
+          ["Confianza", ">= 60%"],
+          ["R:R", ">= 1.5 (ideal >= 2.0)"],
+          ["Score", ">= 67 (BUY) o <= 33 (SELL)"],
+        ]} />
+
+        <div style={{ ...sTitle, marginTop: 14 }}>Paso 3: Verificar Contexto (30 seg)</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "Funding Rate > +0.10%? NO compres.",
+            "Regimen VOLATILE/RANGING? Reduce posicion 50%.",
+            "ML confirma la senal? Mayor confianza.",
+            "Order Book Imbalance > 1.5 en tu direccion? Confirmacion extra."
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+
+        <div style={{ ...sTitle }}>Paso 4: Ejecutar con Disciplina</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "1. Compra/Vende al precio de ENTRADA",
+            "2. STOP LOSS inmediato (obligatorio, sin excepciones)",
+            "3. En TP1: vende 50% (asegura ganancias)",
+            "4. Activa TRAILING STOP en el nivel indicado",
+            "5. Deja correr 50% restante hacia TP2"
+          ].map((step, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{step}</div>
+          ))}
+        </div>
+
+        <div style={{ ...sTitle }}>Paso 5: Monitorear y Aprender</div>
+        <div style={{ ...card, padding: 14, marginBottom: 14 }}>
+          {[
+            "Revisa Paper Trading diariamente: Win Rate, P&L, Max Drawdown",
+            "Objetivo: Win Rate > 50%, Profit Factor > 1.2, Sharpe > 1.0",
+            "Cada 2 semanas: backtest 90 dias y compara con paper",
+            "Si Sharpe < 1.0 por 2 semanas: ejecuta Auto-Tuner",
+            "Consulta Signal Accuracy para ver mejores activos"
+          ].map((item, i) => (
+            <div key={i} style={{ color: muted, fontSize: 11, lineHeight: 1.8, paddingLeft: 8 }}>{"\u2022"} {item}</div>
+          ))}
+        </div>
+
+        <div style={{ ...sTitle }}>Checklist Diario de Indicadores</div>
+        <GuideTable headers={["Indicador", "Valor Optimo", "Si Fuera de Rango"]} rows={[
+          ["Fear & Greed", "25-75", "< 25: buscar compras. > 75: reducir"],
+          ["Confluencia", "3/3 TFs", "< 2: no operar"],
+          ["R:R Ratio", ">= 2.0", "< 1.5: no operar"],
+          ["Funding Rate", "-0.05% a +0.05%", "Extremos: operar contrario"],
+          ["Drawdown", "< 10%", "> 15%: circuit breaker"],
+          ["Win Rate", "> 50%", "< 45%: revisar parametros"],
+          ["Profit Factor", "> 1.5", "< 1.0: pausar y reoptimizar"],
+          ["Regimen", "TRENDING", "VOLATILE: reducir tamano"],
+        ]} />
+        <div style={alertBox}>⚠ <strong>Reglas de oro:</strong> Nunca sin stop-loss. Siempre 50% en TP1. No operes alts en BTC SEASON. Si pierdes 3 seguidos, para y analiza.</div>
+      </div>);
+
+      case 28: return (<div>
+        <div style={sectionHeaderStyle}>🎯 29. Guia de Uso: Mejores Resultados</div>
         <p style={{ color: muted, fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>Sigue estos pasos para sacar el maximo provecho de Sentix Pro:</p>
         <div style={{ ...sTitle }}>Fase 1: Configuracion (Dia 1)</div>
         <div style={{ ...card, padding: 14, marginBottom: 14 }}>
@@ -652,8 +899,8 @@ El sistema:
         <div style={alertBox}>⚠ <strong>Reglas de oro:</strong> Nunca sin stop-loss. Siempre 50% en TP1. No operes alts en BTC SEASON. Si pierdes 3 seguidos, para y analiza. Usa Kill Switch si algo esta mal.</div>
       </div>);
 
-      case 21: return (<div>
-        <div style={sectionHeaderStyle}>📐 22. Parametros Recomendados por Perfil</div>
+      case 29: return (<div>
+        <div style={sectionHeaderStyle}>📐 30. Parametros Recomendados por Perfil</div>
         <div style={{ ...sTitle }}>Conservador (principiante)</div>
         <GuideTable headers={["Parametro", "Valor", "Razon"]} rows={[
           ["Riesgo por trade", "1%", "Minimiza perdidas mientras aprendes"],
@@ -687,8 +934,8 @@ El sistema:
         <div style={alertBox}>⚠ El perfil agresivo requiere experiencia y capital que puedas perder. No uses si eres nuevo.</div>
       </div>);
 
-      case 22: return (<div>
-        <div style={sectionHeaderStyle}>📖 23. Glosario Rapido</div>
+      case 30: return (<div>
+        <div style={sectionHeaderStyle}>📖 31. Glosario Rapido</div>
         <GuideTable headers={["Termino", "Significado"]} rows={[
           [<strong>ATR</strong>, "Average True Range. Mide la volatilidad tipica del activo."],
           [<strong>RSI</strong>, "Relative Strength Index. Sobrecompra (>70) y sobreventa (<30)."],
@@ -720,9 +967,17 @@ El sistema:
           [<strong>Market Regime</strong>, "Estado del mercado: trending, ranging o volatile."],
           [<strong>Auto-Tuner</strong>, "Optimizacion automatica de parametros con aprobacion Telegram."],
           [<strong>APM</strong>, "Advanced Portfolio Management. Multi-wallet con 17 proveedores."],
+          [<strong>VaR</strong>, "Value-at-Risk. Maxima perdida esperada en un dia (95% confianza)."],
+          [<strong>Alpha Decay</strong>, "Degradacion del valor de una senal con el paso del tiempo."],
+          [<strong>SSE</strong>, "Server-Sent Events. Actualizaciones en tiempo real al dashboard."],
+          [<strong>Perpetuos</strong>, "Contratos de futuros sin fecha de expiracion. Con apalancamiento."],
+          [<strong>Sortino Ratio</strong>, "Como Sharpe pero solo penaliza caidas (downside risk)."],
+          [<strong>Calmar Ratio</strong>, "Retorno anualizado dividido entre Max Drawdown."],
+          [<strong>Asset Rotation</strong>, "Seleccion automatica de mejores activos por momentum."],
+          [<strong>On-Chain</strong>, "Datos directos del blockchain (mempool, hash rate, flujos)."],
         ]} />
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 10, color: muted, fontFamily: "monospace" }}>
-          Sentix Pro v6.0 · Motor de 14 factores · Multi-timeframe · Order Book · Risk Engine · Kelly · Monte Carlo
+          Sentix Pro v7.0 · Motor 14+ Factores · ML Ensemble · Auto-Tuner · Multi-timeframe · Bybit Spot & Perpetuos · Risk Engine · Kelly · Monte Carlo
         </div>
       </div>);
 
@@ -751,7 +1006,7 @@ El sistema:
           background: "rgba(168,85,247,0.2)", borderRadius: 20,
           fontSize: 10, color: purple, fontWeight: 700
         }}>
-          v6.0 · 14 Factores · Risk Engine · Kelly · Monte Carlo
+          v7.0 · 14+ Factores · ML Ensemble · Auto-Tuner · Bybit Perpetuos
         </div>
       </div>
 
