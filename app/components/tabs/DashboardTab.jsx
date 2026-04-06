@@ -420,13 +420,13 @@ export default function DashboardTab({
             const currentCapital = isLiveMode
               ? parseFloat(bybitOverview?.balance?.total || 0)
               : (pm?.currentCapital || paperConfig?.initial_capital || 10000);
-            const totalPnl = isLiveMode ? 0 : (pm?.totalPnl || 0);
-            const winRate = isLiveMode ? 0 : (pm?.winRate || 0);
+            const totalPnl = pm?.totalPnl || 0;
+            const winRate = pm?.winRate || 0;
             const openCount = isLiveMode
               ? (bybitOverview?.positions_count || 0)
               : (Array.isArray(paperPositions) ? paperPositions.filter(p => p.status === 'open').length : 0);
-            const maxDD = isLiveMode ? 0 : (pm?.maxDrawdown || 0);
-            const profitFactor = isLiveMode ? 0 : (pm?.profitFactor || 0);
+            const maxDD = pm?.maxDrawdown || 0;
+            const profitFactor = pm?.profitFactor || 0;
 
             return (
               <div>
@@ -479,7 +479,7 @@ export default function DashboardTab({
                   for (const tr of closedTrades) {
                     const regime = tr.entry_regime || 'unknown';
                     if (!regimeStats[regime]) regimeStats[regime] = { wins: 0, losses: 0 };
-                    const pnl = tr.pnl || ((tr.exit_price - tr.entry_price) * tr.size * (tr.direction === 'SHORT' ? -1 : 1));
+                    const pnl = parseFloat(tr.realized_pnl) || ((parseFloat(tr.exit_price) - parseFloat(tr.entry_price)) * parseFloat(tr.quantity || tr.size || 0) * (tr.direction === 'SHORT' ? -1 : 1)) || 0;
                     if (pnl >= 0) regimeStats[regime].wins++; else regimeStats[regime].losses++;
                   }
                   const entries = Object.entries(regimeStats).filter(([, s]) => s.wins + s.losses >= 2);
@@ -513,7 +513,7 @@ export default function DashboardTab({
                   <div>
                     <div style={{ fontSize: 10, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t('dash.lastTrades')}</div>
                     {closedTrades.slice(-5).reverse().map((t, i) => {
-                      const pnl = t.pnl || ((t.exit_price - t.entry_price) * t.size * (t.direction === 'SHORT' ? -1 : 1));
+                      const pnl = parseFloat(t.realized_pnl) || ((parseFloat(t.exit_price) - parseFloat(t.entry_price)) * parseFloat(t.quantity || t.size || 0) * (t.direction === 'SHORT' ? -1 : 1)) || 0;
                       const ago = t.closed_at ? (() => {
                         const mins = Math.floor((Date.now() - new Date(t.closed_at).getTime()) / 60000);
                         if (mins < 60) return `${mins}m`;

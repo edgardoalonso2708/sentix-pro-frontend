@@ -233,7 +233,7 @@ export default function SentixProFrontend() {
         authFetch(`${API_URL}/api/positions/${userIdRef.current}`),
         authFetch(`${API_URL}/api/paper/performance/${userIdRef.current}`),
         authFetch(`${API_URL}/api/paper/history/${userIdRef.current}?status=closed&limit=200&offset=0`),
-        authFetch(`${API_URL}/api/paper/equity/${userIdRef.current}?days=7`),
+        authFetch(`${API_URL}/api/paper/equity/${userIdRef.current}?days=30`),
         authFetch(`${API_URL}/api/paper/performance-advanced/${userIdRef.current}?days=${advancedPerfDays}`),
       ]);
       if (cfgRes.status === 'fulfilled' && cfgRes.value.ok) {
