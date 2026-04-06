@@ -179,7 +179,7 @@ export default function SignalsTab({
                         background: `${statusColor}20`, color: statusColor,
                         fontWeight: 700, textTransform: 'uppercase'
                       }}>
-                        {status === 'tightening' ? '\u25B2' : status === 'relaxing' ? '\u25BC' : '\u25CF'} {statusLabel}
+                        {status === 'tightening' ? '▲' : status === 'relaxing' ? '▼' : '●'} {statusLabel}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -775,7 +775,7 @@ export default function SignalsTab({
                       return (
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 9, color: f.color, fontWeight: 600 }}>
-                            \u25CF {(signal.freshness || 'fresh').toUpperCase()}
+                            {"●"} {(signal.freshness || 'fresh').toUpperCase()}
                           </span>
                           <span style={{ fontSize: 9, color: muted }}>{f.label}</span>
                         </div>
