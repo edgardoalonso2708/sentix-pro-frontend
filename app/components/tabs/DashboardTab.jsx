@@ -561,14 +561,22 @@ export default function DashboardTab({
 
         {/* CURVA DE EQUITY */}
         {(() => {
-          const configCap = paperConfig?.initial_capital || 10000;
-          const hasRealtime = realtimeEquityCurve && realtimeEquityCurve.length >= 2;
+          const configCap = paperConfig?.current_capital || paperConfig?.initial_capital || 10000;
+
+          // Only use realtime snapshots if they have recent data (within last 3 days)
+          const now = Date.now();
+          const recentCutoff = now - 3 * 24 * 60 * 60 * 1000;
+          const recentSnapshots = (realtimeEquityCurve || []).filter(pt =>
+            new Date(pt.timestamp).getTime() > recentCutoff
+          );
+          const hasRealtime = recentSnapshots.length >= 2;
+
           let equityData;
           let isRealtime = false;
 
           if (hasRealtime) {
             isRealtime = true;
-            equityData = realtimeEquityCurve.map((pt) => {
+            equityData = recentSnapshots.map((pt) => {
               const eq = parseFloat(pt.equity);
               return {
                 date: new Date(pt.timestamp).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -577,19 +585,18 @@ export default function DashboardTab({
                 drawdown: 0
               };
             });
-            // Calculate drawdown using first data point as baseline (works for both paper and Bybit)
             let peak = equityData[0]?.equity || configCap;
             for (const pt of equityData) {
               if (pt.equity > peak) peak = pt.equity;
               pt.drawdown = peak > 0 ? Math.round(((peak - pt.equity) / peak) * 10000) / 100 : 0;
             }
           } else {
+            // Compute equity curve from closed trades (works for both paper and Bybit)
             equityData = computePaperEquityCurve(paperHistory, configCap);
           }
 
           if (equityData.length < 2) return null;
 
-          // Use first data point as baseline — works for paper ($10k) or Bybit ($84k)
           const initialCap = equityData[0]?.equity || configCap;
           const latestEquity = equityData[equityData.length - 1]?.equity || initialCap;
           const totalReturn = ((latestEquity - initialCap) / initialCap * 100).toFixed(2);
@@ -598,7 +605,7 @@ export default function DashboardTab({
           return (
             <div style={{ ...card, marginTop: 4 }}>
               <div style={{ ...sTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{t('dash.equityCurve')} {isRealtime ? '(Real-time)' : '(Paper Trading)'}</span>
+                <span>{t('dash.equityCurve')} {isRealtime ? '(Real-time)' : '(Trade History)'}</span>
                 <span style={{ fontSize: 11, color: returnColor, fontWeight: 600 }}>
                   {totalReturn >= 0 ? '+' : ''}{totalReturn}%
                 </span>
