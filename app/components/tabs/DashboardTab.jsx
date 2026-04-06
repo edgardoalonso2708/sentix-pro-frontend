@@ -559,33 +559,38 @@ export default function DashboardTab({
           })()}
         </div>
 
-        {/* CURVA DE EQUITY (Paper Trading) */}
+        {/* CURVA DE EQUITY */}
         {(() => {
-          const initialCap = paperConfig?.initial_capital || 10000;
+          const configCap = paperConfig?.initial_capital || 10000;
           const hasRealtime = realtimeEquityCurve && realtimeEquityCurve.length >= 2;
           let equityData;
           let isRealtime = false;
 
           if (hasRealtime) {
             isRealtime = true;
-            let peak = initialCap;
             equityData = realtimeEquityCurve.map((pt) => {
               const eq = parseFloat(pt.equity);
-              if (eq > peak) peak = eq;
-              const dd = peak > 0 ? ((peak - eq) / peak) * 100 : 0;
               return {
                 date: new Date(pt.timestamp).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 equity: eq,
                 unrealized: parseFloat(pt.unrealized || 0),
-                drawdown: Math.round(dd * 100) / 100
+                drawdown: 0
               };
             });
+            // Calculate drawdown using first data point as baseline (works for both paper and Bybit)
+            let peak = equityData[0]?.equity || configCap;
+            for (const pt of equityData) {
+              if (pt.equity > peak) peak = pt.equity;
+              pt.drawdown = peak > 0 ? Math.round(((peak - pt.equity) / peak) * 10000) / 100 : 0;
+            }
           } else {
-            equityData = computePaperEquityCurve(paperHistory, initialCap);
+            equityData = computePaperEquityCurve(paperHistory, configCap);
           }
 
           if (equityData.length < 2) return null;
 
+          // Use first data point as baseline — works for paper ($10k) or Bybit ($84k)
+          const initialCap = equityData[0]?.equity || configCap;
           const latestEquity = equityData[equityData.length - 1]?.equity || initialCap;
           const totalReturn = ((latestEquity - initialCap) / initialCap * 100).toFixed(2);
           const returnColor = totalReturn >= 0 ? green : red;
