@@ -568,6 +568,20 @@ export default function SignalsTab({
                           DXY {signal.macroContext.dxy} {signal.macroContext.dxyRegime === 'risk_on' ? 'RISK ON' : 'RISK OFF'}
                         </div>
                       )}
+                      {signal.macroContext.lowLiquidity && (
+                        <div style={{
+                          fontSize: 9,
+                          color: red,
+                          fontWeight: 700,
+                          background: `${red}15`,
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          textTransform: "uppercase",
+                          animation: "pulse 2s infinite"
+                        }}>
+                          ⚠ LOW LIQUIDITY ({signal.macroContext.volumeChange24h > 0 ? '+' : ''}{signal.macroContext.volumeChange24h?.toFixed(0) || ''}% vol)
+                        </div>
+                      )}
                     </div>
                   )}
 
