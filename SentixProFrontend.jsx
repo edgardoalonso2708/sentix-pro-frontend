@@ -242,11 +242,19 @@ export default function SentixProFrontend() {
               sublabel: "Market share",
               color: amber 
             },
-            { 
-              label: "Total Market Cap", 
-              value: formatLargeNumber(marketData.macro?.globalMcap || 0),
-              sublabel: "All cryptocurrencies",
-              color: blue 
+            {
+              label: "Vol 24h Global",
+              value: formatLargeNumber(marketData.macro?.globalVolume || 0),
+              sublabel: (() => {
+                const vc = marketData.macro?.volumeChange24h;
+                if (vc == null || vc === 0) return 'Global crypto volume';
+                return `${vc > 0 ? '+' : ''}${vc}% vs anterior`;
+              })(),
+              color: (() => {
+                const vc = marketData.macro?.volumeChange24h;
+                if (vc == null || vc === 0) return muted;
+                return vc > 5 ? green : vc < -5 ? red : amber;
+              })()
             },
             { 
               label: "Gold Price", 
