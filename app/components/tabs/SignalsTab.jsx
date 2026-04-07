@@ -370,6 +370,38 @@ export default function SignalsTab({
                     </div>
                   )}
 
+                  {/* Volume Profile Badge (POC/VAH/VAL) */}
+                  {signal.indicators?.poc != null && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                      padding: "4px 8px", background: `${purple}10`, borderRadius: 4,
+                      borderLeft: `2px solid ${purple}`
+                    }}>
+                      <span style={{ fontSize: 9, color: purple, fontWeight: 700 }}>VP</span>
+                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        VAL {formatPrice(signal.indicators.val)}
+                      </span>
+                      <span style={{ fontSize: 9, color: text, fontWeight: 700, fontFamily: "monospace" }}>
+                        POC {formatPrice(signal.indicators.poc)}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                        VAH {formatPrice(signal.indicators.vah)}
+                      </span>
+                      <span style={{
+                        fontSize: 8, fontWeight: 700, fontFamily: "monospace",
+                        padding: "1px 4px", borderRadius: 3,
+                        background: signal.indicators.vpPosition === 'at_poc' ? `${green}20`
+                          : signal.indicators.vpPosition === 'inside_va' ? `${blue}15`
+                          : `${amber}20`,
+                        color: signal.indicators.vpPosition === 'at_poc' ? green
+                          : signal.indicators.vpPosition === 'inside_va' ? blue
+                          : amber
+                      }}>
+                        {(signal.indicators.vpPosition || '').replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+
                   {/* BTC Correlation Badge */}
                   {signal.btcCorrelation && signal.asset !== 'BITCOIN' && (
                     <div style={{
