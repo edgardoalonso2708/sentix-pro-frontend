@@ -209,22 +209,22 @@ export default function SignalsTab({
         )}
 
         {/* GATE DIAGNOSTICS — Signal Pipeline Funnel */}
-        {gateDiagnostics && gateDiagnostics.gates && (() => {
+        {gateDiagnostics && gateDiagnostics.total != null && (() => {
           const g = gateDiagnostics;
           const passRate = parseFloat(g.passRate) || 0;
           const passColor = passRate >= 20 ? green : passRate >= 5 ? amber : red;
 
           const gates = [
-            { key: 'hold', label: 'HOLD (score too low)', count: g.gates?.hold || g.hold || 0 },
-            { key: 'strength_blocked', label: 'Strength blocked', count: g.gates?.strength_blocked || g.strength_blocked || 0 },
-            { key: 'missing_levels', label: 'No trade levels', count: g.gates?.missing_levels || g.missing_levels || 0 },
-            { key: 'invalid_levels', label: 'Invalid SL/TP', count: g.gates?.invalid_levels || g.invalid_levels || 0 },
-            { key: 'low_rr', label: 'Low risk/reward', count: g.gates?.low_rr || g.low_rr || 0 },
-            { key: 'low_confluence', label: 'Low confluence', count: g.gates?.low_confluence || g.low_confluence || 0 },
-            { key: 'position_size', label: 'Position too small', count: g.gates?.position_size || g.position_size || 0 },
-            { key: 'risk_rejected', label: 'Risk engine rejected', count: g.gates?.risk_rejected || g.risk_rejected || 0 },
-            { key: 'order_create_fail', label: 'Order create fail', count: g.gates?.order_create_fail || g.order_create_fail || 0 },
-            { key: 'submit_fail', label: 'Submit fail', count: g.gates?.submit_fail || g.submit_fail || 0 },
+            { key: 'hold', label: 'HOLD (score too low)', count: g.hold || 0 },
+            { key: 'strength_blocked', label: 'Strength blocked', count: g.strength_blocked || 0 },
+            { key: 'missing_levels', label: 'No trade levels', count: g.missing_levels || 0 },
+            { key: 'invalid_levels', label: 'Invalid SL/TP', count: g.invalid_levels || 0 },
+            { key: 'low_rr', label: 'Low risk/reward', count: g.low_rr || 0 },
+            { key: 'low_confluence', label: 'Low confluence', count: g.low_confluence || 0 },
+            { key: 'position_size', label: 'Position too small', count: g.position_size || 0 },
+            { key: 'risk_rejected', label: 'Risk engine rejected', count: g.risk_rejected || 0 },
+            { key: 'order_create_fail', label: 'Order create fail', count: g.order_create_fail || 0 },
+            { key: 'submit_fail', label: 'Submit fail', count: g.submit_fail || 0 },
           ].filter(x => x.count > 0).sort((a, b) => b.count - a.count);
 
           const total = g.total || 0;
