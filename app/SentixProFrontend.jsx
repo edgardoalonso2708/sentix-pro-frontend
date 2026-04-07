@@ -151,6 +151,9 @@ export default function SentixProFrontend() {
   // APM/Monitor tab state
   const [apmData, setApmData] = useState(null);
 
+  // Gate diagnostics state
+  const [gateDiagnostics, setGateDiagnostics] = useState(null);
+
   // ─── FETCH APM METRICS ───────────────────────────────────────────────────────
   const fetchMetrics = useCallback(async () => {
     try {
@@ -294,6 +297,18 @@ export default function SentixProFrontend() {
     }
   }, [API_URL]);
 
+  const fetchGateDiagnostics = useCallback(async () => {
+    try {
+      const response = await authFetch(`${API_URL}/api/health/gate-diagnostics`);
+      if (response.ok) {
+        const data = await response.json();
+        setGateDiagnostics(data);
+      }
+    } catch (error) {
+      console.error('Error fetching gate diagnostics:', error);
+    }
+  }, [API_URL]);
+
   // ─── FETCH WALLETS & PORTFOLIO FROM BACKEND ──────────────────────────────
   const fetchWallets = useCallback(async () => {
     try {
@@ -388,6 +403,7 @@ export default function SentixProFrontend() {
         fetchSystemHealth(),
         fetchMetrics(),
         fetchAccuracy(),
+        fetchGateDiagnostics(),
       ]);
       setLoading(false);
     };
@@ -409,13 +425,14 @@ export default function SentixProFrontend() {
       fetchBacktestHistory();
       fetchMetrics();
       fetchAccuracy();
+      fetchGateDiagnostics();
     }, 300000);
 
     return () => {
       clearInterval(interval);
       clearInterval(slowInterval);
     };
-  }, [authEnabled, authLoading, fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy, sseConnected]);
+  }, [authEnabled, authLoading, fetchMarketData, fetchSignals, fetchAlerts, fetchDashboardPaper, fetchBacktestHistory, fetchSystemHealth, fetchMetrics, fetchAccuracy, fetchGateDiagnostics, sseConnected]);
 
   // ─── FETCH BACKTEST EQUITY CURVE ─────────────────────────────────────────
   useEffect(() => {
@@ -966,7 +983,7 @@ export default function SentixProFrontend() {
         {/* Tab Content — lazy-loaded with Suspense for code splitting */}
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>{t('main.loading')}</div>}>
         {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} execMode={execMode} authFetch={authFetch} userId={userIdRef.current} />}
-        {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
+        {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} gateDiagnostics={gateDiagnostics} />}
         {tab === "portfolio" && <PortfolioTab
           portfolio={portfolio} wallets={wallets} marketData={marketData}
           portfolioLoading={portfolioLoading} walletsLoading={walletsLoading}
