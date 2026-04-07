@@ -958,10 +958,10 @@ export default function DashboardTab({
                         <span style={{ fontWeight: 700, color: text }}>{r.asset?.toUpperCase()}</span>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 700, color: r.score > 0 ? green : red }}>
+                        <div style={{ fontWeight: 700, color: r.score > 0.01 ? green : r.score < -0.01 ? red : muted }}>
                           {r.score > 0 ? '+' : ''}{r.score?.toFixed(2)}
                         </div>
-                        <div style={{ fontSize: 9, color: muted }}>
+                        <div style={{ fontSize: 9, color: r.change24h > 0 ? green : r.change24h < 0 ? red : muted }}>
                           24h: {r.change24h > 0 ? '+' : ''}{r.change24h?.toFixed(1)}%
                         </div>
                       </div>
