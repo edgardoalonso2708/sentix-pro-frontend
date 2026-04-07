@@ -9,7 +9,7 @@ import { authFetch } from './lib/api';
 // Lazy-loaded tabs (code splitting)
 const DashboardTab = lazy(() => import('./components/tabs/DashboardTab'));
 const SignalsTab = lazy(() => import('./components/tabs/SignalsTab'));
-const AlertsTab = lazy(() => import('./components/tabs/AlertsTab'));
+const SystemTab = lazy(() => import('./components/tabs/SystemTab'));
 const APMTab = lazy(() => import('./components/tabs/APMTab'));
 const PortfolioTab = lazy(() => import('./components/tabs/PortfolioTab'));
 const ExecutionTab = lazy(() => import('./components/tabs/ExecutionTab'));
@@ -950,7 +950,7 @@ export default function SentixProFrontend() {
             { k: "signals", label: `🎯 ${t('tab.signals')}`, desc: t('tab.signals.desc') },
             { k: "execution", label: `⚡ ${t('tab.execution')}`, desc: t('tab.execution.desc') },
             { k: "strategy", label: `⚙ ${t('tab.strategy')}`, desc: t('tab.strategy.desc') },
-            { k: "alerts", label: `🔔 ${t('tab.alerts')}`, desc: t('tab.alerts.desc') },
+            { k: "system", label: `🖥 ${t('tab.system')}`, desc: t('tab.system.desc') },
             { k: "portfolio", label: `💼 ${t('tab.portfolio')}`, desc: t('tab.portfolio.desc') },
             { k: "reports", label: `📄 ${t('tab.reports')}`, desc: t('tab.reports.desc') }
           ].map(({ k, label, desc }) => (
@@ -983,7 +983,7 @@ export default function SentixProFrontend() {
         {/* Tab Content — lazy-loaded with Suspense for code splitting */}
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300, color: colors.muted, fontFamily: 'monospace', fontSize: 12 }}>{t('main.loading')}</div>}>
         {tab === "dashboard" && <DashboardTab marketData={marketData} signals={signals} paperMetrics={paperMetrics} paperHistory={paperHistory} paperPositions={paperPositions} paperConfig={paperConfig} realtimeEquityCurve={realtimeEquityCurve} backtestHistory={backtestHistory} backtestEquityCurve={backtestEquityCurve} systemHealth={systemHealth} sseConnected={sseConnected} lastUpdate={lastUpdate} setTab={setTab} setStrategySubTab={setStrategySubTab} apiUrl={API_URL} execMode={execMode} authFetch={authFetch} userId={userIdRef.current} />}
-        {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} gateDiagnostics={gateDiagnostics} />}
+        {tab === "signals" && <SignalsTab signals={signals} signalAccuracy={signalAccuracy} accuracyDays={accuracyDays} setAccuracyDays={setAccuracyDays} fetchAccuracy={fetchAccuracy} />}
         {tab === "portfolio" && <PortfolioTab
           portfolio={portfolio} wallets={wallets} marketData={marketData}
           portfolioLoading={portfolioLoading} walletsLoading={walletsLoading}
@@ -1002,7 +1002,7 @@ export default function SentixProFrontend() {
           addToPortfolio={addToPortfolio} removeFromPortfolio={removeFromPortfolio}
           authFetch={authFetch} apiUrl={API_URL} userId={USER_ID}
         />}
-        {tab === "alerts" && <AlertsTab alertConfig={alertConfig} setAlertConfig={setAlertConfig} alerts={alerts} alertTestResult={alertTestResult} setAlertTestResult={setAlertTestResult} alertTesting={alertTesting} setAlertTesting={setAlertTesting} alertShowFilters={alertShowFilters} setAlertShowFilters={setAlertShowFilters} alertFilterForm={alertFilterForm} setAlertFilterForm={setAlertFilterForm} alertSavingFilters={alertSavingFilters} setAlertSavingFilters={setAlertSavingFilters} alertFilterSaveMsg={alertFilterSaveMsg} setAlertFilterSaveMsg={setAlertFilterSaveMsg} apiUrl={API_URL} />}
+        {tab === "system" && <SystemTab alertConfig={alertConfig} setAlertConfig={setAlertConfig} alerts={alerts} alertTestResult={alertTestResult} setAlertTestResult={setAlertTestResult} alertTesting={alertTesting} setAlertTesting={setAlertTesting} alertShowFilters={alertShowFilters} setAlertShowFilters={setAlertShowFilters} alertFilterForm={alertFilterForm} setAlertFilterForm={setAlertFilterForm} alertSavingFilters={alertSavingFilters} setAlertSavingFilters={setAlertSavingFilters} alertFilterSaveMsg={alertFilterSaveMsg} setAlertFilterSaveMsg={setAlertFilterSaveMsg} apiUrl={API_URL} gateDiagnostics={gateDiagnostics} />}
         {tab === "execution" && <ExecutionTab
           execSubTab={execSubTab} setExecSubTab={setExecSubTab}
           execOrders={execOrders} execRiskDashboard={execRiskDashboard} execAuditLog={execAuditLog}

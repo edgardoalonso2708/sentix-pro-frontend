@@ -11,7 +11,7 @@ const { bg, bg2, bg3, border, text, muted, green, red, amber, blue, purple } = c
 
 export default function SignalsTab({
   signals, signalAccuracy, accuracyDays,
-  setAccuracyDays, fetchAccuracy, gateDiagnostics,
+  setAccuracyDays, fetchAccuracy,
 }) {
     const { t } = useLanguage();
     const confluenceColor = (c) => c === 'strong' ? green : c === 'moderate' ? amber : c === 'conflicting' ? red : muted;
@@ -207,105 +207,6 @@ export default function SignalsTab({
             </div>
           </div>
         )}
-
-        {/* GATE DIAGNOSTICS — Signal Pipeline Funnel */}
-        {gateDiagnostics && gateDiagnostics.total != null && (() => {
-          const g = gateDiagnostics;
-          const passRate = parseFloat(g.passRate) || 0;
-          const passColor = passRate >= 20 ? green : passRate >= 5 ? amber : red;
-
-          const gates = [
-            { key: 'hold', label: 'HOLD (score too low)', count: g.hold || 0 },
-            { key: 'strength_blocked', label: 'Strength blocked', count: g.strength_blocked || 0 },
-            { key: 'missing_levels', label: 'No trade levels', count: g.missing_levels || 0 },
-            { key: 'invalid_levels', label: 'Invalid SL/TP', count: g.invalid_levels || 0 },
-            { key: 'low_rr', label: 'Low risk/reward', count: g.low_rr || 0 },
-            { key: 'low_confluence', label: 'Low confluence', count: g.low_confluence || 0 },
-            { key: 'position_size', label: 'Position too small', count: g.position_size || 0 },
-            { key: 'risk_rejected', label: 'Risk engine rejected', count: g.risk_rejected || 0 },
-            { key: 'order_create_fail', label: 'Order create fail', count: g.order_create_fail || 0 },
-            { key: 'submit_fail', label: 'Submit fail', count: g.submit_fail || 0 },
-          ].filter(x => x.count > 0).sort((a, b) => b.count - a.count);
-
-          const total = g.total || 0;
-          const executed = g.executed || 0;
-          const bottleneck = g.bottleneck;
-
-          return (
-            <div style={card}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div style={sTitle}>SIGNAL PIPELINE</div>
-                {g.ts && <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
-                  Last cycle: {new Date(g.ts).toLocaleTimeString()}
-                </span>}
-              </div>
-
-              {/* Summary metrics */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
-                <div style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4, fontWeight: 600 }}>SIGNALS IN</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: text, fontFamily: "monospace" }}>{total}</div>
-                </div>
-                <div style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4, fontWeight: 600 }}>TRADES OUT</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: green, fontFamily: "monospace" }}>{executed}</div>
-                </div>
-                <div style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4, fontWeight: 600 }}>PASS RATE</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: passColor, fontFamily: "monospace" }}>{g.passRate}</div>
-                </div>
-                <div style={{ background: bg3, borderRadius: 8, padding: "12px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: muted, marginBottom: 4, fontWeight: 600 }}>BOTTLENECK</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: bottleneck?.gate === 'none' ? green : red, fontFamily: "monospace", marginTop: 4 }}>
-                    {bottleneck?.gate === 'none' ? 'NONE' : (bottleneck?.gate || '--').toUpperCase().replace(/_/g, ' ')}
-                  </div>
-                  {bottleneck?.count > 0 && <div style={{ fontSize: 9, color: muted, marginTop: 2 }}>{bottleneck.count} blocked</div>}
-                </div>
-              </div>
-
-              {/* Gate breakdown bars */}
-              {gates.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 10, color: muted, fontFamily: "monospace", fontWeight: 600, marginBottom: 8, textTransform: "uppercase" }}>
-                    Rejection breakdown
-                  </div>
-                  {gates.map(gate => {
-                    const pct = total > 0 ? (gate.count / total) * 100 : 0;
-                    return (
-                      <div key={gate.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <div style={{ width: 130, fontSize: 10, color: muted, fontFamily: "monospace", textAlign: "right", flexShrink: 0 }}>
-                          {gate.label}
-                        </div>
-                        <div style={{ flex: 1, height: 14, background: "rgba(255,255,255,0.04)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
-                          <div style={{
-                            height: "100%",
-                            width: `${Math.min(100, pct)}%`,
-                            background: gate.key === (bottleneck?.gate) ? `${red}cc` : `${amber}88`,
-                            borderRadius: 4,
-                            transition: "width 0.3s ease",
-                            minWidth: pct > 0 ? 2 : 0,
-                          }} />
-                        </div>
-                        <div style={{ width: 50, fontSize: 11, fontWeight: 700, color: text, fontFamily: "monospace", textAlign: "right" }}>
-                          {gate.count}
-                        </div>
-                        <div style={{ width: 40, fontSize: 9, color: muted, fontFamily: "monospace" }}>
-                          {pct.toFixed(0)}%
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {gates.length === 0 && total > 0 && (
-                <div style={{ textAlign: "center", padding: 16, color: green, fontSize: 12, fontFamily: "monospace" }}>
-                  All signals passed through the pipeline
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         {/* SIGNAL CARDS */}
         <div style={card}>
