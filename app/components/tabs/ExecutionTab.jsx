@@ -617,6 +617,52 @@ export default function ExecutionTab({
                 </div>
               </div>
             )}
+
+            {/* ANTI-MARTINGALE ALERT */}
+            {paperMetrics && paperMetrics.streakType === 'loss' && paperMetrics.currentStreak >= 3 && (() => {
+              const losses = paperMetrics.currentStreak;
+              const scale = losses >= 5 ? 25 : losses >= 4 ? 35 : 50;
+              return (
+                <div style={{
+                  ...card, padding: "14px 20px",
+                  background: `linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))`,
+                  border: `1px solid ${red}44`,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: red, fontFamily: "monospace", marginBottom: 4 }}>
+                        ANTI-MARTINGALE ACTIVE
+                      </div>
+                      <div style={{ fontSize: 11, color: muted, fontFamily: "monospace" }}>
+                        {losses} consecutive losses detected — position sizing reduced to protect capital
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: red, fontFamily: "monospace" }}>
+                        {scale}%
+                      </div>
+                      <div style={{ fontSize: 9, color: muted, fontFamily: "monospace", marginTop: 2 }}>
+                        SIZING SCALE
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                    {[3, 4, 5].map(n => (
+                      <div key={n} style={{
+                        flex: 1, height: 6, borderRadius: 3,
+                        background: losses >= n ? `${red}cc` : "rgba(255,255,255,0.06)",
+                        transition: "background 0.3s"
+                      }} />
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <span style={{ fontSize: 8, color: muted, fontFamily: "monospace" }}>3 losses: 50%</span>
+                    <span style={{ fontSize: 8, color: muted, fontFamily: "monospace" }}>4 losses: 35%</span>
+                    <span style={{ fontSize: 8, color: muted, fontFamily: "monospace" }}>5+ losses: 25%</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 

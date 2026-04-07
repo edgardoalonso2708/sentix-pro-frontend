@@ -452,6 +452,23 @@ export default function SignalsTab({
                     </div>
                   )}
 
+                  {/* Mean-Reversion Badge (RANGING regime) */}
+                  {signal.meanReversionBonus && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                      padding: "4px 8px", background: `${blue}12`, borderRadius: 4,
+                      borderLeft: `2px solid ${blue}`
+                    }}>
+                      <span style={{ fontSize: 9, color: blue, fontWeight: 700 }}>MEAN-REV</span>
+                      <span style={{ fontSize: 10, color: signal.meanReversionBonus > 0 ? green : red, fontWeight: 700, fontFamily: "monospace" }}>
+                        {signal.meanReversionBonus > 0 ? '+' : ''}{signal.meanReversionBonus}
+                      </span>
+                      <span style={{ fontSize: 9, color: muted }}>
+                        BB reversion bonus — ranging market
+                      </span>
+                    </div>
+                  )}
+
                   {/* BTC Correlation Badge */}
                   {signal.btcCorrelation && signal.asset !== 'BITCOIN' && (
                     <div style={{
