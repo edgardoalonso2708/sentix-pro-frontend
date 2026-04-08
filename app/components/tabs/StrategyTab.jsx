@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { colors, card, sTitle } from '../../lib/theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import BacktestTab from './BacktestTab';
@@ -412,6 +413,9 @@ function StrategyConfigContent({
           </div>
         </div>
 
+        {/* REGIME MULTIPLIERS */}
+        <RegimeMultipliersSection opt={opt} authFetch={authFetch} apiUrl={apiUrl} t={t} inputStyle={inputStyle} />
+
         {/* LIMITES DE PORTFOLIO */}
         <div style={{ ...card, padding: "16px 20px" }}>
           <div style={sTitle}>{'\u{1F6E1}'} {t('strat.portfolioLimits')}</div>
@@ -673,4 +677,150 @@ function StrategyConfigContent({
         </div>
       </div>
     );
+}
+
+// ─── Regime Multipliers Section (self-contained with local state) ─────────
+const REGIME_DEFAULTS = {
+  regime_trending_up_buy: 1.15, regime_trending_up_sell: 0.70,
+  regime_trending_down_buy: 0.70, regime_trending_down_sell: 1.15,
+  regime_ranging_buy: 0.85, regime_ranging_sell: 0.85,
+  regime_volatile_buy: 0.60, regime_volatile_sell: 0.60,
+};
+
+const REGIME_ROWS = [
+  { key: 'trending_up',   label: 'Trending Up',   color: colors.green,  icon: '\u2197' },
+  { key: 'trending_down', label: 'Trending Down', color: colors.red,    icon: '\u2198' },
+  { key: 'ranging',       label: 'Ranging',       color: colors.amber,  icon: '\u2194' },
+  { key: 'volatile',      label: 'Volatile',      color: colors.purple, icon: '\u26A1' },
+];
+
+function RegimeMultipliersSection({ opt, authFetch, apiUrl, t, inputStyle }) {
+  const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Initialize from active strategy config or defaults
+  const cfgSource = opt.autoTuneConfig?.config || {};
+  const [form, setForm] = useState(() => {
+    const init = {};
+    for (const [k, def] of Object.entries(REGIME_DEFAULTS)) {
+      init[k] = cfgSource[k] ?? def;
+    }
+    return init;
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const params = {};
+      for (const [k, v] of Object.entries(form)) {
+        params[k] = parseFloat(v);
+      }
+      await authFetch(`${apiUrl}/api/autotune/apply-preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ params, name: 'regime-multipliers' })
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.warn('Regime multipliers save failed:', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isModified = (key) => parseFloat(form[key]) !== REGIME_DEFAULTS[key];
+
+  return (
+    <div style={{ ...card, padding: "16px 20px" }}>
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+      >
+        <div style={sTitle}>{'\u{1F30D}'} {t('strat.regimeMultipliers')}</div>
+        <span style={{ color: colors.muted, fontSize: 12 }}>{expanded ? '\u25B2' : '\u25BC'}</span>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 9, color: colors.muted, marginBottom: 14, lineHeight: 1.4 }}>
+            {t('strat.regimeMultipliersDesc')}
+          </div>
+
+          {/* Header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 8, marginBottom: 6 }}>
+            <div style={{ fontSize: 9, color: colors.muted, fontWeight: 700 }}>{t('strat.regimeLabel')}</div>
+            <div style={{ fontSize: 9, color: colors.green, fontWeight: 700, textAlign: 'center' }}>BUY Mult</div>
+            <div style={{ fontSize: 9, color: colors.red, fontWeight: 700, textAlign: 'center' }}>SELL Mult</div>
+          </div>
+
+          {/* Regime rows */}
+          {REGIME_ROWS.map(({ key, label, color, icon }) => {
+            const buyKey = `regime_${key}_buy`;
+            const sellKey = `regime_${key}_sell`;
+            return (
+              <div key={key} style={{
+                display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 8,
+                marginBottom: 6, alignItems: 'center'
+              }}>
+                <div style={{ fontSize: 11, color, fontWeight: 600, fontFamily: 'monospace' }}>
+                  {icon} {label}
+                </div>
+                <div>
+                  <input
+                    type="number" step="0.05" min="0.20" max="1.50"
+                    value={form[buyKey]}
+                    onChange={e => setForm(prev => ({ ...prev, [buyKey]: e.target.value }))}
+                    style={{
+                      ...inputStyle,
+                      textAlign: 'center',
+                      border: isModified(buyKey)
+                        ? `1px solid ${colors.green}60`
+                        : `1px solid ${colors.border}`
+                    }}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="number" step="0.05" min="0.20" max="1.50"
+                    value={form[sellKey]}
+                    onChange={e => setForm(prev => ({ ...prev, [sellKey]: e.target.value }))}
+                    style={{
+                      ...inputStyle,
+                      textAlign: 'center',
+                      border: isModified(sellKey)
+                        ? `1px solid ${colors.green}60`
+                        : `1px solid ${colors.border}`
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={{ fontSize: 8, color: colors.muted, marginTop: 4, marginBottom: 10, lineHeight: 1.3 }}>
+            {t('strat.regimeHint')}
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              padding: "8px 20px",
+              background: saved ? `${colors.green}30` : `linear-gradient(135deg, ${colors.amber}, #d97706)`,
+              border: saved ? `1px solid ${colors.green}` : "none",
+              borderRadius: 6,
+              color: saved ? colors.green : "#000",
+              fontFamily: "monospace", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              opacity: saving ? 0.6 : 1, width: "100%"
+            }}
+          >
+            {saving ? t('strat.saving') : saved ? '\u2713 ' + t('strat.regimeSaved') : '\u{1F4BE} ' + t('strat.saveRegime')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
