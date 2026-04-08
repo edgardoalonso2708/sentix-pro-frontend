@@ -25,6 +25,7 @@ export default function DashboardTab({
     const [orderFlowData, setOrderFlowData] = useState(null);
     const [rotationData, setRotationData] = useState(null);
     const [regimeData, setRegimeData] = useState(null);
+    const [mainnetReadiness, setMainnetReadiness] = useState(null);
     const isLiveMode = execMode === 'live' || execMode === 'perp';
 
     // Fetch Bybit overview when in live mode
@@ -91,6 +92,20 @@ export default function DashboardTab({
       const iv = setInterval(fetchAll, 60 * 1000);
       return () => clearInterval(iv);
     }, [apiUrl, authFetchProp]);
+
+    // Fetch mainnet readiness gate
+    useEffect(() => {
+      if (!authFetchProp || !apiUrl || !userId) return;
+      const fetchReadiness = async () => {
+        try {
+          const res = await authFetchProp(`${apiUrl}/api/paper/mainnet-readiness/${userId}`);
+          if (res.ok) setMainnetReadiness(await res.json());
+        } catch (_) {}
+      };
+      fetchReadiness();
+      const iv = setInterval(fetchReadiness, 5 * 60 * 1000);
+      return () => clearInterval(iv);
+    }, [apiUrl, authFetchProp, userId]);
 
     if (!marketData || !marketData.crypto) {
       return <div style={{ padding: 40, textAlign: 'center', color: muted }}>{t('dash.loadingMarket')}</div>;
@@ -558,6 +573,95 @@ export default function DashboardTab({
             );
           })()}
         </div>
+
+        {/* MAINNET READINESS GATE */}
+        {mainnetReadiness && (
+          <div style={{ ...card, marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={sTitle}>MAINNET READINESS</div>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "4px 12px",
+                borderRadius: 6,
+                background: mainnetReadiness.ready ? "rgba(0,212,170,0.15)" : "rgba(239,68,68,0.15)",
+                color: mainnetReadiness.ready ? green : red,
+                border: `1px solid ${mainnetReadiness.ready ? green : red}`,
+              }}>
+                {mainnetReadiness.ready ? 'READY' : 'NOT READY'}
+              </div>
+            </div>
+
+            {/* Progress bar: trades toward 50 */}
+            {(() => {
+              const tradeCount = mainnetReadiness.metrics?.trades || 0;
+              const target = 50;
+              const pct = Math.min(100, Math.round((tradeCount / target) * 100));
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: muted }}>Trades completados</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: tradeCount >= target ? green : text }}>{tradeCount} / {target}</span>
+                  </div>
+                  <div style={{ height: 6, background: bg3, borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${pct}%`,
+                      borderRadius: 3,
+                      background: tradeCount >= target ? green : purple,
+                      transition: "width 0.5s ease"
+                    }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Criteria checklist */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {[
+                {
+                  label: "Win Rate",
+                  value: mainnetReadiness.metrics?.winRate != null ? `${mainnetReadiness.metrics.winRate.toFixed(1)}%` : "—",
+                  target: "≥ 45%",
+                  passed: mainnetReadiness.criteria?.winRate
+                },
+                {
+                  label: "Profit Factor",
+                  value: mainnetReadiness.metrics?.profitFactor != null ? mainnetReadiness.metrics.profitFactor.toFixed(2) : "—",
+                  target: "≥ 1.30",
+                  passed: mainnetReadiness.criteria?.profitFactor
+                },
+                {
+                  label: "Max Drawdown",
+                  value: mainnetReadiness.metrics?.maxDrawdown != null ? `${mainnetReadiness.metrics.maxDrawdown.toFixed(1)}%` : "—",
+                  target: "≤ 10%",
+                  passed: mainnetReadiness.criteria?.maxDrawdown
+                },
+              ].map(({ label, value, target, passed }) => (
+                <div key={label} style={{
+                  background: bg3,
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  textAlign: "center",
+                  borderLeft: `3px solid ${passed ? green : passed === false ? red : muted}`
+                }}>
+                  <div style={{ fontSize: 9, color: muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: passed ? green : passed === false ? red : muted }}>{value}</div>
+                  <div style={{ fontSize: 9, color: muted, marginTop: 4 }}>{target}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Net P&L if available */}
+            {mainnetReadiness.metrics?.netPnl != null && mainnetReadiness.metrics.trades >= 50 && (
+              <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: muted }}>
+                Net P&L (50 trades): <span style={{ fontWeight: 700, color: mainnetReadiness.metrics.netPnl >= 0 ? green : red }}>
+                  ${mainnetReadiness.metrics.netPnl.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* CURVA DE EQUITY */}
         {(() => {
