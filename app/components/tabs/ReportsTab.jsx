@@ -289,6 +289,8 @@ function PerformanceReport({ t, perf, equityCurve, dailyPnl, paperConfig, paperP
 // REPORT: Trades Analysis
 // ═══════════════════════════════════════════════════════════════════════════════
 function TradesReport({ t, adv, assetPerf, paperHistory, reportDays }) {
+  const [selectedTrade, setSelectedTrade] = useState(null);
+
   if (!paperHistory || paperHistory.length === 0) return <NoData t={t} />;
 
   return (
@@ -441,7 +443,7 @@ function TradesReport({ t, adv, assetPerf, paperHistory, reportDays }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, minWidth: 600 }}>
             <thead>
               <tr>
-                {[t('rep.thAsset'), t('rep.thDir'), t('rep.thEntry'), t('rep.thExit'), t('rep.thPnl'), t('rep.thPnlPct'), t('rep.thDuration'), t('rep.thReason')].map(h => (
+                {[t('rep.thAsset'), t('rep.thDir'), t('rep.thEntry'), t('rep.thExit'), t('rep.thPnl'), t('rep.thPnlPct'), t('rep.thDuration'), t('rep.thReason'), t('rep.thActions')].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -451,19 +453,33 @@ function TradesReport({ t, adv, assetPerf, paperHistory, reportDays }) {
                 .filter(t => t.exit_at && t.realized_pnl != null)
                 .sort((a, b) => new Date(b.exit_at) - new Date(a.exit_at))
                 .slice(0, 20)
-                .map((t, i) => {
-                  const pnl = parseFloat(t.realized_pnl);
-                  const dur = t.entry_at && t.exit_at ? ((new Date(t.exit_at) - new Date(t.entry_at)) / 3600000).toFixed(1) : '—';
+                .map((tr, i) => {
+                  const pnl = parseFloat(tr.realized_pnl);
+                  const dur = tr.entry_at && tr.exit_at ? ((new Date(tr.exit_at) - new Date(tr.entry_at)) / 3600000).toFixed(1) : '—';
                   return (
-                    <tr key={t.id || i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                      <td style={tdStyle}>{t.asset}</td>
-                      <td style={{ ...tdStyle, color: t.direction === 'LONG' ? green : red }}>{t.direction}</td>
-                      <td style={tdStyle}>{formatPrice(t.entry_price)}</td>
-                      <td style={tdStyle}>{formatPrice(t.exit_price)}</td>
+                    <tr key={tr.id || i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                      <td style={tdStyle}>{tr.asset}</td>
+                      <td style={{ ...tdStyle, color: tr.direction === 'LONG' ? green : red }}>{tr.direction}</td>
+                      <td style={tdStyle}>{formatPrice(tr.entry_price)}</td>
+                      <td style={tdStyle}>{formatPrice(tr.exit_price)}</td>
                       <td style={{ ...tdStyle, color: pnl >= 0 ? green : red, fontWeight: 700 }}>${pnl.toFixed(2)}</td>
-                      <td style={{ ...tdStyle, color: pnl >= 0 ? green : red }}>{(t.realized_pnl_percent || 0).toFixed(2)}%</td>
+                      <td style={{ ...tdStyle, color: pnl >= 0 ? green : red }}>{(tr.realized_pnl_percent || 0).toFixed(2)}%</td>
                       <td style={tdStyle}>{dur}h</td>
-                      <td style={tdStyle}>{formatExitReason(t.exit_reason)}</td>
+                      <td style={tdStyle}>{formatExitReason(tr.exit_reason)}</td>
+                      <td style={tdStyle}>
+                        <button
+                          onClick={() => setSelectedTrade(tr)}
+                          style={{
+                            background: `${purple}20`, color: purple, border: `1px solid ${purple}40`,
+                            borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer',
+                            fontWeight: 600, transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={e => { e.target.style.background = `${purple}40`; }}
+                          onMouseLeave={e => { e.target.style.background = `${purple}20`; }}
+                        >
+                          Ver
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -471,6 +487,10 @@ function TradesReport({ t, adv, assetPerf, paperHistory, reportDays }) {
           </table>
         </div>
       </div>
+
+      {selectedTrade && (
+        <TradeDetailModal trade={selectedTrade} t={t} onClose={() => setSelectedTrade(null)} />
+      )}
     </div>
   );
 }
@@ -661,6 +681,259 @@ function NoData({ t }) {
     <div style={{ ...card, padding: 40, textAlign: 'center' }}>
       <div style={{ fontSize: 13, color: muted }}>{t('rep.noData')}</div>
       <div style={{ fontSize: 11, color: muted, marginTop: 6 }}>{t('rep.runPaper')}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRADE DETAIL MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function TradeDetailModal({ trade, t, onClose }) {
+  const snap = trade.signal_snapshot || {};
+  const pnl = parseFloat(trade.realized_pnl) || 0;
+  const dur = trade.entry_at && trade.exit_at
+    ? ((new Date(trade.exit_at) - new Date(trade.entry_at)) / 3600000).toFixed(1)
+    : '—';
+
+  const reasons = trade.entry_reasons
+    ? trade.entry_reasons.split(' • ').filter(Boolean)
+    : [];
+
+  const macro = snap.macroContext || {};
+
+  const sectionStyle = {
+    background: `${bg3}80`, borderRadius: 8, padding: '12px 14px',
+    marginBottom: 10, border: `1px solid ${border}`,
+  };
+  const sectionTitleStyle = {
+    fontSize: 10, fontWeight: 700, color: purple, textTransform: 'uppercase',
+    letterSpacing: '0.08em', marginBottom: 8,
+  };
+  const rowStyle = {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '3px 0', fontSize: 11,
+  };
+  const labelStyle = { color: muted };
+  const valueStyle = { color: text, fontWeight: 600 };
+
+  const strengthColor = (str) => {
+    if (!str) return muted;
+    if (str.includes('STRONG BUY')) return green;
+    if (str.includes('BUY')) return '#4ade80';
+    if (str.includes('STRONG SELL')) return red;
+    if (str.includes('SELL')) return '#f87171';
+    return amber;
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: bg2, border: `1px solid ${border}`, borderRadius: 12,
+          maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto',
+          padding: 0, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px', borderBottom: `1px solid ${border}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: text }}>{trade.asset}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+              background: trade.direction === 'LONG' ? `${green}20` : `${red}20`,
+              color: trade.direction === 'LONG' ? green : red,
+            }}>
+              {trade.direction}
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+              background: `${strengthColor(trade.entry_signal_strength)}20`,
+              color: strengthColor(trade.entry_signal_strength),
+            }}>
+              {trade.entry_signal_strength || '—'}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', color: muted,
+              fontSize: 20, cursor: 'pointer', padding: '0 4px', lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          {/* Entry Signal */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>{t('rep.entrySignal')}</div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.rawScore')}</span>
+              <span style={valueStyle}>{trade.entry_raw_score ?? snap.rawScore ?? '—'}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.confidence')}</span>
+              <span style={valueStyle}>{trade.entry_confidence != null ? `${trade.entry_confidence}%` : '—'}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.confluence')}</span>
+              <span style={valueStyle}>{trade.entry_confluence != null ? `${trade.entry_confluence} TF` : '—'}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.positionSize')}</span>
+              <span style={valueStyle}>{trade.position_size_usd ? `$${parseFloat(trade.position_size_usd).toFixed(2)}` : '—'}</span>
+            </div>
+          </div>
+
+          {/* Entry Reasons */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>{t('rep.entryReasons')}</div>
+            {reasons.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {reasons.map((r, i) => (
+                  <div key={i} style={{
+                    fontSize: 11, color: text, padding: '4px 8px',
+                    background: `rgba(255,255,255,0.03)`, borderRadius: 4,
+                    borderLeft: `2px solid ${purple}60`,
+                  }}>
+                    {r}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: muted, fontStyle: 'italic' }}>{t('rep.noReasons')}</div>
+            )}
+          </div>
+
+          {/* Macro Context */}
+          {(macro.fearGreed || macro.btcDom || macro.dxy || snap.derivatives) && (
+            <div style={sectionStyle}>
+              <div style={sectionTitleStyle}>{t('rep.macroContext')}</div>
+              {macro.fearGreed != null && (
+                <div style={rowStyle}>
+                  <span style={labelStyle}>{t('rep.fearGreed')}</span>
+                  <span style={{
+                    ...valueStyle,
+                    color: macro.fearGreed >= 60 ? green : macro.fearGreed <= 30 ? red : amber,
+                  }}>{macro.fearGreed}</span>
+                </div>
+              )}
+              {macro.btcDom != null && (
+                <div style={rowStyle}>
+                  <span style={labelStyle}>{t('rep.btcDom')}</span>
+                  <span style={valueStyle}>{parseFloat(macro.btcDom).toFixed(1)}%</span>
+                </div>
+              )}
+              {macro.dxy != null && (
+                <div style={rowStyle}>
+                  <span style={labelStyle}>{t('rep.dxy')}</span>
+                  <span style={valueStyle}>{parseFloat(macro.dxy).toFixed(2)}</span>
+                </div>
+              )}
+              {snap.derivatives?.fundingRatePercent != null && (
+                <div style={rowStyle}>
+                  <span style={labelStyle}>{t('rep.funding')}</span>
+                  <span style={{
+                    ...valueStyle,
+                    color: Math.abs(snap.derivatives.fundingRatePercent) > 0.05 ? amber : text,
+                  }}>{snap.derivatives.fundingRatePercent.toFixed(4)}%</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Trade Levels */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>{t('rep.tradeLevels')}</div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.thEntry')}</span>
+              <span style={valueStyle}>{formatPrice(trade.entry_price)}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.thExit')}</span>
+              <span style={valueStyle}>{formatPrice(trade.exit_price)}</span>
+            </div>
+            {trade.stop_loss && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.stopLoss')}</span>
+                <span style={{ ...valueStyle, color: red }}>{formatPrice(trade.stop_loss)}</span>
+              </div>
+            )}
+            {trade.take_profit_1 && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.takeProfit1')}</span>
+                <span style={{ ...valueStyle, color: green }}>{formatPrice(trade.take_profit_1)}</span>
+              </div>
+            )}
+            {trade.take_profit_2 && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.takeProfit2')}</span>
+                <span style={{ ...valueStyle, color: green }}>{formatPrice(trade.take_profit_2)}</span>
+              </div>
+            )}
+            {trade.trailing_stop_current && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.trailingStop')}</span>
+                <span style={{ ...valueStyle, color: amber }}>{formatPrice(trade.trailing_stop_current)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Exit Info & Result */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>{t('rep.exitInfo')}</div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.thReason')}</span>
+              <span style={{
+                ...valueStyle,
+                color: trade.exit_reason === 'stop_loss' ? red
+                  : trade.exit_reason?.includes('take_profit') ? green
+                  : trade.exit_reason === 'trailing_stop' ? amber : text,
+              }}>{formatExitReason(trade.exit_reason)}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>P&L</span>
+              <span style={{ ...valueStyle, color: pnl >= 0 ? green : red, fontSize: 13 }}>
+                ${pnl.toFixed(2)} ({(trade.realized_pnl_percent || 0).toFixed(2)}%)
+              </span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>{t('rep.thDuration')}</span>
+              <span style={valueStyle}>{dur}h</span>
+            </div>
+            {trade.max_favorable != null && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.maxFavorable')}</span>
+                <span style={{ ...valueStyle, color: green }}>${parseFloat(trade.max_favorable).toFixed(2)}</span>
+              </div>
+            )}
+            {trade.max_adverse != null && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>{t('rep.maxAdverse')}</span>
+                <span style={{ ...valueStyle, color: red }}>-${Math.abs(parseFloat(trade.max_adverse)).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Timestamp */}
+          <div style={{ fontSize: 9, color: muted, textAlign: 'center', marginTop: 6 }}>
+            {trade.entry_at ? new Date(trade.entry_at).toLocaleString() : ''} → {trade.exit_at ? new Date(trade.exit_at).toLocaleString() : ''}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
