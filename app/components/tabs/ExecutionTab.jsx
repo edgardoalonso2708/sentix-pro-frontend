@@ -101,7 +101,10 @@ export default function ExecutionTab({
     }, [execMode, bybitStatus.bybitConfigured]);
 
     // Select data source based on mode
-    const isLiveMode = (execMode === 'live' || execMode === 'perp') && bybitStatus.bybitConfigured;
+    // Backend uses 'bybit' as canonical value; some setters convert to 'live' but
+    // the risk dashboard endpoint sets it raw — accept both to avoid the banner
+    // flipping to "PAPER TRADING ACTIVE" when actually in Bybit mode.
+    const isLiveMode = (execMode === 'live' || execMode === 'perp' || execMode === 'bybit') && bybitStatus.bybitConfigured;
     const activePositions = isLiveMode ? bybitPositions : paperPositions;
     const activeHistory = isLiveMode ? bybitHistory : paperHistory;
     const activeHistoryTotal = isLiveMode ? bybitHistory.length : paperHistoryTotal;

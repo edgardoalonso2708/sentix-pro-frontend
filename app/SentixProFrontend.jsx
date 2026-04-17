@@ -634,7 +634,9 @@ export default function SentixProFrontend() {
       if (riskRes.status === 'fulfilled' && riskRes.value.ok) {
         const data = await riskRes.value.json();
         setExecRiskDashboard(data);
-        setExecMode(data.executionMode || 'paper');
+        // Normalize: backend canonical is 'bybit'; UI uses 'live' for Bybit.
+        const rawMode = data.executionMode || 'paper';
+        setExecMode(rawMode === 'bybit' ? 'live' : rawMode);
         setExecAutoExecute(data.autoExecute !== false);
       }
       if (auditRes.status === 'fulfilled' && auditRes.value.ok) {
