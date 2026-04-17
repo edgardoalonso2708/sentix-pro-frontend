@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const CRYPTO_ASSETS = [
   'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot',
   'avalanche-2', 'dogecoin', 'binancecoin', 'chainlink'
 ];
 
-export default function OrderEntryForm({ onSubmit, marketData, colors }) {
+export default function OrderEntryForm({ onSubmit, marketData, colors, apiUrl, userId, authFetch }) {
   const [form, setForm] = useState({
     asset: 'bitcoin',
     side: 'BUY',
@@ -34,6 +34,57 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
   const currentPrice = marketData?.crypto?.[form.asset]?.price || 0;
 
   const MIN_POSITION_USD = 50;
+
+  // ─── Live SL/TP suggestion (debounced backend call) ─────────────────────
+  const [suggestion, setSuggestion] = useState(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const suggestionTimer = useRef(null);
+
+  useEffect(() => {
+    if (!apiUrl || !userId || !authFetch) return;
+    if (form.side !== 'BUY') {
+      setSuggestion(null);
+      return;
+    }
+    if (suggestionTimer.current) clearTimeout(suggestionTimer.current);
+    suggestionTimer.current = setTimeout(async () => {
+      try {
+        setSuggestionLoading(true);
+        const body = {
+          asset: form.asset,
+          side: form.side,
+          orderType: form.orderType,
+          price: form.price ? parseFloat(form.price) : undefined,
+        };
+        const res = await authFetch(`${apiUrl}/api/orders/${userId}/preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          setSuggestion(null);
+          return;
+        }
+        const data = await res.json();
+        setSuggestion(data.suggestion || null);
+      } catch {
+        setSuggestion(null);
+      } finally {
+        setSuggestionLoading(false);
+      }
+    }, 300);
+    return () => suggestionTimer.current && clearTimeout(suggestionTimer.current);
+  }, [form.asset, form.side, form.orderType, form.price, apiUrl, userId, authFetch]);
+
+  const applySuggestion = () => {
+    if (!suggestion) return;
+    setForm((f) => ({
+      ...f,
+      stopLoss: f.stopLoss || String(suggestion.stopLoss),
+      takeProfit1: f.takeProfit1 || String(suggestion.takeProfit1),
+      takeProfit2: f.takeProfit2 || String(suggestion.takeProfit2),
+    }));
+  };
 
   // Client-side validation
   const validate = () => {
@@ -305,6 +356,7 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
             step="any"
             value={form.stopLoss}
             onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
+            placeholder={suggestion ? `Auto: ${suggestion.stopLoss}` : ''}
             style={inputStyle}
           />
         </div>
@@ -315,6 +367,7 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
             step="any"
             value={form.takeProfit1}
             onChange={(e) => setForm({ ...form, takeProfit1: e.target.value })}
+            placeholder={suggestion ? `Auto: ${suggestion.takeProfit1}` : ''}
             style={inputStyle}
           />
         </div>
@@ -325,10 +378,51 @@ export default function OrderEntryForm({ onSubmit, marketData, colors }) {
             step="any"
             value={form.takeProfit2}
             onChange={(e) => setForm({ ...form, takeProfit2: e.target.value })}
+            placeholder={suggestion ? `Auto: ${suggestion.takeProfit2}` : ''}
             style={inputStyle}
           />
         </div>
       </div>
+
+      {/* Suggestion banner (BUY only) */}
+      {form.side === 'BUY' && (suggestion || suggestionLoading) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 8, padding: '8px 12px', borderRadius: 6,
+          background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)'
+        }}>
+          <div style={{ fontSize: 11, color: muted, lineHeight: 1.5 }}>
+            {suggestionLoading && !suggestion && (
+              <span>Calculando SL/TP sugeridos...</span>
+            )}
+            {suggestion && (
+              <>
+                <span style={{ color: '#a855f7', fontWeight: 600 }}>
+                  Sugerencia SENTIX{suggestion.atr > 0 ? ` (ATR=${suggestion.atr})` : ' (fallback %)'}
+                </span>
+                <span> · ancla ${suggestion.anchor}</span>
+                {Number.isFinite(suggestion.riskRewardRatio) && (
+                  <span> · R/R {suggestion.riskRewardRatio.toFixed(2)}:1</span>
+                )}
+                <span style={{ color: muted, opacity: 0.7 }}> · {suggestion.source}</span>
+              </>
+            )}
+          </div>
+          {suggestion && (
+            <button
+              type="button"
+              onClick={applySuggestion}
+              style={{
+                padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                background: 'rgba(168,85,247,0.2)', color: '#a855f7',
+                border: '1px solid rgba(168,85,247,0.4)', cursor: 'pointer'
+              }}
+            >
+              Auto-completar
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Current price info */}
       {currentPrice > 0 && (

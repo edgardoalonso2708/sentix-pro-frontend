@@ -924,6 +924,9 @@ export default function ExecutionTab({
                 onSubmit={handleCreateOrder}
                 marketData={marketData}
                 colors={executionColors}
+                apiUrl={apiUrl}
+                userId={userId}
+                authFetch={authFetch}
               />
             )}
             <div style={{ marginTop: execManualOrdersEnabled ? 16 : 0 }}>
