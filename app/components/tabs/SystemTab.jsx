@@ -264,7 +264,7 @@ export default function SystemTab({
                   {cell('CAPITAL SYNC',
                     cap.skipped ? 'PAPER MODE' : (capPct != null ? `${capPct >= 0 ? '+' : ''}${fmtPct(capPct, 2)}` : '—'),
                     capColor,
-                    cap.skipped ? cap.reason : (cap.bybit_total != null ? `Bybit ${fmtUsd(cap.bybit_total)} · DB ${fmtUsd(cap.internal_capital)}` : null))}
+                    cap.skipped ? cap.reason : (cap.bybit_total_equity != null ? `Bybit ${fmtUsd(cap.bybit_total_equity)} · DB ${fmtUsd(cap.internal_capital)}` : null))}
                 </div>
               ) : (
                 <div style={{ textAlign: "center", padding: 30, color: muted, fontSize: 12 }}>
@@ -277,6 +277,9 @@ export default function SystemTab({
                   <span>Bybit 5m: {op.bybit?.last_5m?.total || 0} req, {fmtPct((op.bybit?.last_5m?.error_rate || 0) * 100, 1)} err</span>
                   <span>Bybit 24h: {op.bybit?.last_24h?.total || 0} req, {fmtPct((op.bybit?.last_24h?.error_rate || 0) * 100, 1)} err</span>
                   <span>Phantom proxy: {op.phantom_proxy?.rejected_orders_24h || 0} rejected/24h, {op.phantom_proxy?.last_reconciler_issues || 0} last-recon</span>
+                  {cap.bybit_usdt_cash != null && (
+                    <span>Capital: USDT {fmtUsd(cap.bybit_usdt_cash)} + {cap.bybit_positions_count || 0} pos {fmtUsd(cap.bybit_position_value || 0)}</span>
+                  )}
                   <span>Mode: {liveData.execution_mode || '—'}</span>
                 </div>
               )}
