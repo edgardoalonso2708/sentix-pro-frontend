@@ -26,6 +26,8 @@ export default function SystemTab({
   const [liveLoading, setLiveLoading] = useState(false);
   const [perfData, setPerfData] = useState(null);
   const [perfLoading, setPerfLoading] = useState(false);
+  const [syncingCapital, setSyncingCapital] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
 
   const fetchMainnetReadiness = useCallback(async () => {
     setMainnetLoading(true);
@@ -83,6 +85,42 @@ export default function SystemTab({
     const interval = setInterval(fetchLiveHealth, 30000);
     return () => clearInterval(interval);
   }, [fetchLiveHealth]);
+
+  const handleSyncCapital = async () => {
+    if (!liveData?.user_id) return;
+    const cap = liveData.operational?.capital_sync || {};
+    const newVal = cap.bybit_total_equity;
+    const oldVal = cap.internal_capital;
+    const delta = newVal - oldVal;
+    const confirmMsg = `Sync internal capital to Bybit total equity?\n\n`
+      + `Current DB:    $${oldVal?.toFixed(2)}\n`
+      + `Bybit total:   $${newVal?.toFixed(2)}\n`
+      + `Delta:         ${delta >= 0 ? '+' : ''}$${delta?.toFixed(2)}\n\n`
+      + `This will UPDATE paper_config.current_capital and insert an equity\n`
+      + `snapshot. Position sizing for new trades will use the new baseline.\n\n`
+      + `Continue?`;
+    if (!confirm(confirmMsg)) return;
+    setSyncingCapital(true);
+    setSyncResult(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/paper/capital-sync/${liveData.user_id}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult({ ok: true, ...data });
+        // Refresh live health immediately to show the new state
+        fetchLiveHealth();
+      } else {
+        setSyncResult({ ok: false, error: data.error || 'Sync failed' });
+      }
+    } catch (e) {
+      setSyncResult({ ok: false, error: e.message });
+    } finally {
+      setSyncingCapital(false);
+      setTimeout(() => setSyncResult(null), 8000);
+    }
+  };
 
   // Calculate system health score from available data
   const calcHealthScore = () => {
@@ -281,6 +319,31 @@ export default function SystemTab({
                     <span>Capital: USDT {fmtUsd(cap.bybit_usdt_cash)} + {cap.bybit_positions_count || 0} pos {fmtUsd(cap.bybit_position_value || 0)}</span>
                   )}
                   <span>Mode: {liveData.execution_mode || '—'}</span>
+                </div>
+              )}
+              {/* Capital sync action — only shown in bybit mode and when there's drift */}
+              {liveData && !cap.skipped && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <button
+                    onClick={handleSyncCapital}
+                    disabled={syncingCapital || cap.bybit_total_equity == null}
+                    style={{
+                      padding: "8px 14px", borderRadius: 6, border: "none",
+                      cursor: syncingCapital ? "not-allowed" : "pointer",
+                      background: syncingCapital ? bg3 : `linear-gradient(135deg, ${blue}, #3b82f6)`,
+                      color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "monospace"
+                    }}
+                    title="Re-anchor internal current_capital to Bybit total equity (use after deposits/withdrawals)"
+                  >
+                    {syncingCapital ? 'SYNCING...' : 'SYNC CAPITAL FROM BYBIT'}
+                  </button>
+                  {syncResult && (
+                    <span style={{ fontSize: 11, fontFamily: "monospace", color: syncResult.ok ? green : red }}>
+                      {syncResult.ok
+                        ? `\u2713 ${syncResult.classified_as}: ${fmtUsd(syncResult.previous_capital)} \u2192 ${fmtUsd(syncResult.new_capital)} (${syncResult.delta_usd >= 0 ? '+' : ''}${fmtUsd(syncResult.delta_usd)})${syncResult.drawdown_warning ? ' \u26A0 peak preserved' : ''}`
+                        : `\u2717 ${syncResult.error}`}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
