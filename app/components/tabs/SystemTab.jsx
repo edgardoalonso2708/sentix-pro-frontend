@@ -19,9 +19,13 @@ export default function SystemTab({
   apiUrl,
 }) {
   const { t } = useLanguage();
-  const [subTab, setSubTab] = useState('health');
+  const [subTab, setSubTab] = useState('live');
   const [mainnetData, setMainnetData] = useState(null);
   const [mainnetLoading, setMainnetLoading] = useState(false);
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [perfData, setPerfData] = useState(null);
+  const [perfLoading, setPerfLoading] = useState(false);
 
   const fetchMainnetReadiness = useCallback(async () => {
     setMainnetLoading(true);
@@ -38,11 +42,47 @@ export default function SystemTab({
     }
   }, [apiUrl]);
 
+  const fetchLiveHealth = useCallback(async () => {
+    setLiveLoading(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/health/live`);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveData(data);
+        // Chain perf-rolling fetch using the userId returned by /api/health/live
+        if (data?.user_id) {
+          setPerfLoading(true);
+          try {
+            const pres = await authFetch(`${apiUrl}/api/health/performance-rolling/${data.user_id}`);
+            if (pres.ok) {
+              const pdata = await pres.json();
+              setPerfData(pdata);
+            }
+          } catch (pe) {
+            console.error('Failed to fetch performance rolling:', pe);
+          } finally {
+            setPerfLoading(false);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch live health:', e);
+    } finally {
+      setLiveLoading(false);
+    }
+  }, [apiUrl]);
+
   useEffect(() => {
     fetchMainnetReadiness();
     const interval = setInterval(fetchMainnetReadiness, 300000);
     return () => clearInterval(interval);
   }, [fetchMainnetReadiness]);
+
+  useEffect(() => {
+    fetchLiveHealth();
+    const interval = setInterval(fetchLiveHealth, 30000);
+    return () => clearInterval(interval);
+  }, [fetchLiveHealth]);
 
   // Calculate system health score from available data
   const calcHealthScore = () => {
@@ -116,7 +156,8 @@ export default function SystemTab({
       {/* Sub-tab navigation */}
       <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
         {[
-          { k: 'health', label: 'SYSTEM HEALTH' },
+          { k: 'live', label: 'LIVE HEALTH' },
+          { k: 'health', label: 'LEGACY READINESS' },
           { k: 'notifications', label: t('alert.config') || 'NOTIFICATIONS' },
         ].map(({ k, label }) => (
           <button key={k} onClick={() => setSubTab(k)} style={{
@@ -130,6 +171,183 @@ export default function SystemTab({
           </button>
         ))}
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* LIVE HEALTH SUB-TAB (operational + rolling performance)           */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {subTab === 'live' && (() => {
+        const fmtAge = (ms) => {
+          if (ms == null) return '—';
+          const s = Math.floor(ms / 1000);
+          if (s < 60) return `${s}s`;
+          if (s < 3600) return `${Math.floor(s / 60)}m`;
+          if (s < 86400) return `${Math.floor(s / 3600)}h`;
+          return `${Math.floor(s / 86400)}d`;
+        };
+        const fmtPct = (n, d = 2) => (n == null || !Number.isFinite(n)) ? '—' : `${n.toFixed(d)}%`;
+        const fmtNum = (n, d = 2) => (n == null || !Number.isFinite(n)) ? '—' : n.toFixed(d);
+        const fmtUsd = (n) => (n == null || !Number.isFinite(n)) ? '—' : `$${n.toFixed(2)}`;
+
+        const op = liveData?.operational || {};
+        const sigAge = op.last_signal?.age_ms;
+        const sigColor = sigAge == null ? muted : sigAge < 7200000 ? green : sigAge < 14400000 ? amber : red;
+
+        const bybit1h = op.bybit?.last_1h || { total: 0, errors: 0, error_rate: 0 };
+        const bybitErrPct = bybit1h.total > 0 ? bybit1h.error_rate * 100 : 0;
+        const bybitColor = bybit1h.total === 0 ? muted : bybitErrPct < 1 ? green : bybitErrPct < 5 ? amber : red;
+
+        const reconAge = op.reconciler?.age_ms;
+        const reconIssues = op.reconciler?.issues_count ?? 0;
+        const reconColor = reconAge == null ? muted
+          : (reconAge < 5400000 && reconIssues === 0) ? green
+          : (reconAge < 7200000 && reconIssues <= 1) ? amber : red;
+
+        const cap = op.capital_sync || {};
+        const capPct = cap.delta_pct;
+        const capColor = cap.skipped ? muted
+          : capPct == null ? muted
+          : Math.abs(capPct) < 0.5 ? green
+          : Math.abs(capPct) < 2 ? amber : red;
+
+        const pf = perfData?.profit_factor || {};
+        const pfDelta = pf.delta;
+        const pfColor = pf.last_20 == null ? muted
+          : pf.last_20 >= 1.5 ? green
+          : pf.last_20 >= 1.0 ? amber : red;
+
+        const hr = perfData?.hit_rate_last_30;
+        const hrColor = hr == null ? muted : hr >= 55 ? green : hr >= 45 ? amber : red;
+
+        const rMul = perfData?.r_multiple_avg_last_20;
+        const rMulColor = rMul == null ? muted : rMul >= 0.3 ? green : rMul >= 0 ? amber : red;
+
+        const slip = perfData?.slippage || {};
+        const slipColor = slip.avg_bps == null ? muted
+          : slip.avg_bps < 10 ? green
+          : slip.avg_bps < 30 ? amber : red;
+
+        const dd = perfData?.drawdown_from_peak || {};
+        const ddColor = dd.pct == null ? muted
+          : dd.pct < 5 ? green
+          : dd.pct < 10 ? amber : red;
+
+        const cell = (label, value, color, sub) => (
+          <div style={{ background: bg3, padding: "12px 14px", borderRadius: 8 }}>
+            <div style={{ fontSize: 9, color: muted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", color }}>{value}</div>
+            {sub && <div style={{ fontSize: 9, color: muted, fontFamily: "monospace", marginTop: 4 }}>{sub}</div>}
+          </div>
+        );
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* OPERATIONAL */}
+            <div style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={sTitle}>OPERATIONAL HEALTH</div>
+                {liveData?.evaluated_at && (
+                  <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                    {new Date(liveData.evaluated_at).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              {liveLoading && !liveData ? (
+                <div style={{ textAlign: "center", padding: 30, color: muted, fontSize: 12 }}>Loading...</div>
+              ) : liveData ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                  {cell('LAST SIGNAL', fmtAge(sigAge) + (sigAge != null ? ' ago' : ''), sigColor,
+                    op.last_signal?.at ? new Date(op.last_signal.at).toLocaleString() : null)}
+                  {cell('BYBIT (LAST 1H)', `${fmtPct(bybitErrPct, 1)} err`, bybitColor,
+                    `${bybit1h.total} req · ${bybit1h.avg_latency_ms ?? '—'}ms avg`)}
+                  {cell('RECONCILER', fmtAge(reconAge) + (reconAge != null ? ' ago' : ''), reconColor,
+                    `${reconIssues} issues · ${op.reconciler?.reconciled_count ?? 0} fixed`)}
+                  {cell('CAPITAL SYNC',
+                    cap.skipped ? 'PAPER MODE' : (capPct != null ? `${capPct >= 0 ? '+' : ''}${fmtPct(capPct, 2)}` : '—'),
+                    capColor,
+                    cap.skipped ? cap.reason : (cap.bybit_total != null ? `Bybit ${fmtUsd(cap.bybit_total)} · DB ${fmtUsd(cap.internal_capital)}` : null))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: 30, color: muted, fontSize: 12 }}>
+                  Could not load live health data
+                </div>
+              )}
+              {/* Bybit secondary windows */}
+              {liveData && (
+                <div style={{ marginTop: 12, display: "flex", gap: 16, fontSize: 10, color: muted, fontFamily: "monospace", flexWrap: "wrap" }}>
+                  <span>Bybit 5m: {op.bybit?.last_5m?.total || 0} req, {fmtPct((op.bybit?.last_5m?.error_rate || 0) * 100, 1)} err</span>
+                  <span>Bybit 24h: {op.bybit?.last_24h?.total || 0} req, {fmtPct((op.bybit?.last_24h?.error_rate || 0) * 100, 1)} err</span>
+                  <span>Phantom proxy: {op.phantom_proxy?.rejected_orders_24h || 0} rejected/24h, {op.phantom_proxy?.last_reconciler_issues || 0} last-recon</span>
+                  <span>Mode: {liveData.execution_mode || '—'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* PERFORMANCE ROLLING */}
+            <div style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={sTitle}>PERFORMANCE ROLLING</div>
+                {perfData?.evaluated_at && (
+                  <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                    {perfData.total_closed_trades || 0} closed trades
+                  </span>
+                )}
+              </div>
+              {perfLoading && !perfData ? (
+                <div style={{ textAlign: "center", padding: 30, color: muted, fontSize: 12 }}>Loading...</div>
+              ) : perfData ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                  {cell('PROFIT FACTOR (20)', fmtNum(pf.last_20), pfColor,
+                    pf.all_window != null
+                      ? `vs all ${fmtNum(pf.all_window)}${pfDelta != null ? ` (${pfDelta >= 0 ? '+' : ''}${fmtNum(pfDelta)})` : ''}`
+                      : null)}
+                  {cell('HIT RATE (30)', fmtPct(hr, 1), hrColor, null)}
+                  {cell('R-MULTIPLE AVG (20)', fmtNum(rMul), rMulColor,
+                    rMul != null ? (rMul >= 0 ? 'positive expectancy' : 'negative expectancy') : null)}
+                  {cell('SLIPPAGE (LAST 10)',
+                    slip.avg_bps != null ? `${fmtNum(slip.avg_bps, 1)} bps` : '—',
+                    slipColor,
+                    slip.avg_bps != null ? `n=${slip.sample_size}` : (slip.note || null))}
+                  {cell('DRAWDOWN FROM PEAK', fmtPct(dd.pct, 2), ddColor,
+                    dd.peak_equity != null ? `peak ${fmtUsd(dd.peak_equity)} → now ${fmtUsd(dd.current_equity)}` : null)}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: 30, color: muted, fontSize: 12 }}>
+                  Could not load performance data
+                </div>
+              )}
+            </div>
+
+            {/* SIGNAL PIPELINE — reused from legacy panel since it's still useful while live */}
+            {gateDiagnostics && gateDiagnostics.total != null && (() => {
+              const g = gateDiagnostics;
+              const passRate = parseFloat(g.passRate) || 0;
+              const passColor = passRate >= 20 ? green : passRate >= 5 ? amber : red;
+              const total = g.total || 0;
+              const executed = g.executed || 0;
+              const bottleneck = g.bottleneck;
+              return (
+                <div style={card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={sTitle}>SIGNAL PIPELINE (LAST CYCLE)</div>
+                    {g.timestamp && <span style={{ fontSize: 9, color: muted, fontFamily: "monospace" }}>
+                      {new Date(g.timestamp).toLocaleTimeString()}
+                    </span>}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                    {cell('SIGNALS IN', total, text, null)}
+                    {cell('TRADES OUT', executed, green, null)}
+                    {cell('PASS RATE', g.passRate || '—', passColor, null)}
+                    {cell('BOTTLENECK',
+                      (bottleneck?.gate === 'none' ? 'NONE' : (bottleneck?.gate || '--').toUpperCase().replace(/_/g, ' ')),
+                      bottleneck?.gate === 'none' ? green : red,
+                      bottleneck?.count > 0 ? `${bottleneck.count} blocked` : null)}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* HEALTH SUB-TAB                                                    */}
